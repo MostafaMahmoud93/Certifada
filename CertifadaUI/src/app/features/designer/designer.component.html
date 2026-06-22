@@ -1,0 +1,110 @@
+<!-- ============================ Action bar ============================ -->
+<div class="actionbar">
+  <input class="name-input" [(ngModel)]="name" placeholder="Certificate name" />
+
+  <select class="size-select" (change)="applyPreset(presets[+$any($event.target).value])">
+    @for (p of presets; track p.label; let i = $index) {
+      <option [value]="i" [selected]="p.w === width && p.h === height">{{ p.label }}</option>
+    }
+  </select>
+
+  <div class="spacer"></div>
+
+  <div class="zoom">
+    <button class="btn btn-sm" (click)="zoomOut()" aria-label="Zoom out">−</button>
+    <span class="zoom-val" (click)="zoomReset()">{{ (svc.zoom() * 100) | number:'1.0-0' }}%</span>
+    <button class="btn btn-sm" (click)="zoomIn()" aria-label="Zoom in">+</button>
+  </div>
+
+  <button class="btn btn-sm" [disabled]="!svc.canUndo()" (click)="svc.undo()" title="Undo (Ctrl+Z)">↶</button>
+  <button class="btn btn-sm" [disabled]="!svc.canRedo()" (click)="svc.redo()" title="Redo (Ctrl+Y)">↷</button>
+
+  <button class="btn" (click)="saveToHistory()" title="Save current render to history">★ History</button>
+  <button class="btn" (click)="goBulk()">⚇ Bulk</button>
+
+  <div class="export-wrap">
+    <button class="btn" (click)="showExport.set(!showExport())">⬇ Export ▾</button>
+    @if (showExport()) {
+      <div class="export-menu" (mouseleave)="showExport.set(false)">
+        <button (click)="exportPng()">PNG image</button>
+        <button (click)="exportPdf()">PDF document</button>
+        <button (click)="exportSvg()">SVG vector</button>
+        <button (click)="exportJson()">JSON template</button>
+      </div>
+    }
+  </div>
+
+  <button class="btn btn-primary" [disabled]="saving()" (click)="save()">
+    {{ saving() ? 'Saving…' : '💾 Save' }}
+  </button>
+</div>
+
+@if (message(); as m) {
+  <div class="floating-msg" [class.ok]="m.ok" [class.err]="!m.ok">{{ m.text }}</div>
+}
+
+<!-- ============================ Workspace ============================ -->
+<div class="workspace">
+  <!-- Left toolbar -->
+  <aside class="toolbar">
+    <div class="tool-group">
+      <span class="tool-label">Text</span>
+      <button class="btn btn-block" (click)="svc.addHeading()">＋ Heading</button>
+      <button class="btn btn-block" (click)="svc.addText()">＋ Text box</button>
+    </div>
+
+    <div class="tool-group">
+      <span class="tool-label">Dynamic field</span>
+      <div class="row">
+        <input [(ngModel)]="newFieldKey" placeholder="e.g. name" (keyup.enter)="addField()" />
+        <button class="btn" (click)="addField()">＋</button>
+      </div>
+      <small class="muted">Inserts <code>{{ '{{' }}field{{ '}}' }}</code> for bulk merge.</small>
+    </div>
+
+    <div class="tool-group">
+      <span class="tool-label">Table</span>
+      <div class="grid-2">
+        <input type="number" min="1" max="20" [(ngModel)]="tableRows" title="Rows" />
+        <input type="number" min="1" max="12" [(ngModel)]="tableCols" title="Columns" />
+      </div>
+      <button class="btn btn-block mt-1" (click)="svc.addTable(tableRows, tableCols)">＋ Insert table</button>
+    </div>
+
+    <div class="tool-group">
+      <span class="tool-label">Shapes</span>
+      <div class="grid-2">
+        <button class="btn" (click)="svc.addRect()">▭ Rect</button>
+        <button class="btn" (click)="svc.addCircle()">◯ Circle</button>
+        <button class="btn" (click)="svc.addTriangle()">△ Tri</button>
+        <button class="btn" (click)="svc.addLine()">／ Line</button>
+      </div>
+    </div>
+
+    <div class="tool-group">
+      <span class="tool-label">Media</span>
+      <label class="btn btn-block file-btn">
+        🖼 Add image
+        <input type="file" accept="image/*" hidden (change)="onImageFile($event)" />
+      </label>
+      <label class="btn btn-block file-btn">
+        ⬆ Import JSON
+        <input type="file" accept="application/json,.json" hidden (change)="importJson($event)" />
+      </label>
+    </div>
+  </aside>
+
+  <!-- Canvas -->
+  <section class="canvas-area">
+    <div class="canvas-scroll">
+      <div class="canvas-shadow">
+        <canvas #canvasEl></canvas>
+      </div>
+    </div>
+  </section>
+
+  <!-- Right properties panel -->
+  <aside class="panel">
+    <app-properties-panel />
+  </aside>
+</div>

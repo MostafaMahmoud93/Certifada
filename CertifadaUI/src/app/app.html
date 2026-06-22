@@ -1,0 +1,35 @@
+<router-outlet>
+  <!-- <div id="theme-transition-circle"></div>
+  <header class="flex items-center justify-between px-4 py-2 bg-white shadow-md dark:bg-gray-900">
+    <button class="text-gray-700 dark:text-gray-300 hover:text-blue-500 dark:hover:text-green-500 focus:outline-none"
+      (click)="goToLanding()">
+      <i class="material-icons text-2xl">fitbit</i> {{ 'APP.TITLE' | transloco }}
+    </button>
+    <div class="flex items-center space-x-4">
+
+      <button class="text-gray-700 dark:text-gray-300 hover:text-blue-500 dark:hover:text-green-500"
+        (click)="toggleTheme($event)">
+        <i *ngIf="isDark" class="material-icons text-2xl">invert_colors_off</i>
+        <i *ngIf="!isDark" class="material-icons text-2xl">invert_colors</i>
+      </button>
+      <button (click)="toggleDirection()"
+        class="flex items-center gap-2 px-2 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-blue-100 dark:hover:bg-green-800 hover:text-blue-600 dark:hover:text-green-400 transition">
+        {{ currentDir === 'ltr' ? 'ع' : 'En' }}
+        <i class="material-icons text-2xl">language</i>
+      </button>
+      <button class="text-gray-700 dark:text-gray-300 hover:text-blue-500 dark:hover:text-green-500">
+        <i class="material-icons text-2xl">notifications</i>
+      </button>
+      <button class="text-gray-700 dark:text-gray-300 hover:text-blue-500 dark:hover:text-green-500">
+        <i class="material-icons text-2xl">settings</i>
+      </button>
+      <button (click)="showPopup = true"
+        class="text-gray-700 dark:text-gray-300 hover:text-blue-500 dark:hover:text-green-500">
+        <i class="material-icons text-2xl">account_circle</i>
+      </button>
+
+    </div>
+  </header> -->
+</router-outlet>
+<app-toast></app-toast>
+<app-signature-popup *ngIf="showPopup" (CloseSignPopup)="showPopup = false"></app-signature-popup>

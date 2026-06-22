@@ -1,0 +1,101 @@
+p {
+  font-family: Lato;
+}
+
+* {
+  padding: 0;
+  margin: 0;
+  box-sizing: border-box;
+}
+
+html {
+  font-family: 'Ubuntu';
+  font-size: 15px;
+  scroll-behavior: smooth;
+  background-color: #42523f;
+}
+
+section {
+  height: 100vh;
+  width: 100%;
+  background-color: #7e8081;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-transform: uppercase;
+}
+
+#home {
+  background-color: #1c8106;
+}
+
+#about {
+  background-color: #6081c3;
+}
+
+#footer {
+  background-color: #a83e11;
+}
+
+nav {
+  position: sticky;
+  top: 0;
+  background-color: #eef0f1;
+  border-radius: 0 0 20px 20px;
+}
+
+nav .container {
+  width: 90%;
+  max-width: 1000px;
+  margin: 0 auto;
+  text-align: center;
+  padding: 10px;
+}
+
+nav .container ul li {
+  display: inline-block;
+  border-radius: 5px;
+}
+
+nav .container ul li a {
+  display: inline-block;
+  text-decoration: none;
+  padding: 10px 20px;
+  color: black;
+}
+
+nav .container ul li.active {
+  background-color: #3b49df;
+  border-radius: 30px;
+  transition: 0.3s;
+}
+
+nav .container ul li.active a {
+  color: #ffffff;
+}
+
+//For Tooltip✔️✔️✔️✔️✔️✔️✔️✔️✔️✔️✔️✔️✔️✔️✔️✔️✔️✔️✔️✔️✔️✔️✔️✔️✔️✔️✔️✔️✔️✔️✔️✔️✔️✔️✔️✔️✔️✔️✔️✔️✔️✔️✔️✔️✔️✔️✔️✔️✔️✔️✔️✔️✔️✔️✔️✔️✔️✔️✔️
+.permission-tooltip {
+  background-color: #1e293b !important;
+  color: #fff !important;
+  font-size: 13px !important;
+  font-weight: 500;
+  border-radius: 8px !important;
+  padding: 8px 12px !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25) !important;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+
+  &::before {
+    content: '⚠️';
+  }
+}
+
+.upgrade-plan-dialog-panel .mat-mdc-dialog-container {
+  border-radius: 12px !important;
+  overflow: hidden !important;
+}
+
+
+//For Tooltip✔️✔️✔️✔️✔️✔️✔️✔️✔️✔️✔️✔️✔️✔️✔️✔️✔️✔️✔️✔️✔️✔️✔️✔️✔️✔️✔️✔️✔️✔️✔️✔️✔️✔️✔️✔️✔️✔️✔️✔️✔️✔️✔️✔️✔️✔️✔️✔️✔️✔️✔️✔️✔️✔️✔️✔️✔️✔️✔️

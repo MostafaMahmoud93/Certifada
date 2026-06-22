@@ -1,0 +1,363 @@
+<section class=" bg-white h-full overflow-auto flex flex-col dark:bg-gray-900 text-gray-900 dark:text-gray-100">
+  <div *ngIf="!selectedObject" class="text-gray-500 italic text-sm md:h-full  flex items-center justify-center  bg-white dark:bg-gray-900 ">
+    <i class="material-icons">hide_image</i>
+    <p> No object selected.</p>
+  </div>
+  <div>
+     <!-- FONT FORM -->
+     <form *ngIf="selectedObject?.type === 'textbox' || selectedObject?.type === 'i-text'" [formGroup]="form" class="space-y-4 p-2">
+      <!-- Text & Font -->
+      <div class="border rounded p-3 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-gray-300 dark:border-gray-600">
+        <h3 class="font-medium mb-3">Text & Font</h3>
+        <div class="space-y-3">
+
+          <!-- Content -->
+          <div class="flex items-center gap-2 border-b border-gray-200 dark:border-gray-700">
+            <click-edit-field [label]="'Content'" [type]="'text'" [value]="form.get('text')?.value"
+                [disabled]="selectedObject?.get('IsVariable')" (ngModelChange)="form.get('text')?.setValue($event)">
+            </click-edit-field>
+          </div>
+
+          <!-- Font Family -->
+          <div class="flex items-center gap-2 border-b border-gray-200 dark:border-gray-700">
+            <click-edit-field
+              [label]="'Font Family'" [type]="'select'" [value]="form.get('fontFamily')?.value"
+              [options]="fontFamilies" (ngModelChange)="form.get('fontFamily')?.setValue($event)">
+            </click-edit-field>
+          </div> 
+
+          <!-- Font Size -->
+          <div class="flex items-center gap-2 border-b border-gray-200 dark:border-gray-700">
+             <click-edit-field label="Font Size" [value]="form.get('fontSize')?.value"
+             [type]="'number'" (ngModelChange)="form.get('fontSize')?.setValue($event)">
+             </click-edit-field>
+          </div>
+          
+
+          <!-- Font Weight -->
+          <div class="flex items-center gap-2 border-b border-gray-200 dark:border-gray-700">
+              <click-edit-field
+              [label]="'Font Weight'" [type]="'select'" [value]="form.get('fontWeight')?.value"
+              [options]="['normal', 'bold']" (ngModelChange)="form.get('fontWeight')?.setValue($event)">
+              </click-edit-field>
+          </div> 
+
+          <!-- Font Style -->
+          <div class="flex items-center gap-2 border-b border-gray-200 dark:border-gray-700">
+              <click-edit-field
+              [label]="'Font Style'" [type]="'select'" [value]="form.get('fontStyle')?.value"
+              [options]="['normal', 'italic']" (ngModelChange)="form.get('fontStyle')?.setValue($event)">
+              </click-edit-field>
+          </div>
+
+          <!-- Text Align -->
+          <div class="flex items-center gap-2 border-b border-gray-200 dark:border-gray-700">
+             <click-edit-field [label]="'Text Align'" [type]="'select'"
+              [value]="form.get('textAlign')?.value" [options]="['left', 'center', 'right', 'justify']"
+              (ngModelChange)="form.get('textAlign')?.setValue($event)">
+              </click-edit-field>
+          </div>
+
+          <!-- Line Height -->
+          <div class="flex items-center gap-2 border-b border-gray-200 dark:border-gray-700">
+           
+              <click-edit-field [label]="'Line Height'"
+                [value]="form.get('lineHeight')?.value" [type]="'number'"
+                [step]="0.1" (ngModelChange)="form.get('lineHeight')?.setValue($event)">
+              </click-edit-field>
+
+          </div>
+
+          <!-- Text Decoration -->
+          <div class="flex items-center gap-2">
+            <label class="w-40 text-sm">Text Decoration:</label>
+            <div class="flex gap-4 flex-wrap">
+              <label class="flex items-center space-x-1">
+                <input type="checkbox" formControlName="underline" />
+                <span class="text-sm">Underline</span>
+              </label>
+              <label class="flex items-center space-x-1">
+                <input type="checkbox" formControlName="linethrough" />
+                <span class="text-sm">Linethrough</span>
+              </label>
+              <label class="flex items-center space-x-1">
+                <input type="checkbox" formControlName="overline" />
+                <span class="text-sm">Overline</span>
+              </label>
+            </div>
+          </div>
+
+          <!-- Character Spacing -->
+          <div class="flex items-center gap-2">
+            <click-edit-field label="Character Spacing" [value]="form.get('charSpacing')?.value"
+            [type]="'number'" (ngModelChange)="form.get('charSpacing')?.setValue($event)">
+            </click-edit-field>
+          </div>
+        </div>
+      </div>
+
+
+      <!-- APPEARANCE -->
+      <div class="border rounded p-3 bg-gray-50 text-gray-900 dark:text-gray-300 dark:bg-gray-800 dark:border-gray-600">
+        <h3 class="font-medium mb-2">Appearance</h3>
+        <div class="flex flex-wrap gap-2">
+          <label class="w-full sm:flex-1 text-sm">Fill Color:
+            <input type="color" formControlName="fill" class="w-full rounded cursor-pointer transition h-8 mt-1 border-0 p-0 dark:bg-gray-900 dark:border-gray-600" />
+         </label> 
+          <label class="w-full sm:flex-1 text-sm">Stroke Color:
+            <input type="color" formControlName="stroke" class="w-full h-8 mt-1 border-0 p-0 dark:bg-gray-900 dark:border-gray-600" />
+          </label>
+        </div>
+        <div class="flex flex-wrap gap-2">
+          <label class="w-full sm:flex-1 text-sm">Stroke Width:
+            <input type="number" formControlName="strokeWidth" class="w-full mt-1 p-2 border rounded text-sm dark:bg-gray-900 dark:border-gray-600" />
+          </label>
+          <label class="w-full sm:flex-1 text-sm">Stroke Dash Array:
+            <input formControlName="strokeDashArray" class="w-full mt-1 p-2 border rounded text-sm dark:bg-gray-900 dark:border-gray-600" />
+          </label>
+        </div>
+        <label class="block text-sm">Background Color:
+          <input type="color" formControlName="backgroundColor" class="w-full h-8 mt-1 border-0 p-0 dark:bg-gray-900 dark:border-gray-600" />
+        </label>
+        <label class="block text-sm">Shadow:
+          <div class="grid grid-cols-2 gap-2 mt-1">
+            <label class="text-sm">Color:
+              <input type="color" formControlName="shadowColor" class="w-full h-8 border-0 p-0 dark:bg-gray-900 dark:border-gray-600" />
+            </label>
+            <label class="text-sm">Offset X:
+              <input type="number" formControlName="shadowOffsetX" class="w-full min-w-0 mt-1 p-2 border rounded text-sm dark:bg-gray-900 dark:border-gray-600" />
+            </label>
+            <label class="text-sm">Offset Y:
+              <input type="number" formControlName="shadowOffsetY" class="w-full min-w-0 mt-1 p-2 border rounded text-sm dark:bg-gray-900 dark:border-gray-600" />
+            </label>
+            <label class="text-sm">Blur:
+              <input type="number" formControlName="shadowBlur" class="w-full min-w-0 mt-1 p-2 border rounded text-sm dark:bg-gray-900 dark:border-gray-600" />
+            </label>
+          </div>
+        </label>
+      </div>
+
+      <!-- TRANSFORM & BEHAVIOR -->
+      <div class="border rounded p-3 bg-gray-50 text-gray-900 dark:text-gray-300 dark:bg-gray-800 dark:border-gray-600">
+        <h3 class="font-medium mb-2">Transform & Behavior</h3>
+        <div class="flex flex-wrap gap-2">
+          <label class="w-full sm:flex-1 text-sm">Left:
+            <input type="number" formControlName="left" class="w-full mt-1 p-2 border rounded text-sm dark:bg-gray-900 dark:border-gray-600" />
+          </label>
+          <label class="w-full sm:flex-1 text-sm">Top:
+            <input type="number" formControlName="top" class="w-full mt-1 p-2 border rounded text-sm dark:bg-gray-900 dark:border-gray-600" />
+          </label>
+        </div>
+        <div class="flex flex-wrap gap-2">
+          <label class="w-full sm:flex-1 text-sm">Angle:
+            <input type="number" formControlName="angle" class="w-full mt-1 p-2 border rounded text-sm dark:bg-gray-900 dark:border-gray-600" />
+          </label>
+          <label class="w-full sm:flex-1 text-sm">Opacity:
+            <input type="number" step="0.1" min="0" max="1" formControlName="opacity" class="w-full mt-1 p-2 border rounded text-sm dark:bg-gray-900 dark:border-gray-600" />
+          </label>
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+          <label class="text-sm flex items-center space-x-2">
+            <input type="checkbox" formControlName="flipX" />
+            <span>Flip X</span>
+          </label>
+          <label class="text-sm flex items-center space-x-2">
+            <input type="checkbox" formControlName="flipY" />
+            <span>Flip Y</span>
+          </label>
+          <label class="text-sm flex items-center space-x-2">
+            <input type="checkbox" formControlName="lockMovementX" />
+            <span>Lock Move X</span>
+          </label>
+          <label class="text-sm flex items-center space-x-2">
+            <input type="checkbox" formControlName="lockMovementY" />
+            <span>Lock Move Y</span>
+          </label>
+          <label class="text-sm flex items-center space-x-2">
+            <input type="checkbox" formControlName="lockRotation" />
+            <span>Lock Rotate</span>
+          </label>
+          <label class="text-sm flex items-center space-x-2">
+            <input type="checkbox" formControlName="lockScalingX" />
+            <span>Lock Scale X</span>
+          </label>
+          <label class="text-sm flex items-center space-x-2">
+            <input type="checkbox" formControlName="lockScalingY" />
+            <span>Lock Scale Y</span>
+          </label>
+          <label class="text-sm flex items-center space-x-2 col-span-2">
+            <input type="checkbox" formControlName="selectable" />
+            <span>Selectable</span>
+          </label>
+        </div>
+      </div>
+    </form>
+    
+    <!-- IMAGE FORM -->
+    <form *ngIf="selectedObject?.type === 'image'" [formGroup]="form" class="space-y-4 p-2 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-300">
+      <div class="border rounded p-3 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-300 dark:border-gray-600">
+        <h3 class="font-medium mb-2">Appearance</h3>
+          
+        <div class="flex flex-wrap gap-2">
+          <label class="w-full sm:flex-1 text-sm">Opacity:
+            <input type="number" step="0.1" min="0" max="1" formControlName="opacity" class="w-full min-w-0 mt-1 p-2 border rounded text-sm dark:bg-gray-900 dark:border-gray-600" />
+          </label>
+          <label class="w-full sm:flex-1 text-sm">Angle:
+            <input type="number" formControlName="angle" class="w-full min-w-0 mt-1 p-2 border rounded text-sm dark:bg-gray-900 dark:border-gray-600" />
+          </label>
+        </div>
+        <div class="flex flex-wrap gap-2">
+          <label class="w-full sm:flex-1 text-sm flex items-center space-x-2">
+            <input type="checkbox" formControlName="flipX" />
+            <span>Flip X</span>
+          </label>
+          <label class="w-full sm:flex-1 text-sm flex items-center space-x-2">
+            <input type="checkbox" formControlName="flipY" />
+            <span>Flip Y</span>
+          </label>
+        </div>
+        <label class="block text-sm">Shadow:
+          <div class="grid grid-cols-2 gap-2 mt-1">
+            <label class="text-sm">Color:
+              <input type="color" formControlName="shadowColor" class="w-full h-8 border-0 p-0 dark:bg-gray-900 dark:border-gray-600" />
+            </label>
+            <label class="text-sm">Offset X:
+              <input type="number" formControlName="shadowOffsetX" class="w-full min-w-0 mt-1 p-2 border rounded text-sm dark:bg-gray-900 dark:border-gray-600" />
+            </label>
+            <label class="text-sm">Offset Y:
+              <input type="number" formControlName="shadowOffsetY" class="w-full min-w-0 mt-1 p-2 border rounded text-sm dark:bg-gray-900 dark:border-gray-600" />
+            </label>
+            <label class="text-sm">Blur:
+              <input type="number" formControlName="shadowBlur" class="w-full min-w-0 mt-1 p-2 border rounded text-sm dark:bg-gray-900 dark:border-gray-600" />
+            </label>
+          </div>
+        </label>
+      </div>
+
+      <div class="border rounded p-3 bg-gray-50 space-y-2 dark:bg-gray-900 text-gray-900 dark:text-gray-300 dark:border-gray-600">
+        <h3 class="font-medium mb-2">Size & Transform</h3>
+        <div class="flex flex-wrap gap-2">
+          <label class="w-full sm:flex-1 text-sm">Width:
+            <input type="number" formControlName="width" class="w-full min-w-0 mt-1 p-2 border rounded text-sm dark:bg-gray-900 dark:border-gray-600" />
+          </label>
+          <label class="w-full sm:flex-1 text-sm">Height:
+            <input type="number" formControlName="height" class="w-full min-w-0 mt-1 p-2 border rounded text-sm dark:bg-gray-900 dark:border-gray-600" />
+          </label>
+        </div>
+        <label class="text-sm flex items-center space-x-2">
+          <input type="checkbox" formControlName="lockAspectRatio" />
+          <span>Lock Aspect Ratio</span>
+        </label>
+        <div class="grid grid-cols-2 gap-2">
+          <label class="text-sm flex items-center space-x-2">
+            <input type="checkbox" formControlName="lockMovementX" />
+            <span>Lock Move X</span>
+          </label>
+          <label class="text-sm flex items-center space-x-2">
+            <input type="checkbox" formControlName="lockMovementY" />
+            <span>Lock Move Y</span>
+          </label>
+          <label class="text-sm flex items-center space-x-2">
+            <input type="checkbox" formControlName="lockRotation" />
+            <span>Lock Rotate</span>
+          </label>
+          <label class="text-sm flex items-center space-x-2">
+            <input type="checkbox" formControlName="lockScalingX" />
+            <span>Lock Scale X</span>
+          </label>
+          <label class="text-sm flex items-center space-x-2">
+            <input type="checkbox" formControlName="lockScalingY" />
+            <span>Lock Scale Y</span>
+          </label>
+          <label class="text-sm flex items-center space-x-2 col-span-2">
+            <input type="checkbox" formControlName="selectable" />
+            <span>Selectable</span>
+          </label>
+        </div>
+      </div>
+    </form>
+
+    <!-- SHAPE FORM -->
+    <form *ngIf="isShape(selectedObject)" [formGroup]="form" class="space-y-4 p-2 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-300">
+      <div class="border rounded p-3 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-300 dark:border-gray-600">
+        <h3 class="font-medium mb-2">Appearance</h3>
+        <div class="flex flex-wrap gap-2">
+          <label class="w-full sm:flex-1 text-sm">Fill Color:
+            <input type="color" formControlName="fill" class="w-full h-8 mt-1 border-0 p-0 dark:bg-gray-900 dark:border-gray-600" />
+          </label>
+          <label class="w-full sm:flex-1 text-sm">Stroke Color:
+            <input type="color" formControlName="stroke" class="w-full h-8 mt-1 border-0 p-0 dark:bg-gray-900 dark:border-gray-600" />
+          </label>
+        </div>
+        <div class="flex flex-wrap gap-2">
+          <label class="w-full sm:flex-1 text-sm">Stroke Width:
+            <input type="range" min="0" max="10" step="1" formControlName="strokeWidth" class="slider w-full min-w-0 mt-1 p-2 border rounded text-sm dark:bg-gray-900 dark:border-gray-600" />
+          </label>
+          <label class="w-full sm:flex-1 text-sm">Stroke Dash Array:
+            <input formControlName="strokeDashArray" class="w-full min-w-0 mt-1 p-2 border rounded text-sm dark:bg-gray-900 dark:border-gray-600" />
+          </label>
+        </div>
+        <label class="block text-sm">Opacity:
+          <input type="number" step="0.1" min="0" max="1" formControlName="opacity" class="w-full min-w-0 mt-1 p-2 border rounded text-sm dark:bg-gray-900 dark:border-gray-600" />
+        </label>
+        <label class="block text-sm">Shadow:
+          <div class="grid grid-cols-2 gap-2 mt-1">
+            <label class="text-sm">Color:
+              <input type="color" formControlName="shadowColor" class="w-full h-8 border-0 p-0 dark:bg-gray-900 dark:border-gray-600" />
+            </label>
+            <label class="text-sm">Offset X:
+              <input type="number" formControlName="shadowOffsetX" class="w-full min-w-0 mt-1 p-2 border rounded text-sm dark:bg-gray-900 dark:border-gray-600" />
+            </label>
+            <label class="text-sm">Offset Y:
+              <input type="number" formControlName="shadowOffsetY" class="w-full min-w-0 mt-1 p-2 border rounded text-sm dark:bg-gray-900 dark:border-gray-600" />
+            </label>
+            <label class="text-sm">Blur:
+              <input type="number" formControlName="shadowBlur" class="w-full min-w-0 mt-1 p-2 border rounded text-sm dark:bg-gray-900 dark:border-gray-600" />
+            </label>
+          </div>
+        </label>
+        <label class="block text-sm" *ngIf="selectedObject?.type === 'rect'">Corner Radius:
+          <input type="number" formControlName="rx" class="w-full min-w-0 mt-1 p-2 border rounded text-sm dark:bg-gray-900 dark:border-gray-600" />
+        </label>
+      </div>
+
+      <div class="border rounded p-3 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-300 dark:border-gray-600">
+        <h3 class="font-medium mb-2">Transform & Behavior</h3>
+        <div class="flex flex-wrap gap-2">
+          <label class="w-full sm:flex-1 text-sm">Angle:
+            <input type="number" formControlName="angle" class="w-full min-w-0 mt-1 p-2 border rounded text-sm dark:bg-gray-900 dark:border-gray-600" />
+          </label>
+          <label class="w-full sm:flex-1 text-sm">Opacity:
+            <input type="number" step="0.1" min="0" max="1" formControlName="opacity" class="w-full min-w-0 mt-1 p-2 border rounded text-sm dark:bg-gray-900 dark:border-gray-600" />
+          </label>
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+          <label class="text-sm flex items-center space-x-2">
+            <input type="checkbox" formControlName="flipX" /><span>Flip X</span>
+          </label>
+          <label class="text-sm flex items-center space-x-2">
+            <input type="checkbox" formControlName="flipY" /><span>Flip Y</span>
+          </label>
+          <label class="text-sm flex items-center space-x-2">
+            <input type="checkbox" formControlName="lockMovementX" /><span>Lock Move X</span>
+          </label>
+          <label class="text-sm flex items-center space-x-2">
+            <input type="checkbox" formControlName="lockMovementY" /><span>Lock Move Y</span>
+          </label>
+          <label class="text-sm flex items-center space-x-2">
+            <input type="checkbox" formControlName="lockRotation" /><span>Lock Rotate</span>
+          </label>
+          <label class="text-sm flex items-center space-x-2">
+            <input type="checkbox" formControlName="lockScalingX" /><span>Lock Scale X</span>
+          </label>
+          <label class="text-sm flex items-center space-x-2">
+            <input type="checkbox" formControlName="lockScalingY" /><span>Lock Scale Y</span>
+          </label>
+          <label class="text-sm flex items-center space-x-2 col-span-2">
+            <input type="checkbox" formControlName="selectable" /><span>Selectable</span>
+          </label>
+        </div>
+      </div>
+    </form>
+  </div>
+</section>

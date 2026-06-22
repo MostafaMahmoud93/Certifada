@@ -1,0 +1,15 @@
+<div class="mt-4">
+  <h4 class="font-semibold mb-2 dark:text-gray-300">Only If Conditions</h4>
+  <div *ngFor="let condition of conditions; let i = index" class="flex space-x-2 mb-2">
+    <input [(ngModel)]="condition.field" class="w-1/3 border rounded px-2 py-1 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-700" placeholder="Field" />
+    <select [(ngModel)]="condition.operator" class="w-1/4 border rounded px-2 py-1 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-700">
+      <option value="==">==</option>
+      <option value="!=">!=</option>
+      <option value=">">&gt;</option>
+      <option value="<">&lt;</option>
+    </select>
+    <input [(ngModel)]="condition.value" class="w-1/3 border rounded px-2 py-1 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-700" placeholder="Value" />
+    <button (click)="removeCondition(i)" class="text-red-500">✕</button>
+  </div>
+  <button (click)="addCondition()" class="text-sm text-blue-600">+ Add Condition</button>
+</div>

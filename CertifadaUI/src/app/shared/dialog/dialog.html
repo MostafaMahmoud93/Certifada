@@ -1,0 +1,28 @@
+<h2 mat-dialog-title class="flex items-center bg-gray-100">
+  <i
+    class="material-icons text-2xl text-orange-500 relative top-[1px] p-2"
+    *ngIf="data.icon">
+    {{ data.icon }}
+  </i>
+  <span class="text-xl font-medium">{{ data.title }}</span>
+</h2>
+
+
+
+<mat-dialog-content class="pt-4">
+  <p>{{ data.message }}</p>
+
+  <mat-form-field *ngIf="data.type === 'input'" appearance="fill" class="w-full">
+    <input matInput [placeholder]="data.inputPlaceholder || 'jhgj'" [(ngModel)]="userInput" />
+    
+  </mat-form-field>
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-button *ngIf="data.type === 'confirm' || data.type === 'input'" (click)="onCancel()">
+    {{ data.cancelText || 'Cancel' }}
+  </button>
+  <button mat-button color="primary" (click)="onConfirm()">
+    {{ data.confirmText || 'OK' }}
+  </button>
+</mat-dialog-actions>

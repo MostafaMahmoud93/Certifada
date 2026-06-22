@@ -1,0 +1,199 @@
+<div class="w-full max-w-3xl p-4">
+  <!-- Header -->
+  <div class="flex items-center justify-between mb-4">
+    <h2 class="text-xl font-semibold">Complete Your Profile to get Your Own Domain!</h2>
+    <!-- <button class="p-2 rounded hover:bg-gray-100" (click)="close()" aria-label="Close">
+      ✕
+    </button> -->
+  </div>
+
+  <!-- Progress -->
+  <div class="w-full bg-gray-200 rounded-full h-2 mb-6">
+    <div
+      class="bg-blue-600 h-2 rounded-full transition-all"
+      [style.width.%]="step() === 1 ? 33 : step() === 2 ? 66 : 100">
+    </div>
+  </div>
+
+  <!-- Steps -->
+  <div *ngIf="step() === 1" class="space-y-6">
+    <h3 class="text-lg font-medium">1) Let's create the best experience for you</h3>
+
+    <!-- Use For -->
+    <div>
+      <p class="mb-2 text-sm text-gray-600">What will you be using Certifada for?</p>
+      <div class="flex flex-wrap gap-2">
+  <button class="px-4 py-2 rounded-full border"
+          [class.bg-blue-600]="step1Form.value.useFor === 'work'"
+          [class.text-white]="step1Form.value.useFor === 'work'"
+          (click)="setUseFor('work')">Work</button>
+
+  <button class="px-4 py-2 rounded-full border"
+          [class.bg-blue-600]="step1Form.value.useFor === 'personal'"
+          [class.text-white]="step1Form.value.useFor === 'personal'"
+          (click)="setUseFor('personal')">Personal</button>
+
+  <button class="px-4 py-2 rounded-full border"
+          [class.bg-blue-600]="step1Form.value.useFor === 'school'"
+          [class.text-white]="step1Form.value.useFor === 'school'"
+          (click)="setUseFor('school')">School</button>
+</div>
+      <div *ngIf="step1Form.controls.useFor.invalid && step1Form.touched" class="text-red-600 text-sm mt-1">
+        Required
+      </div>
+    </div>
+
+    <!-- Org Type -->
+    <div>
+      <p class="mb-2 text-sm text-gray-600">What type of organization are you in?</p>
+     <div class="grid grid-cols-2 md:grid-cols-3 gap-2">
+  <ng-container *ngFor="let o of orgOptions">
+    <button class="px-3 py-2 rounded border text-left"
+            [class.bg-blue-600]="step1Form.value.orgType === o"
+            [class.text-white]="step1Form.value.orgType === o"
+            (click)="setOrgType(o)">{{ o }}</button>
+  </ng-container>
+</div>
+    </div>
+
+    <!-- Role -->
+    <div>
+      <p class="mb-2 text-sm text-gray-600">What best describes your role?</p>
+      <div class="grid grid-cols-2 md:grid-cols-3 gap-2">
+  <ng-container *ngFor="let r of roleOptions">
+    <button class="px-3 py-2 rounded border text-left"
+            [class.bg-blue-600]="step1Form.value.role === r"
+            [class.text-white]="step1Form.value.role === r"
+            (click)="setRole(r)">{{ r }}</button>
+  </ng-container>
+</div>
+    </div>
+  </div>
+
+  <div *ngIf="step() === 2" class="space-y-6">
+    <h3 class="text-lg font-medium">2) Add your brand kit effortlessly</h3>
+
+    <!-- Mode toggle -->
+    <div class="flex gap-2">
+      <button class="px-4 py-2 rounded border"
+              [class.bg-blue-600]="step2Form.value.mode === 'manual'"
+              [class.text-white]="step2Form.value.mode === 'manual'"
+              (click)="setMode('manual')">Enter manually</button>
+      <button class="px-4 py-2 rounded border"
+              [class.bg-blue-600]="step2Form.value.mode === 'website'"
+              [class.text-white]="step2Form.value.mode === 'website'"
+              (click)="setMode('website')">Enter website</button>
+    </div>
+
+    <!-- Manual -->
+    <div *ngIf="step2Form.value.mode === 'manual'" class="space-y-4">
+      <label class="block">
+        <span class="text-sm">Company name</span>
+        <input class="mt-1 w-full rounded border p-2" placeholder="Your company"
+               [value]="step2Form.value.companyName"
+               (input)="onCompanyNameInput($event)" />
+      </label>
+
+      <!-- Logos -->
+      <label class="block">
+        <span class="text-sm">Logos (URLs, comma separated)</span>
+        <input class="mt-1 w-full rounded border p-2" placeholder="https://... , https://..."
+                       (change)="onCsvChange('logos', $event)"   />
+      </label>
+
+      <!-- Colors -->
+      <label class="block">
+        <span class="text-sm">Brand colors (hex, comma separated)</span>
+        <input class="mt-1 w-full rounded border p-2" placeholder="#0ea5e9, #111827"
+               (change)="onCsvChange('colors', $event)" />
+      </label>
+
+      <!-- Fonts -->
+      <label class="block">
+        <span class="text-sm">Fonts (comma separated)</span>
+        <input class="mt-1 w-full rounded border p-2" placeholder="Inter, Roboto"
+               (change)="onCsvChange('fonts', $event)" />
+      </label>
+    </div>
+
+    <!-- Website -->
+    <div *ngIf="step2Form.value.mode === 'website'" class="space-y-4">
+      <label class="block">
+        <span class="text-sm">Website</span>
+        <div class="flex gap-2">
+          <input class="mt-1 w-full rounded border p-2" placeholder="https://example.com"
+                 [value]="step2Form.value.website"
+                (input)="onWebsiteInput($event)" />
+          <button class="mt-1 px-4 rounded bg-blue-600 text-white disabled:opacity-50"
+                  [disabled]="loading()" (click)="extractFromWebsite()">Extract</button>
+        </div>
+      </label>
+      <p *ngIf="errorMsg()" class="text-sm text-red-600">{{errorMsg()}}</p>
+
+      <!-- Preview -->
+      <div *ngIf="brandPreview()" class="border rounded p-4 space-y-3">
+        <div class="flex items-center gap-2">
+          <span class="text-sm text-gray-600">Detected Name:</span>
+          <strong>{{ brandPreview()?.name || '—' }}</strong>
+        </div>
+
+        <div class="flex items-start gap-4">
+          <div>
+            <div class="text-sm text-gray-600 mb-1">Colors</div>
+            <div class="flex flex-wrap gap-2">
+              <div *ngFor="let c of brandPreview()?.colors"
+                   class="w-8 h-8 rounded border"
+                   [style.backgroundColor]="c"></div>
+            </div>
+          </div>
+
+          <div>
+            <div class="text-sm text-gray-600 mb-1">Fonts</div>
+            <div class="flex flex-wrap gap-2">
+              <span *ngFor="let f of brandPreview()?.fonts"
+                    class="px-2 py-1 rounded border text-xs" [style.fontFamily]="f">{{f}}</span>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <div class="text-sm text-gray-600 mb-1">Logos</div>
+          <div class="flex flex-wrap gap-3">
+            <img *ngFor="let l of brandPreview()?.logos" [src]="l" class="h-10 w-10 object-contain border rounded bg-white" />
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div *ngIf="step() === 3" class="space-y-6">
+    <h3 class="text-lg font-medium">3) Choose your Certifada domain</h3>
+    <div class="flex items-center gap-2">
+      <input class="w-56 rounded border p-2"
+             placeholder="your-company"
+             [value]="step3Form.value.subdomain"
+             (input)="step3Form.patchValue({subdomain: $any($event.target).value})" />
+      <span class="text-gray-500">.certifada.com</span>
+      <button class="px-4 py-2 rounded bg-blue-600 text-white disabled:opacity-50"
+              [disabled]="!step3Form.valid || loading()" (click)="checkDomain()">Check</button>
+    </div>
+    <div *ngIf="domainCheck() as dc" class="text-sm">
+      <span *ngIf="dc.available" class="text-green-600">Available ✓</span>
+      <span *ngIf="!dc.available" class="text-red-600">Not available — {{dc.reason || 'taken'}}</span>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <div class="mt-8 flex items-center justify-between">
+    <button class="px-4 py-2 rounded border" (click)="back()" [disabled]="step()===1">Back</button>
+    <div class="flex items-center gap-2">
+      <button class="px-4 py-2 rounded border" (click)="close()">Cancel</button>
+      <button *ngIf="step()!==3"
+              class="px-4 py-2 rounded bg-blue-600 text-white disabled:opacity-50"
+              [disabled]="!canNext()" (click)="next()">Next</button>
+      <button *ngIf="step()===3"
+              class="px-4 py-2 rounded bg-emerald-600 text-white disabled:opacity-50"
+              [disabled]="!canNext()" (click)="finish()">Finish</button>
+    </div>
+  </div>
+</div>

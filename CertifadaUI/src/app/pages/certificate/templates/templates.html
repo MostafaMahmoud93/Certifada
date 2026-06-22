@@ -1,0 +1,117 @@
+ <main class="flex-1 m-4">
+   <section class="bg-white dark:bg-gray-900 p-6 rounded-lg shadow mb-6">
+        <div class=" mx-auto mb-6 flex gap-2">
+          <input type="text" [(ngModel)]="searchTerm" placeholder="Search…"
+            class="w-full flex-grow px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:text-gray-100"/>
+          <button (click)="toggleView()" class="dark:border-gray-700 border dark:bg-gray-900 dark:text-gray-400 dark:hover:bg-gray-800 bg-white text-gray-400  hover:bg-gray-100 px-2 py-1 rounded-lg">
+            <i class="material-icons text-3xl">{{ viewMode === 'grid' ? 'view_list' : 'grid_on' }}</i>
+          </button>
+           <button (click)="exportCardsToPDF()" class="dark:border-gray-700 border dark:bg-gray-900 dark:text-gray-400 dark:hover:bg-gray-800 bg-white text-gray-400  hover:bg-gray-100 px-2 py-1 rounded-lg">
+            <i class="material-icons text-3x">picture_as_pdf</i>    
+          </button>
+           <button (click)="exportToExcel(filteredCards)" class="dark:border-gray-700 border dark:bg-gray-900 dark:text-gray-400 dark:hover:bg-gray-800 bg-white text-gray-400  hover:bg-gray-100 px-3 py-1 rounded-lg">
+            Xls          
+           </button>
+           <button (click)="openCreateForm()" class="dark:border-gray-700 border dark:bg-green-500 dark:text-gray-200 dark:hover:bg-gray-800 bg-blue-500 text-white hover:text-gray-500  hover:bg-gray-200 px-2 py-1 rounded-lg">
+             <i class="material-icons text-3x">add</i>    
+          </button>
+        </div>
+        <ng-container *ngIf="filteredCards.length > 0; else noData">
+        <!-- Grid View -->
+        <div #cardContainer *ngIf="viewMode === 'grid'" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+          <ng-container *ngFor="let card of filteredCards">
+           <div class="card relative bg-gray-100 dark:bg-gray-800 rounded-lg shadow p-24 pt-16 pb-12 flex flex-col items-center justify-center group h-56"
+              (click)="toggleCardActions(card.id)" [class.cursor-pointer]="true">
+              <h3 class="text-2xl font-bold text-gray-600 dark:text-gray-400">{{ card.title }}</h3>
+              <p class="mt-2 text-sm text-gray-500 dark:text-gray-500">{{ card.subtitle }}</p>
+              <div class="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center space-x-4 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg">
+                <i [appHasAction]="actions.Canvas_Edit" [tooltipMessage]="'🔒 You need permission to print projects ❌❌❌❌.'" (click)="openEditForm(card,card.id)" class="material-icons text-white hover:text-blue-500 dark:hover:text-green-500 text-2xl cursor-pointer" matTooltip="Edit">edit</i>
+                <i class="material-icons text-white hover:text-blue-500 dark:hover:text-green-500 text-2xl cursor-pointer" matTooltip="Delete">delete</i>
+                <i class="material-icons text-white hover:text-blue-500 dark:hover:text-green-500 text-2xl cursor-pointer" matTooltip="Archive">archive</i>
+                <i (click)="openCanvasPreview(card)" class="material-icons text-white hover:text-blue-500 dark:hover:text-green-500 text-2xl cursor-pointer" matTooltip="Info">info</i>
+               </div>
+               <div class="absolute bottom-2 left-4 right-4 flex justify-between text-xs text-gray-500 dark:text-gray-400">
+                <div class="flex items-center space-x-1"><i class="material-icons text-sm">event</i><span>{{ card.Created | date: 'dd MMM yyyy' }}</span></div>
+                <div class="flex items-center space-x-1"><i class="material-icons text-sm">person</i><span>{{ card.CreatedBy }}</span></div>
+               </div>
+           </div>
+          </ng-container>
+        </div>
+        <!-- List (Card) View -->
+        <div *ngIf="viewMode === 'list'" class="space-y-4">
+          <ng-container *ngFor="let card of filteredCards">
+           <div class="card flex items-center justify-between bg-gray-100 dark:bg-gray-800 rounded-lg shadow px-6 py-4 group hover:bg-gray-200 dark:hover:bg-gray-700"
+              (click)="toggleCardActions(card.id)" [class.cursor-pointer]="true">
+              <div class="flex flex-col justify-center">
+                <h3 class="text-xl font-bold text-gray-600 dark:text-gray-400">{{ card.title }}</h3>
+                <p class="text-sm text-gray-500 dark:text-gray-500">{{ card.subtitle }}</p>
+              </div>
+              <div class="flex flex-col items-center justify-center text-sm text-gray-500 dark:text-gray-400 mx-6">
+                <div class="flex items-center space-x-1"><i class="material-icons text-base">event</i><span>{{ card.Created | date: 'dd MMM yyyy' }}</span></div>
+                <div class="flex items-center space-x-1 mt-1"><i class="material-icons text-base">person</i><span>{{ card.CreatedBy }}</span></div>
+              </div>
+              <div class="flex space-x-3 opacity-0 group-hover:opacity-100 transition-opacity"
+              [ngClass]="{'opacity-100': activeCardIndex === card.id,'opacity-0 group-hover:opacity-100': activeCardIndex !== card.id}">
+                <i (click)="openEditForm(card,card.id)" class="material-icons text-white bg-black bg-opacity-50 rounded p-1 hover:text-blue-500 text-2xl cursor-pointer" matTooltip="Edit">edit</i>
+                <i class="material-icons text-white bg-black bg-opacity-50 rounded p-1 hover:text-blue-500 text-2xl cursor-pointer" matTooltip="Delete">delete</i>
+                <i class="material-icons text-white bg-black bg-opacity-50 rounded p-1 hover:text-blue-500 text-2xl cursor-pointer" matTooltip="Archive">archive</i>
+                <i (click)="openCanvasPreview(card)" class="material-icons text-white bg-black bg-opacity-50 rounded p-1 hover:text-blue-500 text-2xl cursor-pointer" matTooltip="Info">info</i>
+              </div>
+          </div>
+          </ng-container>
+        </div>
+      </ng-container>
+      <ng-template #noData>
+        <div class="no-data flex flex-col  items-center justify-center h-full text-center">
+          <i class="material-icons text-9xl text-gray-200 dark:text-gray-600">image_not_supported</i>
+          <p class="text-gray-200 dark:text-gray-600">No templates found.</p>
+        </div>
+      </ng-template>
+  </section>
+</main>
+
+<!-- Modal -->
+<div *ngIf="showFormPanel" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
+  <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 w-full max-w-md relative">
+    <h2 class="text-xl font-semibold mb-4 text-gray-700 dark:text-gray-200">
+      {{ isEditMode ? 'Edit Template' : 'Create Template' }}
+    </h2>
+
+    <form (ngSubmit)="saveCard()" class="space-y-4">
+      <div>
+        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Title</label>
+        <input type="text" [(ngModel)]="cardForm.title" name="title"
+          class="w-full mt-1 px-3 py-2 border rounded dark:bg-gray-700 dark:text-white dark:border-gray-600" required>
+      </div>
+
+      <div>
+        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Subtitle</label>
+        <input type="text" [(ngModel)]="cardForm.subtitle" name="subtitle"
+          class="w-full mt-1 px-3 py-2 border rounded dark:bg-gray-700 dark:text-white dark:border-gray-600">
+      </div>
+
+      <div>
+        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Branch</label>
+        <input type="text" [(ngModel)]="cardForm.Branch" name="branch"
+          class="w-full mt-1 px-3 py-2 border rounded dark:bg-gray-700 dark:text-white dark:border-gray-600">
+      </div>
+
+      <div>
+        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Created By</label>
+        <input type="text" [(ngModel)]="cardForm.CreatedBy" name="createdBy"
+          class="w-full mt-1 px-3 py-2 border rounded dark:bg-gray-700 dark:text-white dark:border-gray-600">
+      </div>
+
+      <div class="flex justify-end space-x-3 mt-4">
+        <button type="button" (click)="closeForm()" class="text-sm px-4 py-2 rounded bg-gray-300 hover:bg-gray-400 dark:bg-gray-600 dark:text-white">Cancel</button>
+        <button type="submit" class="text-sm px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 dark:bg-green-500 dark:hover:bg-green-600">
+          {{ isEditMode ? 'Update' : 'Create' }}
+        </button>
+          <button *ngIf="isEditMode" (click)="navigateToCanvas()" type="submit" class="text-sm px-4 py-2 rounded text-white bg-gradient-to-r from-red-500 via-yellow-500 to-blue-500">
+          Go to Desgin
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+

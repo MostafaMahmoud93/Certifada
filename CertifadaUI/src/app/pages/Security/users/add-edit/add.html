@@ -1,0 +1,34 @@
+<h2 mat-dialog-title>
+  {{ isEdit ? 'Edit User' : 'Add New User' }}
+</h2>
+@if(user){
+  <mat-dialog-content class="space-y-4">
+    <div class="flex flex-col items-center space-y-2">
+      <label for="avatarInput" class="cursor-pointer">
+        <img [src]="user.avatar || 'https://ui-avatars.com/api/?name=User'" alt="Avatar"
+          class="w-24 h-24 rounded-full border object-cover transition hover:opacity-80" />
+      </label>
+      <input type="file" id="avatarInput" accept="image/*" class="hidden" (change)="onFileSelected($event)" />
+      <span class="text-xs text-gray-500 dark:text-gray-400">Click image to change</span>
+    </div>
+    <mat-form-field appearance="fill" class="w-full">
+      <mat-label>Name</mat-label>
+      <input matInput [(ngModel)]="user.name" required />
+    </mat-form-field>
+    <mat-form-field appearance="fill" class="w-full">
+      <mat-label>Email</mat-label>
+      <input matInput type="email" [(ngModel)]="user.email" required />
+    </mat-form-field>
+    <mat-form-field appearance="fill" class="w-full">
+      <mat-label>Role</mat-label>
+      <input matInput [(ngModel)]="user.role" />
+    </mat-form-field>
+  </mat-dialog-content>
+  
+  <mat-dialog-actions align="end">
+    <button mat-button (click)="onCancel()">Cancel</button>
+    <button mat-button color="primary" (click)="onSave()">
+      {{ isEdit ? 'Update' : 'Add' }}
+    </button>
+  </mat-dialog-actions>
+}

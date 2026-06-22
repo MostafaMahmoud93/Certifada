@@ -1,0 +1,140 @@
+<div class="lp" [class.drawer-open]="isDrawerOpen">
+
+  <!-- Backdrop (mobile drawer) -->
+  <div class="lp-backdrop" (click)="closeDrawer()"></div>
+
+  <!-- Sidebar (off-canvas drawer on mobile) -->
+  <aside class="lp-side">
+    <nav class="lp-nav-list">
+      <div class="lp-navgroup">Main</div>
+
+      <button class="lp-nav" [class.active]="activeMenu==='dashboard'" (click)="setActiveMenu('dashboard','home')">
+        <i class="material-icons">dashboard</i><span>{{ 'LAND.HOME' | transloco }}</span>
+      </button>
+      <button class="lp-nav" [class.active]="activeMenu==='templates'" (click)="setActiveMenu('templates','design_services')">
+        <i class="material-icons">design_services</i><span>{{ 'LAND.TEMPLATES' | transloco }}</span>
+      </button>
+      <button class="lp-nav" [class.active]="activeMenu==='credentials'" (click)="setActiveMenu('credentials','card_membership')">
+        <i class="material-icons">card_membership</i><span>{{ 'LAND.CREDINTIALS' | transloco }}</span>
+      </button>
+      <button class="lp-nav" [class.active]="activeMenu==='branding'" (click)="setActiveMenu('branding','copyright')">
+        <i class="material-icons">palette</i><span>{{ 'LAND.BRANDING' | transloco }}</span>
+      </button>
+
+      <div class="lp-navgroup">Administration</div>
+
+      <button class="lp-nav" [class.active]="activeMenu==='users'" (click)="toggleSubMenu('users')">
+        <i class="material-icons">group</i><span>{{ 'LAND.USERS' | transloco }}</span>
+        <i class="material-icons lp-caret" [class.open]="openSubMenu==='users'">expand_more</i>
+      </button>
+      <div class="lp-sub" *ngIf="openSubMenu==='users'">
+        <button class="lp-subnav" [class.active]="activeSubMenu==='user_List'" (click)="setActiveSubMenu('users','user_List','group')">{{ 'LAND.USER_LIST' | transloco }}</button>
+        <button class="lp-subnav" [class.active]="activeSubMenu==='roles'" (click)="setActiveSubMenu('users','roles','group')">{{ 'LAND.ROLES' | transloco }}</button>
+        <button class="lp-subnav" [class.active]="activeSubMenu==='automation'" (click)="setActiveSubMenu('users','automation','group')">{{ 'LAND.AUTOMATION' | transloco }}</button>
+      </div>
+
+      <button class="lp-nav" [class.active]="activeMenu==='settings'" (click)="toggleSubMenu('settings')">
+        <i class="material-icons">settings</i><span>{{ 'LAND.SETTINGS' | transloco }}</span>
+        <i class="material-icons lp-caret" [class.open]="openSubMenu==='settings'">expand_more</i>
+      </button>
+      <div class="lp-sub" *ngIf="openSubMenu==='settings'">
+        <button class="lp-subnav" [class.active]="activeSubMenu==='emails'" (click)="setActiveSubMenu('settings','emails','settings')">{{ 'LAND.EMAILS' | transloco }}</button>
+      </div>
+
+      <div class="lp-navgroup">Insights</div>
+      <button class="lp-nav" [class.active]="activeMenu==='reports'" (click)="setActiveMenu('reports','analytics')">
+        <i class="material-icons">bar_chart</i><span>{{ 'LAND.REPORTS' | transloco }}</span>
+      </button>
+    </nav>
+
+    <div class="lp-side-foot">
+      <button class="lp-support" (click)="openSupport()">
+        <i class="material-icons">support_agent</i><span>{{ 'LAND.SUPPORT' | transloco }}</span>
+      </button>
+      <button class="lp-logout" (click)="logout()">
+        <i class="material-icons">logout</i><span>{{ 'LAND.LOGOUT' | transloco }}</span>
+      </button>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <main class="lp-main">
+    <div class="lp-mobilebar">
+      <button class="lp-iconbtn" (click)="toggleDrawer()" aria-label="Menu"><i class="material-icons">menu</i></button>
+      <span class="lp-mobile-title">{{ getActiveMenu() }}</span>
+    </div>
+
+    <div class="lp-pagehead">
+      <div class="lp-pagehead-info">
+        <h1>{{ 'LAND.HELLO' | transloco }}</h1>
+        <p class="cf-muted">{{ 'LAND.WELCOME' | transloco }}</p>
+      </div>
+      <div class="lp-pagehead-actions">
+        <span class="lp-section-chip"><i class="material-icons">{{ activeicon }}</i>{{ getActiveMenu() }}</span>
+        <button class="cf-btn cf-btn-primary" (click)="createNew()"><i class="material-icons">add</i><span>{{ 'LAND.CREATE_NEW' | transloco }}</span></button>
+        <button class="lp-iconbtn lp-railtoggle" (click)="togglePanel()" aria-label="Toggle side panel"><i class="material-icons">{{ isPanelOpen ? 'view_sidebar' : 'chevron_right' }}</i></button>
+      </div>
+    </div>
+
+    <div class="lp-content">
+      <app-dashboard *ngIf="activeMenu==='dashboard'"></app-dashboard>
+      <app-templates *ngIf="activeMenu==='templates'"></app-templates>
+      <app-branding *ngIf="activeMenu==='branding'"></app-branding>
+      <app-user-list *ngIf="activeSubMenu==='user_List'"></app-user-list>
+      <app-roles *ngIf="activeSubMenu==='roles'"></app-roles>
+      <app-automation *ngIf="activeSubMenu==='automation'"></app-automation>
+      <app-email-template-editor *ngIf="activeSubMenu==='emails'"></app-email-template-editor>
+      <app-credentials *ngIf="activeMenu==='credentials'"></app-credentials>
+      <app-certificate-report *ngIf="activeMenu==='reports'"></app-certificate-report>
+    </div>
+  </main>
+
+  <!-- Right rail -->
+  <aside class="lp-rail" *ngIf="!isPanelOpen">
+    <div class="cf-card cf-card-pad lp-rail-card">
+      <h3>{{ 'LAND.PLAN' | transloco }}</h3>
+      <div class="lp-rail-grid">
+        <div>
+          <div class="cf-muted cf-small">{{ 'LAND.PLAN_TYPE' | transloco }}</div>
+          <div class="lp-rail-strong">{{ 'LAND.STANDARD' | transloco }}</div>
+        </div>
+        <div>
+          <div class="cf-muted cf-small">Renewal date</div>
+          <div class="lp-rail-strong">31/12/2025</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="cf-card cf-card-pad lp-rail-card">
+      <h3>Plan usage</h3>
+      <div class="lp-usage"><span class="lp-usage-num">1209</span><span class="cf-muted cf-small">/ 2000 created</span></div>
+      <div class="lp-progress"><span style="inline-size:60%"></span></div>
+      <p class="cf-small cf-muted lp-usage-left">791 remaining</p>
+    </div>
+
+    <div class="cf-card cf-card-pad lp-rail-card">
+      <div class="cf-flex cf-aic cf-jcsb lp-rail-head">
+        <h3>Activities</h3><span class="cf-small cf-muted">20 done · 6 left</span>
+      </div>
+      <ul class="lp-feed">
+        <li *ngFor="let activity of activities">
+          <span class="lp-feed-dot"></span>
+          <span><strong>{{ activity.user }}</strong> {{ activity.message }}</span>
+        </li>
+      </ul>
+      <a href="#" class="cf-small lp-showall">Show all →</a>
+    </div>
+
+    <div class="cf-card cf-card-pad lp-rail-card">
+      <h3 class="lp-rail-head">Recent events</h3>
+      <ul class="lp-events">
+        <li *ngFor="let event of events">
+          <div class="lp-event-title">{{ event.title }}</div>
+          <div class="cf-small cf-muted">{{ event.date }}</div>
+        </li>
+      </ul>
+    </div>
+
+    <app-floating-widget [mediaUrl]="'images/support.gif'" [isVideo]="false"></app-floating-widget>
+  </aside>
+</div>

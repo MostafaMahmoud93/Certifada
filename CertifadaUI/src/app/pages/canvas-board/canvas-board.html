@@ -1,0 +1,377 @@
+<!-- <div [ngClass]="isExpanded_Properties ? 'expanded_properties' : 'collapsed_properties'" 
+  
+class="layout collapsed bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100"> -->
+<div class="layout collapsed bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100"
+ [ngClass]="isExpanded_details ? 'expanded_details' : 'collapsed_details'">
+  <!-- Sidebar -->
+  <app-sidebar class="sidebar h-full overflow-hidden bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-gray-100">
+  </app-sidebar>
+
+  <!-- Detail Panel -->
+  <app-detail-panel
+    class="detail h-full overflow-auto bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
+  </app-detail-panel>
+
+  <!-- Canvas + Toolbar -->
+   <div #Maincanvas class="canvas flex flex-col h-full relative " style="grid-area: canvas;">
+    <button (click)="ai()"
+      class="fixed bottom-6 right-6 z-50 bg-gradient-to-br from-purple-600 to-yellow-600 text-white py-3 px-4 rounded-full shadow-xl hover:scale-105 transition-transform duration-300 hover:shadow-2xl animate-pulse"
+      aria-label="AI Assistant"><i class="material-icons text-lg">auto_awesome</i>
+    </button>
+      <div class="toolbar bg-gray-100 dark:bg-gray-800 flex items-center justify-between px-2 py-1 ">
+      <div class="flex space-x-2">
+
+      <button 
+        (click)="toggleDetails()"
+        class="px-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded shadow-sm hover:bg-gray-50 dark:hover:bg-gray-400 text-sm dark:text-gray-200"
+          [matTooltip]="isExpanded_details ? 'Close Detail Panel' : 'Open Detail Panel'">
+        <i class="material-icons text-2xl rotate-90"> 
+          {{ isExpanded_details ? 'expand_more' : 'expand_less' }}
+        </i>
+      </button>
+      <button
+        (click)="saveTemplate()"
+        class="px-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded shadow-sm hover:bg-gray-50 dark:hover:bg-gray-400 text-sm dark:text-gray-200"
+        matTooltip="save template">
+        <i class="material-icons text-2xl">save</i>
+      </button>
+      <button
+        (click)="clearCanvas()"
+        class="px-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded shadow-sm hover:bg-gray-50 dark:hover:bg-gray-400 text-sm dark:text-gray-200"
+        matTooltip="Clear the canvas">
+        <i class="material-icons text-2xl">cleaning_services</i>
+      </button>
+
+      <button
+        (click)="redo()"
+        class="px-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded shadow-sm hover:bg-gray-50 dark:hover:bg-gray-400 text-sm dark:text-gray-200"
+        matTooltip="undo">
+        <i class="material-icons text-xl">undo</i>
+      </button>
+      <button
+        (click)="undo()"
+        class="px-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded shadow-sm hover:bg-gray-50 dark:hover:bg-gray-400 text-sm dark:text-gray-200"
+        matTooltip="redo">
+        <i class="material-icons text-xl">redo</i>
+      </button>
+
+      <p *ngIf="isSaving" class="text-xs text-gray-500 mt-2">Auto-saving...</p>
+
+      </div>
+      <div class="flex items-center space-x-1">
+      <button
+        (click)="zoomOut()"
+        class="px-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded shadow-sm hover:bg-gray-50 dark:hover:bg-gray-600 text-sm dark:text-gray-200"
+        matTooltip="Zoom Out"
+      >
+        <i class="material-icons text-2xl">zoom_out</i>
+      </button>
+      <input
+        [value]="zoomPercent"
+        (input)="onZoomPercentInput($event)"
+        type="number"
+        min="50"
+        max="300"
+        [step]="1"
+        [title]="'Zoom: ' + zoomPercent + '%'"
+        [attr.aria-label]="'Zoom: ' + zoomPercent + '%'"
+        class="w-16 h-9 text-center text-sm text-gray-700 dark:text-gray-200 border border-gray-300 dark:border-gray-600 rounded px-2 py-1 bg-white dark:bg-gray-800"
+      />
+      <button
+        (click)="zoomIn()"
+        class="px-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded shadow-sm hover:bg-gray-50 dark:hover:bg-gray-600 text-sm dark:text-gray-200"
+        matTooltip="Zoom In"
+      >
+        <i class="material-icons text-2xl">zoom_in</i>
+      </button>
+      <!-- Reset Zoom to 100% -->
+      <button id = "resetZoom"
+        (click)="resetZoom()"
+        class="px-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded shadow-sm hover:bg-gray-50 dark:hover:bg-gray-600 text-sm dark:text-gray-200"
+        matTooltip="Reset to 100%"
+      >
+        <i class="material-icons text-2xl">fit_screen</i>
+      </button>
+      <button id = "resetView"
+        (click)="resetView()"
+        class="px-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded shadow-sm hover:bg-gray-50 dark:hover:bg-gray-600 text-sm dark:text-gray-200"
+        matTooltip="Reset view (pan & zoom)"
+        >
+        <i class="material-icons text-2xl">zoom_in_map</i>
+      </button>
+      </div>
+
+      <!-- Settings Menu -->
+      <input #fileInput type="file" (change)="onFileSelected($event)" style="display: none" />
+      <div class="flex items-center space-x-1 relative">
+      <span class="text-sm text-gray-700 dark:text-gray-300">Template Name</span>
+      <button
+        #settingsBtn
+        (click)="openSettings($event)"
+        class="px-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded shadow-sm hover:bg-gray-50 dark:hover:bg-gray-600 text-sm dark:text-gray-200"
+        matTooltip="Settings"
+      >
+        <i class="material-icons text-2xl">settings</i>
+      </button>
+      <div
+        *ngIf="settingsMenuVisible"
+        class="absolute bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded shadow-md z-50 w-64 "
+        [ngStyle]="{ top: menuY + 'px', left: menuX + 'px' }"
+        (click)="$event.stopPropagation()"
+      >
+        <ul class="flex flex-col p-0 m-0 list-none ">
+          <li class="grid grid-cols-3 justify-around items-center border-b border-gray-200 dark:border-gray-700 ">
+            <div
+              class="flex flex-col items-center cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 p-1"
+              (click)="saveTemplate()"
+            >
+              <i class="material-icons text-2xl text-blue-600 dark:text-green-500" matTooltip="Save Template" matTooltipPosition="left">save</i>
+            </div>
+            <div
+              class="flex flex-col items-center cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 p-1"
+              (click)="void 0"
+            >
+              <i class="material-icons text-2xl text-blue-600 dark:text-green-500" matTooltip="Load Template" matTooltipPosition="above">downloading</i>
+            </div>
+            <div
+              class="flex flex-col items-center cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 p-1 dark:bg-green-600 bg-blue-600"
+            (click)="startIntroJs()">
+              <i class="material-icons text-2xl text-blue-400 dark:text-green-200" matTooltip="Start Tour!" matTooltipPosition="right">flight_takeoff</i>
+            </div>
+          </li>
+          <li
+            class="flex items-center px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer text-sm text-gray-700 dark:text-gray-200"
+            (click)="onSettingOption('1')"
+          >
+            <i class="material-icons mr-2 text-xl text-gray-700 dark:text-gray-200">design_services</i>
+            Template Settings
+          </li>
+          <li
+            class="flex items-center px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer text-sm text-gray-700 dark:text-gray-200"
+            (click)="onSettingOption('2')"
+          >
+            <i class="material-icons mr-2 text-xl text-gray-700 dark:text-gray-200" >rebase_edit</i>
+            WorkFlow
+          </li>
+          <li
+            class="flex items-center px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer text-sm text-gray-700 dark:text-gray-200"
+            (click)="onSettingOption('3')"
+          >
+            <i class="material-icons mr-2 text-xl text-gray-700 dark:text-gray-200" >auto_mode</i>
+            Versions (Auto-save)
+          </li>
+          <li
+            class="flex items-center px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer text-sm text-gray-700 dark:text-gray-200"
+            (click)="onSettingOption('4')"
+          >
+            <i class="material-icons mr-2 text-xl text-gray-700 dark:text-gray-200" >preview</i>
+            Preview
+          </li>
+          <li
+            class="flex items-center px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer text-sm text-gray-700 dark:text-gray-200"
+            (click)="onSettingOption('5')"
+          >
+            <i class="material-icons mr-2 text-xl text-gray-700 dark:text-gray-200" >gavel</i>
+            Terms & Conditions
+          </li>
+          <li
+            class="flex items-center px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer text-sm text-gray-700 dark:text-gray-200"
+            (click)="onSettingOption('6')"
+          >
+            <i class="material-icons mr-2 text-xl text-gray-700 dark:text-gray-200" >event</i>
+            Expiry Date
+          </li>
+          <li
+            class="flex items-center px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer text-sm text-gray-700 dark:text-gray-200"
+            (click)="onSettingOption('7')"
+          >
+            <i class="material-icons mr-2 text-xl text-gray-700 dark:text-gray-200" >notifications</i>
+            Notifications
+          </li>
+          <li
+            class="flex items-center px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer text-sm text-gray-700 dark:text-gray-200"
+            (click)="onSettingOption('8')"
+          >
+            <i class="material-icons mr-2 text-xl text-gray-700 dark:text-gray-200" >archive</i>
+            Archive Template
+          </li>
+
+          <li class="flex items-center px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer text-sm text-gray-700 dark:text-gray-200" (click)="onSettingOption('9')">
+              <i class="material-icons mr-2 text-xl text-gray-700 dark:text-gray-200" >delete_forever</i>
+              Delete Template
+          </li>
+
+          <li class="flex items-center px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer text-sm text-gray-700 dark:text-gray-200" (click)="onSettingOption('11')" >
+            <i class="material-icons mr-2 text-xl text-gray-700 dark:text-gray-200" >data_object</i>
+              Load Fro Json
+          </li>
+
+          <li class="flex items-center px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer text-sm relative text-gray-700 dark:text-gray-200" (click)="onSettingOption('10')">
+              <i class="material-icons text-xl">file_download</i>
+              Export As
+              <i class="material-icons ml-auto text-xl" >play_arrow</i>
+
+              <ul class="absolute left-full hidden bg-white dark:bg-gray-800 shadow-lg mt-2 rounded-md py-1 w-32">
+                  <li (click)="exportPNG()" class="hover:bg-gray-100 cursor-pointer px-4 py-2 flex items-center dark:hover:bg-gray-700">
+                      <i class="material-icons text-xl">collections</i>
+                      PNG
+                  </li>
+                  <li (click)="exportPDF()" class="hover:bg-gray-100 cursor-pointer px-4 py-2 flex items-center dark:hover:bg-gray-700">
+                      <i class="material-icons text-xl">picture_as_pdf</i>
+                      PDF
+                  </li>
+              </ul>
+          </li>
+        </ul>
+      </div>
+      </div>
+      </div>   
+      <div class="canvas-scroll-container flex-1 w-full overflow-auto flex justify-center bg-gray-300 dark:bg-gray-700">
+          <div #Minmaxcanvas class="canvas-container p-4 max-h-[calc(300px)] max-w-[calc(300px)] md:max-h-[calc(100vh-120px)] md:max-w-[calc(100vw-510px)]">
+              <app-canvas id="canvas" class="canvas-it w-full overflow-auto" style="max-height: 100%; max-width: 100%;">
+                
+              </app-canvas>
+          </div>
+          <div class="absolute top-12 left-0 right-0 h-5 flex border-t border-gray-400 dark:border-gray-600 bg-gray-200 dark:bg-gray-600" #hRuler></div>
+          <div class="absolute top-12 left-0 bottom-0 w-6 flex border-l flex-col border-gray-400 dark:border-gray-600 bg-gray-200 dark:bg-gray-600" #vRuler></div>
+          <svg #guidesOverlay class="absolute w-full h-full" style="top: 0; left: 0; right: 0; bottom: 0; pointer-events: none; z-index: 10;"></svg>
+      </div>
+  </div>
+    <!-- {Properties & Layers} -->
+  <div class="properties flex flex-col md:h-full overflow-auto">
+      <div class="transition-all duration-300 overflow-hidden flex flex-col pb-10 "
+          [style.flex]="panel1Open && panel2Open ? '1' : panel1Open ? '1' : '0'">
+          <div class="bg-gray-100 p-2 h-11 cursor-pointer dark:bg-gray-800 text-gray-900 dark:text-gray-100 flex items-center justify-between hover:text-blue-600 dark:hover:text-green-600" 
+              matTooltip="Expand/Collapse panel" 
+              (click)="togglePanel(1)">
+              <span>Properties</span>
+              <i class="material-icons text-lg">unfold_more</i>
+          </div>
+          <app-footer-toolbar class="bg-gray-100 dark:bg-gray-800 dark:border-gray-900"></app-footer-toolbar>
+          <div class="flex-1 overflow-auto">
+              <app-properties-panel></app-properties-panel>
+          </div>
+      </div>
+
+
+
+      <div class="transition-all duration-300 overflow-hidden flex flex-col"
+          [style.flex]="panel1Open && panel2Open ? '1' : panel2Open ? '1' : '0'">
+          <div class="bg-gray-100 p-2 h-11 cursor-pointer dark:bg-gray-800 text-gray-900 dark:text-gray-100 border-b-2 dark:border-gray-600 flex items-center justify-between hover:text-blue-600 dark:hover:text-green-600" matTooltip="Expand/Collapse panel" (click)="togglePanel(2)">
+            <span>Layers</span>
+            <i class="material-icons ml-auto text-lg">unfold_more</i>
+          </div>
+          <div class="flex-1 overflow-auto">
+            <app-layers-panel></app-layers-panel>
+          </div>
+      </div>
+  </div>  
+     
+ <div *ngIf="previewVisible" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div class="relative bg-white rounded shadow-lg max-w-[90%] max-h-[90%] overflow-auto">
+      <button (click)="closePreview()" class="absolute top-2 right-2 text-gray-600 hover:text-gray-900"
+        title="Close Preview">
+        ✕
+      </button>
+      <img [src]="previewDataUrl" alt="Canvas Preview" class="max-w-full max-h-full" />
+    </div>
+ </div>
+
+
+ <div *ngIf="versionVisible" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 ">
+    <div class="relative bg-white rounded shadow-lg overflow-auto p-4">
+      <button (click)="closePreview()" class="absolute top-2 right-2 text-gray-600 hover:text-gray-900" title="Close Version History">
+        <i class="material-icons text-lg">close</i>
+      </button>
+
+      <h3 class="font-bold text-sm mb-2">Version History</h3>
+      <ul class="text-sm space-y-4">
+        <li *ngFor="let version of versions; let i = index" class="flex gap-2 items-start">
+          <div class="flex flex-row justify-between flex-1 space-x-2 border rounded-lg p-2 bg-gray-50 dark:bg-gray-800">
+            <span class="text-xs text-gray-700 pr-8">{{ version.timestamp | date:'short' }}</span>
+            <div class="flex gap-2">
+              <button (click)="restoreVersion(version)" class="text-blue-600 text-xs hover:underline">Restore</button>
+              <button (click)="deleteVersion(version.id)" class="text-red-600 text-xs hover:underline">Delete</button>
+            </div>
+          </div>
+        </li>
+      </ul>
+    </div>
+ </div>
+
+         
+<div *ngIf="isModalOpen" class="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
+  <div class="relative bg-white rounded-lg shadow-lg p-6 w-full max-w-4xl">
+    <button (click)="closeModal()" class="absolute top-2 right-2 text-gray-500 hover:text-gray-700" aria-label="Close">
+      <i class="material-icons text-lg">close</i>
+    </button>
+    <div class="space-y-4">
+      <app-workflow-steps *ngIf="isModalOpen" (close)="closeModal()"></app-workflow-steps>
+    </div>
+  </div>
+</div>
+
+
+  <!-- <div *ngIf="aiVisible" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 ">
+    <div class="relative bg-white rounded shadow-lg overflow-auto dark:bg-gray-800 dark:text-gray-300  w-1/4">
+      <button (click)="ai()" class="absolute top-2 right-2 text-gray-600 hover:text-gray-900"
+        title="Close Preview">
+        ✕
+      </button>
+      <div class="mt-4 p-2 dark:bg-gray-800 dark:text-gray-300">
+        <label class="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">Certificate About:</label>
+        <textarea
+          [(ngModel)]="awardText"
+          rows="4"
+          class="w-full p-2 border border-gray-300 rounded-md text-sm resize-none dark:bg-gray-900 dark:border-gray-600 dark:text-gray-300 dark:placeholder-gray-400"
+          placeholder="Enter certificate content..."
+        ></textarea>
+        <button
+          (click)="suggestText()"
+          class="mt-2 px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 disabled:opacity-50 dark:bg-green-600 dark:hover:bg-green-700"
+          [disabled]="isLoading">
+          {{ isLoading ? 'Generating...' : '✨ AI ADA' }}
+        </button>
+      </div>
+    </div>
+ </div> -->
+
+
+<!-- AI Panel that expands out of the floating button -->
+<div
+  *ngIf="aiVisible"
+  [@slidePanel]
+  class="fixed bottom-20 right-6 w-80 h-96 bg-white dark:bg-gray-800 rounded-xl shadow-2xl z-50 overflow-hidden transform origin-bottom-right animate-scaleIn"
+>
+  <div class="relative h-full p-4">
+    <button
+      (click)="ai()"
+      class="absolute top-2 right-2 text-gray-600 hover:text-gray-900 dark:text-gray-300"
+      title="Close Panel"
+    >
+      ✕
+    </button>
+
+    <h2 class="text-lg font-semibold mb-4 text-gray-900 dark:text-white">AI Assistant</h2>
+
+    <label class="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">Certificate About:</label>
+    <textarea
+      [(ngModel)]="awardText"
+      rows="6"
+      class="w-full p-2 border border-gray-300 rounded-md text-sm resize-none dark:bg-gray-900 dark:border-gray-600 dark:text-gray-300"
+      placeholder="Enter certificate content..."
+    ></textarea>
+
+    <button
+      (click)="suggestText()"
+      class="mt-4 w-full px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 disabled:opacity-50 dark:bg-green-600 dark:hover:bg-green-700"
+      [disabled]="isLoading"
+    >
+      {{ isLoading ? 'Generating...' : '✨ AI ADA' }}
+    </button>
+  </div>
+</div>
+
+
+</div>
+

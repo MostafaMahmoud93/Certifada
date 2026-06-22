@@ -1,0 +1,34 @@
+<section class="relative md:py-24 py-16 dark:bg-slate-900" id="review">
+    <div class="container relative">
+        <div class="grid grid-cols-1 pb-6 text-center">
+            <h3 class="font-semibold text-2xl leading-normal mb-4 dark:text-slate-200">What Our Users Say</h3>
+            <p class="text-slate-400 max-w-xl mx-auto">This is just a simple text made for this unique and awesome template, you can replace it with any text.</p>
+        </div>
+
+        <div class="grid grid-cols-1 mt-6">
+            <div class="tiny-three-item">
+                <div *ngFor="let item of clientData" class="tiny-slide text-center">
+                    <div class="cursor-e-resize">
+                        <div class="content relative rounded shadow dark:shadow-gray-700 m-2 p-6 bg-white dark:bg-slate-900 before:content-[''] before:absolute before:start-1/2 before:-bottom-[4px] before:box-border before:border-8 before:rotate-[45deg] before:border-t-transparent before:border-e-white dark:before:border-e-slate-900 before:border-b-white dark:before:border-b-slate-900 before:border-s-transparent before:shadow-testi dark:before:shadow-gray-700 before:origin-top-left">
+                            <i class="mdi mdi-format-quote-open mdi-48px text-violet-500"></i>
+                            <p class="text-slate-400">{{item.desc}}</p>
+                            <ul class="list-none mb-0 text-amber-400 mt-3">
+                                <li class="inline"><i class="mdi mdi-star"></i></li>
+                                <li class="inline"><i class="mdi mdi-star"></i></li>
+                                <li class="inline"><i class="mdi mdi-star"></i></li>
+                                <li class="inline"><i class="mdi mdi-star"></i></li>
+                                <li class="inline"><i class="mdi mdi-star"></i></li>
+                            </ul>
+                        </div>
+                        
+                        <div class="text-center mt-5">
+                            <img [src]="item.image" class="size-14 rounded-full shadow-md dark:shadow-gray-700 mx-auto" alt="">
+                            <h6 class="mt-2 font-semibold dark:text-slate-200">{{item.name}}</h6>
+                            <span class="text-slate-400 text-sm">{{item.title}}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>

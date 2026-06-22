@@ -1,0 +1,137 @@
+:host { display: block; height: 100%; }
+
+/* ============================ layout grid ============================ */
+.layout {
+  display: grid;
+  height: 100%;
+  min-height: 0;
+  grid-template-rows: 100%;
+  grid-template-columns: 76px 288px 1fr 324px;
+  grid-template-areas: "sidebar detail canvas properties";
+  background: var(--cf-bg) !important;
+  color: var(--cf-ink-700) !important;
+  transition: grid-template-columns .25s ease;
+  overflow: hidden;
+}
+.layout.collapsed_details { grid-template-columns: 76px 0 1fr 324px; }
+.layout.expanded_details  { grid-template-columns: 76px 288px 1fr 324px; }
+
+.sidebar    { grid-area: sidebar; overflow: hidden; background: var(--cf-surface) !important; border-inline-end: 1px solid var(--cf-line); }
+.detail     { grid-area: detail; overflow: auto; background: var(--cf-surface) !important; border-inline-end: 1px solid var(--cf-line); }
+.canvas     { grid-area: canvas; min-width: 0; background: var(--cf-bg) !important; }
+.properties { grid-area: properties; border-inline-start: 1px solid var(--cf-line); background: var(--cf-surface) !important; }
+.layout.collapsed_details .detail { border-inline-end: 0; }
+
+@media (max-width: 1100px) {
+  .layout, .layout.expanded_details { grid-template-columns: 64px 220px 1fr 280px; }
+  .layout.collapsed_details { grid-template-columns: 64px 0 1fr 280px; }
+}
+
+/* ============================ top toolbar ============================ */
+.toolbar {
+  background: var(--cf-surface) !important;
+  border-bottom: 1px solid var(--cf-line);
+  padding: 8px 12px !important;
+  gap: 6px;
+  min-height: 52px;
+}
+.toolbar > div { gap: 6px !important; }
+.toolbar span { color: var(--cf-ink-600) !important; font-size: 13px; }
+
+.toolbar button {
+  background: var(--cf-surface) !important;
+  border: 1px solid var(--cf-line) !important;
+  color: var(--cf-ink-600) !important;
+  border-radius: var(--cf-radius-sm) !important;
+  box-shadow: none !important;
+  height: 36px; min-width: 36px; padding: 0 8px !important;
+  display: inline-flex; align-items: center; justify-content: center;
+  transition: background .15s, border-color .15s, color .15s;
+}
+.toolbar button:hover {
+  background: var(--cf-brand-50) !important;
+  border-color: var(--cf-brand-500) !important;
+  color: var(--cf-brand-700) !important;
+}
+.toolbar button .material-icons { font-size: 20px !important; }
+.toolbar input[type="number"] {
+  background: var(--cf-surface) !important;
+  border: 1px solid var(--cf-line) !important;
+  color: var(--cf-ink-900) !important;
+  border-radius: var(--cf-radius-sm) !important;
+  height: 36px;
+}
+.toolbar input[type="number"]:focus { border-color: var(--cf-brand-500) !important; outline: none; box-shadow: var(--cf-ring); }
+
+/* ============================ settings dropdown ============================ */
+.toolbar .absolute {
+  background: var(--cf-surface) !important;
+  border: 1px solid var(--cf-line) !important;
+  border-radius: var(--cf-radius-md) !important;
+  box-shadow: var(--cf-shadow-lg) !important;
+  overflow: hidden;
+}
+.toolbar .absolute li { color: var(--cf-ink-700) !important; }
+.toolbar .absolute li:hover { background: var(--cf-surface-2) !important; }
+.toolbar .absolute .border-b, .toolbar .absolute .border-gray-200 { border-color: var(--cf-line) !important; }
+.toolbar .absolute .material-icons { color: var(--cf-ink-500) !important; }
+.toolbar .absolute .text-blue-600,
+.toolbar .absolute .text-blue-400,
+.toolbar .absolute .text-blue-200 { color: var(--cf-brand-600) !important; }
+.toolbar .absolute .bg-blue-600 { background: var(--cf-brand-50) !important; }
+.toolbar .absolute ul ul { background: var(--cf-surface) !important; box-shadow: var(--cf-shadow-md) !important; }
+
+/* ============================ canvas stage ============================ */
+.canvas-scroll-container { background: var(--cf-surface-2) !important; }
+.canvas-scroll-container .bg-gray-200 { background: var(--cf-surface) !important; }
+.canvas-scroll-container .border-gray-400 { border-color: var(--cf-line) !important; }
+
+/* ============================ side panels (Properties / Layers) ============================ */
+.properties { display: flex; flex-direction: column; position: relative; }
+.properties .bg-gray-100 {
+  background: var(--cf-surface-2) !important;
+  color: var(--cf-ink-900) !important;
+  border-color: var(--cf-line) !important;
+  font-size: 12.5px; font-weight: 600;
+  letter-spacing: .02em;
+}
+.properties .bg-gray-100:hover { color: var(--cf-brand-600) !important; }
+.properties .bg-gray-100 .material-icons { color: var(--cf-ink-400) !important; }
+
+/* ============================ AI floating button + panel ============================ */
+button[aria-label="AI Assistant"] {
+  background: var(--cf-brand-600) !important;
+  color: #fff !important;
+  box-shadow: var(--cf-shadow-lg) !important;
+  animation: none !important;
+}
+button[aria-label="AI Assistant"]:hover { background: var(--cf-brand-700) !important; }
+
+.fixed textarea {
+  background: var(--cf-surface) !important;
+  border: 1px solid var(--cf-line) !important;
+  color: var(--cf-ink-900) !important;
+  border-radius: var(--cf-radius-sm) !important;
+}
+.fixed .bg-indigo-600, .fixed .bg-green-600 { background: var(--cf-brand-600) !important; }
+
+/* ============================ modals (preview / versions / workflow) ============================ */
+.fixed.inset-0 > div {
+  background: var(--cf-surface) !important;
+  color: var(--cf-ink-700) !important;
+  border: 1px solid var(--cf-line);
+  border-radius: var(--cf-radius-lg) !important;
+  box-shadow: var(--cf-shadow-lg) !important;
+}
+.fixed.inset-0 h3 { color: var(--cf-ink-900) !important; }
+.fixed.inset-0 .text-blue-600 { color: var(--cf-brand-600) !important; }
+.fixed.inset-0 .text-red-600 { color: var(--cf-danger) !important; }
+.fixed.inset-0 .bg-gray-50 { background: var(--cf-surface-2) !important; }
+
+/* ============================ misc ============================ */
+.cursor-col-resize { cursor: col-resize; }
+.canvas-container { padding: 1rem; overflow: hidden; display: flex; justify-content: center; align-items: center; }
+.canvas-scroll-container { padding: 1rem; }
+li:hover > ul { display: block; }
+.material-icons { padding: 1px; }
+.resize-gutter { position: absolute; left: 0; top: 0; bottom: 0; width: 10px; background-color: rgba(0,0,0,.1); cursor: ew-resize; z-index: 1000; }

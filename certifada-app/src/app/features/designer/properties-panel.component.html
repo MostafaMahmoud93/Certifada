@@ -1,0 +1,225 @@
+@if (obj) {
+  <div class="section">
+    <h4>{{ isTextLike() ? 'Text' : (obj.type | titlecase) }}</h4>
+
+    <!-- Text / field / cell controls -->
+    @if (isTextLike()) {
+      @if (val('objType') === 'field') {
+        <div class="field">
+          <label>Variable</label>
+          <div class="var-chip">{{ val('text') }}</div>
+          <small class="muted">Locked — only styling changes. The value is filled per-recipient in Bulk.</small>
+        </div>
+      } @else {
+        <div class="field">
+          <label>Content</label>
+          <textarea rows="2" [value]="val('text')"
+            (input)="set('text', $any($event.target).value)" (change)="commit()"></textarea>
+        </div>
+      }
+
+      <div class="field">
+        <label>Font</label>
+        <select [value]="val('fontFamily')" (change)="setFont($any($event.target).value)">
+          @for (f of fonts; track f) { <option [value]="f" [style.fontFamily]="f">{{ f }}</option> }
+          @if (svc.userFonts().length) {
+            <optgroup label="Your fonts">
+              @for (f of svc.userFonts(); track f) { <option [value]="f" [style.fontFamily]="f">{{ f }}</option> }
+            </optgroup>
+          }
+        </select>
+      </div>
+
+      <div class="grid-2">
+        <div class="field">
+          <label>Size</label>
+          <input class="rng" type="number" min="6" max="300" [value]="num('fontSize', 24)"
+            (input)="set('fontSize', +$any($event.target).value)" (change)="commit()" />
+          <select class="sel" [value]="num('fontSize', 24)" (change)="set('fontSize', +$any($event.target).value); commit()">
+            @for (o of sizeOpts; track o) { <option [value]="o">{{ o }}</option> }
+          </select>
+        </div>
+        <div class="field">
+          <label>Line height</label>
+          <input class="rng" type="number" min="0.5" max="3" step="0.1" [value]="num('lineHeight', 1.16)"
+            (input)="set('lineHeight', +$any($event.target).value)" (change)="commit()" />
+          <select class="sel" [value]="num('lineHeight', 1.16)" (change)="set('lineHeight', +$any($event.target).value); commit()">
+            @for (o of lineOpts; track o) { <option [value]="o">{{ o }}</option> }
+          </select>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Letter spacing</label>
+        <input class="rng" type="range" min="-100" max="800" [value]="num('charSpacing', 0)"
+          (input)="set('charSpacing', +$any($event.target).value)" (change)="commit()" />
+        <select class="sel" [value]="num('charSpacing', 0)" (change)="set('charSpacing', +$any($event.target).value); commit()">
+          @for (o of spacingOpts; track o) { <option [value]="o">{{ o }}</option> }
+        </select>
+      </div>
+
+      <div class="btn-group">
+        <button class="btn btn-sm" [class.on]="val('fontWeight') === 'bold' || val('fontWeight') === '700'"
+          (click)="toggleFontWeight()" title="Bold"><b>B</b></button>
+        <button class="btn btn-sm" [class.on]="val('fontStyle') === 'italic'"
+          (click)="toggleFontStyle()" title="Italic"><i>I</i></button>
+        <button class="btn btn-sm" [class.on]="val('underline')"
+          (click)="toggle('underline')" title="Underline"><u>U</u></button>
+        <button class="btn btn-sm" [class.on]="val('linethrough')"
+          (click)="toggle('linethrough')" title="Strikethrough"><s>S</s></button>
+      </div>
+
+      <div class="btn-group mt-1">
+        <button class="btn btn-sm" [class.on]="val('textAlign') === 'left'" (click)="setAndCommit('textAlign', 'left')" title="Align left">⬅</button>
+        <button class="btn btn-sm" [class.on]="val('textAlign') === 'center'" (click)="setAndCommit('textAlign', 'center')" title="Align center">⬌</button>
+        <button class="btn btn-sm" [class.on]="val('textAlign') === 'right'" (click)="setAndCommit('textAlign', 'right')" title="Align right">➡</button>
+        <button class="btn btn-sm" [class.on]="val('textAlign') === 'justify'" (click)="setAndCommit('textAlign', 'justify')" title="Justify">☰</button>
+      </div>
+
+      <div class="field mt-1">
+        <label>Text color</label>
+        <input type="color" [value]="val('fill') || '#000000'"
+          (input)="set('fill', $any($event.target).value)" (change)="commit()" />
+      </div>
+    }
+
+    <!-- Shape fill / stroke -->
+    @if (is('rect') || is('circle') || is('triangle')) {
+      <div class="field">
+        <label>Fill</label>
+        <input type="color" [value]="val('fill') || '#000000'"
+          (input)="set('fill', $any($event.target).value)" (change)="commit()" />
+      </div>
+      @if (is('rect')) {
+        <div class="grid-2">
+          <div class="field">
+            <label>Corner X</label>
+            <input type="number" min="0" max="100" [value]="num('rx')"
+              (input)="set('rx', +$any($event.target).value)" (change)="commit()" />
+          </div>
+          <div class="field">
+            <label>Corner Y</label>
+            <input type="number" min="0" max="100" [value]="num('ry')"
+              (input)="set('ry', +$any($event.target).value)" (change)="commit()" />
+          </div>
+        </div>
+      }
+    }
+
+    @if (is('rect') || is('circle') || is('triangle') || is('line')) {
+      <div class="grid-2">
+        <div class="field">
+          <label>Stroke</label>
+          <input type="color" [value]="val('stroke') || '#000000'"
+            (input)="set('stroke', $any($event.target).value)" (change)="commit()" />
+        </div>
+        <div class="field">
+          <label>Width</label>
+          <input type="number" min="0" max="40" [value]="num('strokeWidth', 1)"
+            (input)="set('strokeWidth', +$any($event.target).value)" (change)="commit()" />
+        </div>
+      </div>
+    }
+
+    <!-- Image filters -->
+    @if (is('image')) {
+      <div class="field">
+        <label>Flip</label>
+        <div class="btn-group">
+          <button class="btn btn-sm" (click)="flip('x')" title="Flip horizontal"><span class="material-icons">swap_horiz</span><span class="lbl">Horizontal</span></button>
+          <button class="btn btn-sm" (click)="flip('y')" title="Flip vertical"><span class="material-icons">swap_vert</span><span class="lbl">Vertical</span></button>
+        </div>
+      </div>
+      <div class="field"><label>Brightness</label>
+        <input class="rng" type="range" min="-1" max="1" step="0.05" [value]="fx('brightness')"
+          (input)="setFx('brightness', +$any($event.target).value)" (change)="commit()" />
+        <select class="sel" [value]="fx('brightness')" (change)="setFx('brightness', +$any($event.target).value); commit()">
+          @for (o of signedOpts; track o) { <option [value]="o">{{ o }}</option> }
+        </select></div>
+      <div class="field"><label>Contrast</label>
+        <input class="rng" type="range" min="-1" max="1" step="0.05" [value]="fx('contrast')"
+          (input)="setFx('contrast', +$any($event.target).value)" (change)="commit()" />
+        <select class="sel" [value]="fx('contrast')" (change)="setFx('contrast', +$any($event.target).value); commit()">
+          @for (o of signedOpts; track o) { <option [value]="o">{{ o }}</option> }
+        </select></div>
+      <div class="field"><label>Saturation</label>
+        <input class="rng" type="range" min="-1" max="1" step="0.05" [value]="fx('saturation')"
+          (input)="setFx('saturation', +$any($event.target).value)" (change)="commit()" />
+        <select class="sel" [value]="fx('saturation')" (change)="setFx('saturation', +$any($event.target).value); commit()">
+          @for (o of signedOpts; track o) { <option [value]="o">{{ o }}</option> }
+        </select></div>
+      <div class="field"><label>Blur</label>
+        <input class="rng" type="range" min="0" max="1" step="0.02" [value]="fx('blur')"
+          (input)="setFx('blur', +$any($event.target).value)" (change)="commit()" />
+        <select class="sel" [value]="fx('blur')" (change)="setFx('blur', +$any($event.target).value); commit()">
+          @for (o of blurOpts; track o) { <option [value]="o">{{ o }}</option> }
+        </select></div>
+      <div class="field"><label>Pixelate</label>
+        <input class="rng" type="range" min="0" max="20" step="1" [value]="fx('pixelate')"
+          (input)="setFx('pixelate', +$any($event.target).value)" (change)="commit()" />
+        <select class="sel" [value]="fx('pixelate')" (change)="setFx('pixelate', +$any($event.target).value); commit()">
+          @for (o of pixOpts; track o) { <option [value]="o">{{ o }}</option> }
+        </select></div>
+      <div class="btn-group">
+        <button class="btn btn-sm" [class.on]="fx('grayscale')" (click)="toggleFx('grayscale')">Gray</button>
+        <button class="btn btn-sm" [class.on]="fx('sepia')" (click)="toggleFx('sepia')">Sepia</button>
+        <button class="btn btn-sm" [class.on]="fx('invert')" (click)="toggleFx('invert')">Invert</button>
+      </div>
+      <button class="btn btn-sm mt-1" (click)="resetFx()" title="Reset filters"><span class="material-icons">filter_alt_off</span><span class="lbl">Reset filters</span></button>
+    }
+
+    <!-- Common -->
+    <div class="field">
+      <label>Opacity</label>
+      <input class="rng" type="range" min="0" max="1" step="0.05" [value]="num('opacity', 1)"
+        (input)="set('opacity', +$any($event.target).value)" (change)="commit()" />
+      <select class="sel" [value]="num('opacity', 1)" (change)="set('opacity', +$any($event.target).value); commit()">
+        @for (o of opacityOpts; track o) { <option [value]="o">{{ o }}</option> }
+      </select>
+    </div>
+    <div class="field">
+      <label>Rotation</label>
+      <input class="rng" type="range" min="0" max="360" [value]="num('angle')"
+        (input)="set('angle', +$any($event.target).value)" (change)="commit()" />
+      <select class="sel" [value]="num('angle')" (change)="set('angle', +$any($event.target).value); commit()">
+        @for (o of rotOpts; track o) { <option [value]="o">{{ o }}</option> }
+      </select>
+    </div>
+  </div>
+
+  <!-- Arrange -->
+  <div class="section">
+    <h4>Arrange</h4>
+    <div class="btn-group">
+      <button class="btn btn-sm" (click)="svc.align('left')" title="Align left">⇤</button>
+      <button class="btn btn-sm" (click)="svc.align('center-h')" title="Center H">⇆</button>
+      <button class="btn btn-sm" (click)="svc.align('right')" title="Align right">⇥</button>
+      <button class="btn btn-sm" (click)="svc.align('top')" title="Align top">⤒</button>
+      <button class="btn btn-sm" (click)="svc.align('center-v')" title="Center V">⇅</button>
+      <button class="btn btn-sm" (click)="svc.align('bottom')" title="Align bottom">⤓</button>
+    </div>
+    <div class="btn-group mt-1">
+      <button class="btn btn-sm" (click)="svc.bringToFront()" title="Bring to front"><span class="material-icons">flip_to_front</span></button>
+      <button class="btn btn-sm" (click)="svc.bringForward()" title="Bring forward"><span class="material-icons">arrow_upward</span></button>
+      <button class="btn btn-sm" (click)="svc.sendBackwards()" title="Send backward"><span class="material-icons">arrow_downward</span></button>
+      <button class="btn btn-sm" (click)="svc.sendToBack()" title="Send to back"><span class="material-icons">flip_to_back</span></button>
+    </div>
+    <div class="btn-group mt-1">
+      <button class="btn btn-sm" (click)="svc.cloneSelected()" title="Duplicate"><span class="material-icons">content_copy</span><span class="lbl">Duplicate</span></button>
+      <button class="btn btn-sm btn-danger" (click)="svc.deleteSelected()" title="Delete"><span class="material-icons">delete</span><span class="lbl">Delete</span></button>
+    </div>
+  </div>
+} @else {
+  <div class="section empty">
+    <p class="muted">Select an element to edit its properties — or add one from the rail. Background &amp; theme live in the <b>Background</b> panel.</p>
+  </div>
+}
+
+
+<!-- preset value lists for the ribbon's number boxes (type or pick, like Word) -->
+<datalist id="op_opacity"><option value="0"></option><option value="0.25"></option><option value="0.5"></option><option value="0.75"></option><option value="1"></option></datalist>
+<datalist id="op_rot"><option value="0"></option><option value="45"></option><option value="90"></option><option value="135"></option><option value="180"></option><option value="270"></option><option value="360"></option></datalist>
+<datalist id="op_spacing"><option value="-50"></option><option value="0"></option><option value="50"></option><option value="100"></option><option value="200"></option><option value="400"></option></datalist>
+<datalist id="op_signed"><option value="-0.5"></option><option value="-0.25"></option><option value="0"></option><option value="0.25"></option><option value="0.5"></option></datalist>
+<datalist id="op_blur"><option value="0"></option><option value="0.1"></option><option value="0.25"></option><option value="0.5"></option><option value="1"></option></datalist>
+<datalist id="op_pix"><option value="0"></option><option value="4"></option><option value="8"></option><option value="12"></option><option value="20"></option></datalist>

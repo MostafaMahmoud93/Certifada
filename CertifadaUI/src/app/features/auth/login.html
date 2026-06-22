@@ -1,0 +1,105 @@
+<div class="lg">
+
+  <!-- Brand panel -->
+  <div class="lg-brand">
+    <div class="lg-brand-top">
+      <span class="lg-mark"><i class="material-icons">workspace_premium</i></span>
+      <span class="lg-brand-name">Certifada</span>
+    </div>
+    <div class="lg-brand-body">
+      <h2>Issue, manage and verify certificates in one place.</h2>
+      <p>Design templates, automate issuance, and let recipients verify instantly.</p>
+      <ul class="lg-features">
+        <li><i class="material-icons">check_circle</i><span>Drag-and-drop certificate designer</span></li>
+        <li><i class="material-icons">check_circle</i><span>Branded, multi-tenant workspaces</span></li>
+        <li><i class="material-icons">check_circle</i><span>Instant public verification</span></li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Form panel -->
+  <div class="lg-form">
+    <div class="lg-form-inner">
+
+      <!-- LOGIN -->
+      <ng-container *ngIf="!isSignUp">
+        <h1 class="lg-title">Welcome back</h1>
+        <p class="lg-sub cf-muted">Sign in to your Certifada workspace</p>
+
+        <form [formGroup]="loginForm" (ngSubmit)="onSubmit()">
+          <div class="cf-field">
+            <label class="cf-label">Email</label>
+            <div class="cf-inwrap">
+              <i class="material-icons cf-lead">mail</i>
+              <input class="cf-input" type="email" formControlName="email" placeholder="you@example.com" />
+            </div>
+          </div>
+          <div class="cf-field">
+            <label class="cf-label">Password</label>
+            <div class="cf-inwrap cf-has-trail">
+              <i class="material-icons cf-lead">lock</i>
+              <input class="cf-input" [type]="showPassword ? 'text' : 'password'" formControlName="password" placeholder="••••••••" />
+              <button type="button" class="cf-trail" (click)="togglePassword()" aria-label="Toggle password">
+                <i class="material-icons">{{ showPassword ? 'visibility_off' : 'visibility' }}</i>
+              </button>
+            </div>
+          </div>
+
+          <div class="lg-row">
+            <label class="lg-check"><input type="checkbox" formControlName="remember" /><span>Remember me</span></label>
+            <a href="#">Forgot password?</a>
+          </div>
+
+          <button type="submit" class="cf-btn cf-btn-primary cf-btn-block lg-submit" [disabled]="loginForm.invalid">Sign in</button>
+        </form>
+
+        <div class="lg-divider">or continue with</div>
+        <div class="lg-socials">
+          <button class="lg-social" (click)="signInWithGoogle()" aria-label="Continue with Google"><img src="assets/google.png" alt="" class="lg-social-ic" /></button>
+          <button class="lg-social" (click)="signInWithFacebook()" aria-label="Continue with Facebook"><img src="assets/facebook.png" alt="" class="lg-social-ic" /></button>
+          <button class="lg-social" (click)="signInWithMicrosoft()" aria-label="Continue with Microsoft"><img src="assets/microsoft.png" alt="" class="lg-social-ic" /></button>
+        </div>
+
+        <p class="lg-foot cf-muted">New to Certifada? <button type="button" class="lg-link" (click)="isSignUp = true">Create an account</button></p>
+      </ng-container>
+
+      <!-- SIGNUP -->
+      <ng-container *ngIf="isSignUp">
+        <h1 class="lg-title">Create your account</h1>
+        <p class="lg-sub cf-muted">Start issuing certificates in minutes</p>
+
+        <form [formGroup]="signUpForm" (ngSubmit)="onSubmit()">
+          <div class="cf-field">
+            <label class="cf-label">Email</label>
+            <div class="cf-inwrap">
+              <i class="material-icons cf-lead">mail</i>
+              <input class="cf-input" type="email" formControlName="email" placeholder="you@example.com" />
+            </div>
+          </div>
+          <div class="cf-field">
+            <label class="cf-label">Password</label>
+            <div class="cf-inwrap cf-has-trail">
+              <i class="material-icons cf-lead">lock</i>
+              <input class="cf-input" [type]="showPassword ? 'text' : 'password'" formControlName="password" placeholder="••••••••" />
+              <button type="button" class="cf-trail" (click)="togglePassword()" aria-label="Toggle password">
+                <i class="material-icons">{{ showPassword ? 'visibility_off' : 'visibility' }}</i>
+              </button>
+            </div>
+          </div>
+
+          <button type="submit" class="cf-btn cf-btn-primary cf-btn-block lg-submit" [disabled]="signUpForm.invalid">Create account</button>
+        </form>
+
+        <div class="lg-divider">or sign up with</div>
+        <div class="lg-socials">
+          <button class="lg-social" (click)="signInWithGoogle()" aria-label="Sign up with Google"><img src="assets/google.png" alt="" class="lg-social-ic" /></button>
+          <button class="lg-social" (click)="signInWithFacebook()" aria-label="Sign up with Facebook"><img src="assets/facebook.png" alt="" class="lg-social-ic" /></button>
+          <button class="lg-social" (click)="signInWithMicrosoft()" aria-label="Sign up with Microsoft"><img src="assets/microsoft.png" alt="" class="lg-social-ic" /></button>
+        </div>
+
+        <p class="lg-foot cf-muted">Already have an account? <button type="button" class="lg-link" (click)="isSignUp = false">Sign in</button></p>
+      </ng-container>
+
+    </div>
+  </div>
+</div>

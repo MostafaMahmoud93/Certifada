@@ -1,0 +1,49 @@
+<!-- Slide Drawer -->
+<div *ngIf="selectedAutomation" class="fixed inset-0 bg-black bg-opacity-50 flex justify-end z-50">
+  <div class="bg-white w-full max-w-md p-6 overflow-y-auto h-full">
+    <h2 class="text-xl font-bold mb-4">{{ selectedAutomation.name || 'New Automation' }}</h2>
+
+    <!-- Name -->
+    <label class="block text-sm font-medium mb-1">Automation Name</label>
+    <input type="text" [(ngModel)]="selectedAutomation.name"
+           class="w-full border px-3 py-2 rounded mb-4" />
+
+    <!-- WHEN -->
+    <label class="block text-sm font-medium mb-1">When</label>
+    <select [(ngModel)]="selectedAutomation.trigger"
+            class="w-full border px-3 py-2 rounded mb-4">
+      <option *ngFor="let t of triggers" [value]="t">{{ t }}</option>
+    </select>
+
+    <!-- THEN -->
+    <label class="block text-sm font-medium mb-1">Then</label>
+    <select [(ngModel)]="selectedAutomation.action"
+            class="w-full border px-3 py-2 rounded mb-4">
+      <option *ngFor="let a of actions" [value]="a">{{ a }}</option>
+    </select>
+
+    <!-- ONLY IF Conditions -->
+    <app-condition-builder
+      [(conditions)]="selectedAutomation.conditions">
+    </app-condition-builder>
+
+    <!-- Checkboxes -->
+    <div class="space-y-2 mt-4">
+      <label class="flex items-center">
+        <input type="checkbox" [(ngModel)]="selectedAutomation.enabled" class="mr-2">
+        Enable Automation
+      </label>
+
+      <label class="flex items-center">
+        <input type="checkbox" [(ngModel)]="selectedAutomation.fireOnAnyCondition" class="mr-2">
+        Fire when at least one condition is met
+      </label>
+    </div>
+
+    <!-- Actions -->
+    <div class="flex justify-between mt-6">
+      <button class="px-4 py-2 bg-gray-200 rounded" (click)="closeSlide()">Cancel</button>
+      <button class="px-4 py-2 bg-blue-600 text-white rounded" (click)="saveAutomation()">Save</button>
+    </div>
+  </div>
+</div>

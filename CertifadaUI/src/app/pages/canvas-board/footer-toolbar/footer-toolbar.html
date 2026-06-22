@@ -1,0 +1,25 @@
+<div class="flex justify-center items-center h-full space-x-4">
+  <button (click)="alignLeft()" [disabled]="!hasSelection" class="px-1 border rounded hover:bg-gray-200 dark:hover:bg-gray-700 disabled:opacity-50 dark:border-gray-600" matTooltip="Align Left">
+    <i class="material-icons text-lg dark:text-gray-300">format_align_left</i>  
+   </button>
+
+  <button (click)="alignRight()" [disabled]="!hasSelection" class="px-1 border rounded hover:bg-gray-200 dark:hover:bg-gray-700 disabled:opacity-50 dark:border-gray-600" matTooltip="Align Right">
+     <i class="material-icons text-lg dark:text-gray-300">format_align_right</i>  
+  </button>
+
+  <button (click)="alignTop()" [disabled]="!hasSelection" class="px-1 border rounded hover:bg-gray-200 dark:hover:bg-gray-700 disabled:opacity-50 dark:border-gray-600" matTooltip="Align Top">
+     <i class="material-icons text-lg dark:text-gray-300">vertical_align_top</i>
+  </button>
+
+  <button (click)="alignBottom()"[disabled]="!hasSelection" class="px-1 border rounded hover:bg-gray-200 dark:hover:bg-gray-700 disabled:opacity-50 dark:border-gray-600" matTooltip="Align Bottom">
+    <i class="material-icons text-lg dark:text-gray-300">vertical_align_bottom</i>
+  </button>
+
+  <button (click)="alignCenterVertically()" [disabled]="!hasSelection" class="px-1 border rounded hover:bg-gray-200 dark:hover:bg-gray-700 disabled:opacity-50 dark:border-gray-600" matTooltip="Center Vertically">
+   <i class="material-icons text-lg dark:text-gray-300">align_vertical_center</i>
+  </button>
+
+  <button (click)="alignCenterHorizontally()" [disabled]="!hasSelection" class="px-1 border rounded hover:bg-gray-200 dark:hover:bg-gray-700 disabled:opacity-50 dark:border-gray-600" matTooltip="Center Horizontally">
+    <i class="material-icons text-lg dark:text-gray-300">align_horizontal_center</i>
+  </button>
+</div>

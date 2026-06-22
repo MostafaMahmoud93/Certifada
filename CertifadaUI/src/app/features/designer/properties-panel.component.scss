@@ -1,0 +1,93 @@
+:host {
+  display: block;
+  overflow-y: auto;
+  height: 100%;
+  font-family: var(--cf-font);
+  color: var(--cf-ink-700);
+}
+
+.section {
+  padding: 1rem;
+  border-bottom: 1px solid var(--cf-line);
+}
+.section h4 {
+  font-size: .8rem;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  color: var(--cf-ink-400);
+  margin: 0 0 .75rem;
+  font-weight: 700;
+}
+.section.empty { padding: 1.5rem 1rem; }
+.muted { color: var(--cf-ink-500); font-size: 12.5px; }
+
+/* fields */
+.field { margin-bottom: .75rem; }
+.field > label {
+  display: block;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--cf-ink-600);
+  margin-bottom: .35rem;
+}
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: .5rem; }
+.mt-1 { margin-top: .4rem; }
+
+input, select, textarea {
+  width: 100%;
+  border: 1px solid var(--cf-line);
+  border-radius: var(--cf-radius-sm);
+  padding: 7px 10px;
+  font: inherit;
+  font-size: 13px;
+  background: var(--cf-surface);
+  color: var(--cf-ink-900);
+  outline: none;
+}
+input:focus, select:focus, textarea:focus { border-color: var(--cf-brand-500); box-shadow: var(--cf-ring); }
+textarea { resize: vertical; }
+input[type="range"] { padding: 0; accent-color: var(--cf-brand-600); }
+input[type="color"] {
+  height: 36px;
+  padding: 3px;
+  cursor: pointer;
+}
+input[type="file"] { border: 0; padding: 0; font-size: 12px; }
+
+/* buttons */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  padding: 7px 10px;
+  border: 1px solid var(--cf-line);
+  border-radius: var(--cf-radius-sm);
+  background: var(--cf-surface);
+  color: var(--cf-ink-700);
+  cursor: pointer;
+  transition: background .15s, border-color .15s, color .15s;
+}
+.btn:hover { background: var(--cf-surface-2); border-color: var(--cf-ink-400); color: var(--cf-ink-900); }
+.btn-sm { padding: 6px 8px; font-size: 12.5px; }
+.btn-block { width: 100%; }
+.btn-danger { color: var(--cf-danger); border-color: color-mix(in srgb, var(--cf-danger) 30%, transparent); }
+.btn-danger:hover { background: var(--cf-danger-soft); color: var(--cf-danger); }
+
+.btn-group { display: flex; gap: .3rem; flex-wrap: wrap; }
+.btn-group .btn { flex: 1; justify-content: center; min-width: 34px; }
+.btn-group .btn.on {
+  background: var(--cf-brand-600);
+  border-color: var(--cf-brand-600);
+  color: #fff;
+}
+
+small code {
+  background: var(--cf-brand-50);
+  padding: 0 4px;
+  border-radius: 4px;
+  color: var(--cf-brand-600);
+}

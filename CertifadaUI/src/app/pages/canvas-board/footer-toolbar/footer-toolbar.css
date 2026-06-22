@@ -1,0 +1,12 @@
+:host {
+  display: block;
+  height: 35px;
+  background-color: #f9fafb;
+}
+button:disabled {
+  cursor: not-allowed;
+}
+
+.material-icons{
+padding: 1px;
+}

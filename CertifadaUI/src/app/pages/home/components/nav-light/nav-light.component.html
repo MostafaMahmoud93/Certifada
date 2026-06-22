@@ -1,0 +1,50 @@
+<nav class="navbar" id="navbar" [ngClass]="scrolled ? 'is-sticky' : '' ">
+    <div class="container relative flex flex-wrap items-center justify-between">
+        <a class="navbar-brand md:me-8" [routerLink]="'/'">
+            <span class="inline-block dark:hidden">
+                <img [src]="'/assets/logo-dark.png'" class="l-dark" alt="">
+                <img [src]="'/assets/logo-light.png'" class="l-light" alt="">
+            </span>
+            <img [src]="'/assets/logo-light.png'" class="hidden dark:inline-block" alt="">
+        </a>
+
+        <div class="nav-icons flex items-center lg_992:order-2 ms-auto md:ms-8">
+            <ul class="list-none menu-social mb-0">
+                <li class="inline">
+                    <a [routerLink]="[]" class="h-8 px-4 text-[12px] tracking-wider inline-flex items-center justify-center font-medium rounded-md bg-violet-500 text-white uppercase">Login</a>
+                </li>
+            </ul>
+            <button data-collapse="menu-collapse" type="button" class="collapse-btn inline-flex items-center ms-2 text-dark dark:text-white lg_992:hidden" aria-controls="menu-collapse" aria-expanded="false" (click)="toggleManu()">
+                <span class="sr-only">Navigation Menu</span>
+                <i class="material-icons text-[24px]">menu</i>
+            </button>
+        </div>
+
+        <!-- Navbar Manu -->
+        <div class="navigation lg_992:order-1 lg_992:flex ms-auto" [ngClass]="manu=== true ? 'block' : 'hidden' " id="menu-collapse">
+            <ul class="navbar-nav nav-light sidebar-nav cursor-pointer" id="navbar-navlist">
+                <li class="nav-item ms-0 home active">
+                    <a class="nav-link active" (click)="scrollToSection('home')">Home</a>
+                </li>
+                <li class="nav-item ms-0 about">
+                    <a class="nav-link" (click)="scrollToSection('about')">about</a>
+                </li>
+                <li class="nav-item ms-0 services">
+                    <a class="nav-link" (click)="scrollToSection('services')">Services</a>
+                </li>
+                <li class="nav-item ms-0 review">
+                    <a class="nav-link" (click)="scrollToSection('review')">Testimonial</a>
+                </li>
+                <li class="nav-item ms-0 pricing">
+                    <a class="nav-link" (click)="scrollToSection('pricing')">Pricing</a>
+                </li>
+                <li class="nav-item ms-0 blog">
+                    <a class="nav-link" (click)="scrollToSection('blog')">Blogs</a>
+                </li>
+                <li class="nav-item ms-0 contact">
+                    <a class="nav-link" (click)="scrollToSection('contact')">Contact us</a>
+                </li>
+            </ul>
+        </div>
+    </div>
+</nav>

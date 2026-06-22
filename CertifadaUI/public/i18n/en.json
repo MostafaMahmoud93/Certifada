@@ -1,0 +1,38 @@
+{
+  "LAND": {
+    "HELLO":"HELLO, John Doe",
+    "WELCOME": "Welcome back!",
+    "CREATE_NEW": "Create New",
+    "HOME":"Home",
+    "DASHBOARD": "Dashboard",
+    "TEMPLATES": "Templates",
+    "CREDINTIALS": "Credentials",
+    "BRANDING": "Branding",
+    "USERS": "Users",
+    "USER_LIST":"Ueres List",
+    "ROLES":"Roles",
+    "AUTOMATION":"Automation",
+    "SETTINGS":"Settings",
+    "EMAILS":"Emails",
+    "REPORTS":"Reports",
+    "LOGOUT":"Logout",
+    "SUPPORT":"Support",
+    "PLAN":"Plan Information",
+    "PLAN_TYPE":"Plan Type",
+    "STANDARD":"standard"
+  },
+  "DASHBOARD":{
+    "TILE1":"Templates",
+    "TILE2":"Generated Certificates",
+    "TILE3":"Approved Certificates",
+    "TILE4":"Under-progress Certificates",
+    "TILE5":"Number of Users",
+    "CODE":"Code"
+  },
+    "APP": {
+    "TITLE": "Certifada"
+  },
+  "FLOAT": {
+    "MESSAGE": "Get Stunning Certificates Designed!"
+  }
+}

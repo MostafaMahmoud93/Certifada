@@ -1,0 +1,23 @@
+<ng-container *ngFor="let position of getAllPositions()">
+  <div *ngIf="toastMap[position].length" [ngClass]="getContainerClass(position)">
+    <div
+      *ngFor="let toast of toastMap[position]"
+      [ngClass]="[
+        getClass(toast.type),
+        getAnimationClass(toast.visible, toast.style),
+        'transition-all duration-300 ease-out transform'
+      ]"
+      (mouseenter)="pauseTimer(toast)"
+      (mouseleave)="resumeTimer(toast, position)"
+    >
+      <span>{{ toast.text }}</span>
+      <button
+        (click)="dismissToast(toast, position)"
+        class="ml-4 text-white hover:text-gray-300 focus:outline-none"
+        aria-label="Dismiss toast"
+      >
+        &times;
+      </button>
+    </div>
+  </div>
+</ng-container>

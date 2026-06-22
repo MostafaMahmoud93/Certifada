@@ -1,0 +1,26 @@
+/*********************************/
+/*             General           */
+/*===============================*/
+html {
+    @apply scroll-smooth;
+}
+
+body {
+    @apply text-[15px] text-black;
+}
+
+h1, h2, h3, h4, h5, h6, .h1, .h2, .h3, .h4, .h5, .h6 p {
+    @apply font-libre_franklin;
+}
+
+p {
+    @apply leading-relaxed font-libre_franklin;
+}
+ul li{
+    -webkit-margin-start: 0.25rem;
+            margin-inline-start: 0.25rem;
+  }
+  ul li:first-child{
+    -webkit-margin-start: 0px;
+            margin-inline-start: 0px;
+  }

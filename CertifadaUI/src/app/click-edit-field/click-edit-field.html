@@ -1,0 +1,17 @@
+<div class="ce" [class.editing]="editing" (click)="onEdit()">
+  <span class="ce-label" *ngIf="label">{{ label }}</span>
+
+  <ng-container *ngIf="!editing; else editTpl">
+    <span class="ce-value">{{ value }}</span>
+  </ng-container>
+
+  <ng-template #editTpl>
+    <ng-container [ngSwitch]="type">
+      <input *ngSwitchCase="'text'" type="text" [(ngModel)]="value" (blur)="onBlur()" [disabled]="disabled" />
+      <input *ngSwitchCase="'number'" type="number" [step]="step || 1" [(ngModel)]="value" (blur)="onBlur()" [disabled]="disabled" />
+      <select *ngSwitchCase="'select'" [(ngModel)]="value" (blur)="onBlur()" [disabled]="disabled">
+        <option *ngFor="let opt of options" [value]="opt">{{ opt }}</option>
+      </select>
+    </ng-container>
+  </ng-template>
+</div>

@@ -1,0 +1,116 @@
+<!-- Tabs -->
+<div class="flex space-x-4 border-b dark:border-gray-700 mb-4">
+  <button *ngFor="let tab of tabs"
+    class="py-2 px-4"
+    [ngClass]="{ 'border-b-2 border-blue-500 dark:border-green-500 dark:text-gray-300': selectedTab === tab }"
+    (click)="selectTab(tab)">
+    {{ tab }}
+  </button>
+</div>
+
+<!-- Cards -->
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 p-2">
+  <!-- New Automation Card -->
+  <div class="cursor-pointer bg-white dark:bg-gray-900 border-dashed border-2 border-gray-300 dark:border-gray-700 rounded-lg p-6 flex flex-col justify-center items-center text-gray-500 hover:text-blue-600 hover:border-blue-400 dark:hover:border-gray-500 dark:hover:text-green-600 darkhover:border-green-400 transition group" (click)="openAutomation()">
+    <i class="material-icons text-4xl mb-2 group-hover:scale-110 transition">add_circle_outline</i>
+     Add New Automation
+  </div>
+  <div *ngFor="let automation of automations"
+    class="bg-white p-4 shadow rounded-xl cursor-pointer hover:shadow-lg transition dark:bg-gray-900"
+    (click)="openAutomation(automation)">
+    <h3 class="font-bold dark:text-gray-300">{{ automation.name }}</h3>
+    <div class="text-sm text-gray-600 mt-2 p-2">
+      <strong class="text-blue-600 bg-blue-100 dark:border-gray-700 dark:bg-blue-300 rounded-full px-4 py-1 border">When</strong> 
+      <p class="p-4 dark:text-gray-300">{{ automation.trigger }} </p>
+      <strong class="text-green-600  bg-green-100 dark:bg-green-300 dark:border-gray-700 rounded-full px-5 py-1 border">Then</strong> 
+      <p class="pt-4 pl-4 dark:text-gray-300"> {{ automation.action }} </p>
+    </div>
+  </div>
+</div>
+
+<!-- Slide Panel -->
+<div *ngIf="selectedAutomation" class="fixed inset-0 bg-black bg-opacity-50 flex justify-end z-40">
+  <div class="bg-white w-full max-w-md p-6 overflow-y-auto h-full dark:bg-gray-900">
+    <h2 class="text-xl font-bold mb-4 dark:text-gray-300">
+      {{ selectedAutomation.id ? 'Edit' : 'New' }} Automation
+    </h2>
+
+    <!-- Name -->
+    <label class="block text-sm font-medium mb-1 dark:text-gray-300">Name</label>
+    <input [(ngModel)]="selectedAutomation.name" class="dark:bg-gray-800 dark:text-gray-300 dark:border-gray-700 w-full mb-3 border px-3 py-2 rounded" />
+
+    <!-- Trigger -->
+    <label class="block text-sm font-medium mb-1 dark:text-gray-300">When (Trigger)</label>
+    <select [(ngModel)]="selectedAutomation.trigger" class="w-full mb-3 border px-3 py-2 rounded dark:bg-gray-800 dark:text-gray-300 dark:border-gray-700">
+      <option value="Template Created">Template Created</option>
+      <option value="Credential Issued">Credential Issued</option>
+      <option value="User Added">User Added</option>
+    </select>
+
+    <!-- Action -->
+    <label class="block text-sm font-medium mb-1 dark:text-gray-300">Then (Action)</label>
+    <select [(ngModel)]="selectedAutomation.action" class="w-full mb-3 border px-3 py-2 rounded dark:bg-gray-800 dark:text-gray-300 dark:border-gray-700">
+      <option value="Assign Role">Assign Role</option>
+      <option value="Send Notification">Send Notification</option>
+      <option value="Redirect to Portal">Redirect to Portal</option>
+    </select>
+
+
+    <!-- Email Template Editing -->
+    <div *ngIf="selectedAutomation.action === 'Send Notification'" class="mt-4">
+        <app-email-template-editor
+          [(subject)]="selectedAutomation.emailTemplate!.subject"
+          [(body)]="selectedAutomation.emailTemplate!.body">
+        </app-email-template-editor>
+    </div>
+
+
+    <!-- Conditions -->
+    <app-condition-builder
+      [(conditions)]="selectedAutomation.conditions">
+    </app-condition-builder>
+
+    <!-- Run Test Button -->
+    <div class="mt-6">
+      <button (click)="runTest()" class="bg-yellow-500 text-white px-4 py-2 rounded hover:bg-yellow-600">
+           Run Test
+      </button>
+    </div>
+
+    <!-- Test Results -->
+    <div *ngIf="testResults.length" class="mt-4 bg-gray-50 border rounded p-4 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-700">
+      <h4 class="font-bold mb-2">Test Results:</h4>
+      <ul class="space-y-1 text-sm">
+        <li *ngFor="let result of testResults" class="flex items-center">
+          <span [ngClass]="result.passed ? 'text-green-600' : 'text-red-500'">
+            {{ result.passed ? '✅' : '❌' }}
+          </span>
+          <span class="ml-2">{{ result.reason }}</span>
+        </li>
+      </ul>
+
+      <div class="mt-3 text-sm font-semibold"
+          [ngClass]="finalTestResult ? 'text-green-700' : 'text-red-600'">
+        Result: This automation <span *ngIf="finalTestResult">would be triggered ✅</span>
+        <span *ngIf="!finalTestResult">would not be triggered ❌</span>
+      </div>
+    </div>
+
+    <!-- Options -->
+    <label class="block mt-4 dark:text-gray-300">
+      <input type="checkbox" [(ngModel)]="selectedAutomation.enabled" class="mr-2 " />
+      Enable Automation
+    </label>
+
+    <label class="block mt-2 dark:text-gray-300">
+      <input type="checkbox" [(ngModel)]="selectedAutomation.fireOnAnyCondition" class="mr-2" />
+      Fire when at least one condition is met
+    </label>
+
+    <!-- Actions -->
+    <div class="flex justify-between mt-6">
+      <button class="px-4 py-2 bg-gray-200 rounded dark:bg-gray-400" (click)="closeSlide()">Cancel</button>
+      <button class="px-4 py-2 bg-blue-600 text-white rounded dark:bg-green-500" (click)="saveAutomation()">Save</button>
+    </div>
+  </div>
+</div>

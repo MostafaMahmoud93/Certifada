@@ -1,0 +1,71 @@
+<div class="space-y-4 mt-4 justify-center text-center">
+   <button 
+    (click)="addFilter()"
+    [disabled]="isEditingFilterActive()"
+    class="bg-gray-300 text-gray-700 px-3 py-1 rounded text-sm hover:bg-gray-400 hover:text-gray-50 disabled:opacity-50 dark:bg-gray-800 dark:hover:bg-gray-500">
+    + Add Filter
+  </button>
+ 
+
+  <div *ngFor="let filter of selectedFilters; let i = index" class="flex flex-col gap-2 justify-center items-center m-2">
+    
+    <ng-container *ngIf="filter.isEditing; else displayFilter">
+      <select [(ngModel)]="filter.category" 
+              (change)="onFieldChange(filter, filter.category)"
+              class="w-1/2 md:w-3/4 border rounded px-2 py-1 text-sm dark:bg-gray-900 dark:border-gray-700 dark:text-gray-300 ">
+        <option *ngFor="let cat of categories" [value]="cat.name">{{ cat.label }}</option>
+      </select>
+
+      <select [(ngModel)]="filter.field" 
+              (change)="onFieldChange(filter, filter.category)"
+              class="w-1/2 md:w-3/4 border rounded px-2 py-1 text-sm dark:bg-gray-900 dark:border-gray-700 dark:text-gray-300">
+        <option *ngFor="let f of getFieldOptions(filter.category)" [value]="f.name">{{ f.label }}</option>
+      </select>
+
+      <select [(ngModel)]="filter.operator" class="w-1/2 md:w-3/4 border rounded px-2 py-1 text-sm dark:bg-gray-900 dark:border-gray-700 dark:text-gray-300">
+        <option *ngFor="let op of getOperators(filter.field, filter.category)" [value]="op">{{ op }}</option>
+      </select>
+
+      <ng-container [ngSwitch]="true">
+        <!-- between operator -->
+        <div *ngSwitchCase="filter.operator === 'between'" class="flex flex-col gap-2  justify-center items-center">
+          <input [(ngModel)]="filter.value[0]" type="date" class="w-1/2 md:w-3/4 border rounded px-2 py-1 text-sm dark:bg-gray-900 dark:border-gray-700 dark:text-gray-300"  />
+          <span>and</span>
+          <input [(ngModel)]="filter.value[1]" type="date" class="w-1/2 md:w-3/4 border rounded px-2 py-1 text-sm dark:bg-gray-900 dark:border-gray-700 dark:text-gray-300" />
+        </div>
+
+        <div *ngSwitchCase="isMultiSelect(filter)">
+          <select [(ngModel)]="filter.value" multiple class="w-1/2 md:w-3/4 border rounded px-2 py-1 text-sm dark:bg-gray-900 dark:border-gray-700 dark:text-gray-300">
+            <option *ngFor="let opt of getFieldType(filter.category, filter.field)?.options" [value]="opt" >{{ opt }}</option>
+          </select>
+        </div>
+
+        <ng-container *ngSwitchDefault >
+          <input *ngIf="getFieldType(filter.category, filter.field)?.type === 'date'" [(ngModel)]="filter.value" type="date" class="w-1/2 md:w-3/4 border rounded px-2 py-1 text-sm dark:bg-gray-900 dark:border-gray-700 dark:text-gray-300" />
+          <input *ngIf="getFieldType(filter.category, filter.field)?.type === 'text'" [(ngModel)]="filter.value" type="text" class="w-1/2 md:w-3/4 border rounded px-2 py-1 text-sm dark:bg-gray-900 dark:border-gray-700 dark:text-gray-300" />
+          <input *ngIf="getFieldType(filter.category, filter.field)?.type === 'number'" [(ngModel)]="filter.value" type="number" class="w-1/2 md:w-3/4 border rounded px-2 py-1 text-sm dark:bg-gray-900 dark:border-gray-700 dark:text-gray-300 " />
+          <select *ngIf="getFieldType(filter.category, filter.field)?.type === 'select'" [(ngModel)]="filter.value" class="w-1/2 md:w-3/4 border rounded px-2 py-1 text-sm dark:bg-gray-900 dark:border-gray-700 dark:text-gray-300">
+            <option *ngFor="let opt of getFieldType(filter.category, filter.field)?.options" [value]="opt">{{ opt }}</option>
+          </select>
+        </ng-container>
+      </ng-container>
+
+      <button (click)="applyFilter(filter)" class="bg-green-500 text-white px-2 py-1 rounded text-sm hover:bg-green-600 w-1/2 md:w-3/4">
+        Apply
+      </button>
+      <button (click)="removeFilter(i)" class="bg-gray-200 text-gray-400 px-2 py-1 rounded text-sm hover:bg-gray-600 hover:text-white  w-1/2 md:w-3/4">
+        Cancel
+      </button>
+      
+    </ng-container>
+
+    <div class="bg-gray-500">
+      <ng-template #displayFilter>
+        <span class=" bg-gray-200 border-gray-400 px-3 py-1 rounded-full border-dashed border text-sm flex items-center gap-2 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-300">
+          {{ getFilterLabel(filter) }}
+          <button (click)="removeFilter(i)" class="text-red-500 hover:text-red-700 text-xs">×</button>
+        </span>
+      </ng-template>
+    </div>
+  </div>
+</div>

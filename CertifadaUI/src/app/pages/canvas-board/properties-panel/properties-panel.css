@@ -1,0 +1,8 @@
+.material-icons{
+font-size: 16px;
+color: rgb(65, 63, 63);}
+
+
+.slider{
+    accent-color: theme('colors.gray.400');
+}

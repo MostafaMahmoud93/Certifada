@@ -1,0 +1,186 @@
+<div class="flex flex-col md:flex-row h-full w-full dark:bg-gray-800">
+  <!-- Mobile Header -->
+  <div class="md:hidden flex justify-between items-center p-4 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
+    <h2 class="text-lg font-semibold text-gray-800 dark:text-white">Support Center</h2>
+    <button (click)="sidebarOpen = !sidebarOpen">
+      <i class="material-icons text-3xl text-gray-800 dark:text-white">menu</i>
+    </button>
+  </div>
+  <!-- Sidebar Navigation -->
+ <!-- Sidebar Navigation -->
+<aside
+  class="w-full md:w-1/4 h-auto md:h-full bg-gray-100 dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 p-4 dark:text-gray-300 transition-all duration-300 z-50"
+  [ngClass]="{ 'hidden': !sidebarOpen && isMobile, 'block': sidebarOpen || !isMobile }">
+  <ul class="space-y-2">
+    <!-- Support Channels -->
+    <li>
+      <button
+        class="w-full flex items-end px-4 py-2 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition"
+        [ngClass]="{ 'bg-blue-100 dark:bg-blue-900 text-blue-900 dark:text-blue-100': activeSection === 'support' }"
+        (click)="setSection('support')"
+      >
+        <i class="material-icons text-xl pr-4">live_tv</i> Support Channels
+      </button>
+    </li>
+
+    <!-- Online Support -->
+    <li>
+      <button
+        class="w-full flex items-end px-4 py-2 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition"
+        [ngClass]="{ 'bg-blue-100 dark:bg-blue-900 text-blue-900 dark:text-blue-100': activeSection === 'live' }"
+        (click)="setSection('live')"
+      >
+        <i class="material-icons text-xl pr-4">support_agent</i> Online Support
+      </button>
+    </li>
+
+    <!-- Developers (Collapsible Menu) -->
+    <li>
+      <div>
+        <button
+          class="w-full flex items-end justify-between px-4 py-2 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition text-left"
+          (click)="isDeveloperOpen = !isDeveloperOpen"
+        >
+          <i class="material-icons text-xl pr-4">developer_mode</i>
+          <p class="text-left w-full">Developers</p>
+          <svg
+            [ngClass]="{ 'rotate-90': isDeveloperOpen }"
+            class="w-4 h-4 ml-2 transform transition-transform duration-200 right-0"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            viewBox="0 0 24 24"
+          >
+            <path d="M9 5l7 7-7 7"></path>
+          </svg>
+        </button>
+
+        <ul *ngIf="isDeveloperOpen" class="mt-2 ml-4 space-y-1">
+          <li>
+            <button
+              class="w-full text-left px-3 py-2 rounded hover:bg-gray-200 dark:hover:bg-gray-700 text-sm"
+              [ngClass]="{ 'bg-blue-100 dark:bg-blue-900 text-blue-900 dark:text-blue-100': activeSection === 'API' }"
+              (click)="setSection('API')"
+            >
+              <i class="material-icons text-xl pr-4">api</i> APIs
+            </button>
+          </li>
+          <li>
+            <button
+              class="w-full text-left px-3 py-2 rounded hover:bg-gray-200 dark:hover:bg-gray-700 text-sm"
+              [ngClass]="{ 'bg-blue-100 dark:bg-blue-900 text-blue-900 dark:text-blue-100': activeSection === 'access-token' }"
+              (click)="setSection('access-token')"
+            >
+              <i class="material-icons text-xl pr-4">key</i> Access Token
+            </button>
+          </li>
+        </ul>
+      </div>
+    </li>
+  </ul>
+</aside>
+
+  <!-- Content Area -->
+<div class="w-full md:w-3/4 p-6 overflow-y-auto dark:bg-gray-800">
+    <div class="p-8  dark:bg-gray-800">
+        <div *ngIf="activeSection === 'support'">
+            <h3 class="text-xl font-bold mb-4 text-gray-800 dark:text-gray-100">Support Channels</h3>
+            <p class="text-gray-600 dark:text-gray-300 mb-2">You can reach us through the following channels:</p>
+            <ul class="list-disc pl-5 text-gray-700 dark:text-gray-300">
+                <li>Email: support-certifada.com</li>
+                <li>Phone: +971 (800) 4567</li>
+                <li>Live Chat: Available Mon–Fri, 9am–6pm</li>
+                <li>Knowledge Base: <a href="#" class="text-blue-600 underline">Visit Help Center</a></li>
+                <br/>
+            </ul>
+
+            <div class="text-gray-600 dark:text-gray-300">
+                Live chat will be available once the app is live. In the meantime, contact us at
+                <a href="mailto:support@example.com" class="text-blue-600 underline">support-certifada.com</a>.
+            </div>
+        </div>
+
+        <div *ngIf="activeSection === 'live'">
+            <h3 class="text-xl font-bold mb-4 text-gray-800 dark:text-gray-100">Online Support</h3>
+            <p class="text-gray-600 dark:text-gray-300 mb-4">
+                Chat with our support agents in real time. Click below to start a session:
+            </p>
+            <button class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-700 transition dark:bg-green-500 dark:hover:bg-green-700">
+                Start Live Chat
+            </button>
+        </div>
+
+        <div *ngIf="activeSection === 'API'">
+            <h3 class="text-xl font-bold mb-4 text-gray-800 dark:text-gray-100">API Integrations</h3>
+
+            <!-- Search Input -->
+            <input
+                type="text"
+                placeholder="Search endpoints..."
+                [(ngModel)]="searchTerm"
+                class="w-full mb-4 p-2 border border-gray-300 dark:border-gray-700 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:text-white"
+            />
+
+            <!-- Filtered Results -->
+            <div *ngFor="let item of integrationItems | filterBySearch: searchTerm" class="mb-6 p-4 border border-gray-200 dark:border-gray-700 rounded bg-white dark:bg-gray-900">
+                <div class="flex justify-between items-center mb-2">
+                <span class="text-sm font-medium  bg-blue-100 text-blue-800 px-2 py-1 rounded dark:bg-gray-700 dark:text-blue-200">
+                    {{ item.method }}
+                </span>
+                <code class="text-xs text-gray-500 dark:text-gray-400">{{ item.path }}</code>
+                </div>
+                <h4 class="text-lg font-semibold text-gray-800 dark:text-gray-100">{{ item.title }}</h4>
+                <p class="text-gray-600 dark:text-gray-300">{{ item.description }}</p>
+            </div>
+        </div>
+
+    <div *ngIf="activeSection === 'access-token'">
+    <h3 class="text-xl font-bold mb-6 text-gray-800 dark:text-gray-100">🔑 Access Token</h3>
+
+    <div *ngIf="!token; else showToken" class="flex flex-col items-center justify-center pt-56">
+        <i class="material-icons text-8xl text-gray-400 dark:text-gray-700">api</i>
+        <p class="mt-4 text-gray-600 dark:text-gray-300 text-2xl">You have no access tokens</p>
+            <p class="mt-4 text-gray-600 dark:text-gray-300 text-sm">
+                Access tokens are used to build custom integrations using Certifada REST API.
+            </p>
+        <button class="px-6 py-3 mt-4 bg-blue-600 text-white rounded hover:bg-blue-700 transition dark:bg-green-500 dark:hover:bg-green-700"
+        (click)="generateToken()">
+        Generate Access Token
+        </button>
+    </div>
+
+    <ng-template #showToken>
+        <div class="bg-gray-100 dark:bg-gray-900 p-6 rounded shadow  w-full">
+         <div class="mb-4 text-gray-700 dark:text-gray-300">
+            <strong>Token Name:</strong> {{ token?.name }}
+        </div>
+        <div class="mb-2 text-gray-700 dark:text-gray-300">
+            <strong>Token :</strong>
+            <span class="bg-white dark:bg-gray-700 px-2 py-1 rounded font-mono tracking-wider select-text">
+                {{ tokenVisible ? token?.value : '•'.repeat(64) }}
+            </span>
+            <button class="ml-2 text-blue-600 dark:text-blue-300 text-sm underline"
+                (click)="tokenVisible = !tokenVisible">
+                {{ tokenVisible ? 'Hide' : 'Reveal' }}
+            </button>
+            <button class="ml-2 text-blue-600 dark:text-blue-300 text-sm underline"
+                (click)="copyTokenToClipboard()">
+                Copy
+            </button>
+        </div>
+        <div class="mb-4 text-gray-700 dark:text-gray-300">
+            <strong>Created:</strong> {{ token?.created | date: 'medium' }}
+        </div>
+        <button
+            class="text-red-600 hover:text-red-800 text-sm underline"
+            (click)="revokeToken()"
+        >
+            Revoke Token
+        </button>
+        </div>
+    </ng-template>
+    </div>
+
+    </div>
+</div>
+</div>

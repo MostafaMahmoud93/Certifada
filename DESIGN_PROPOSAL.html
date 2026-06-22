@@ -1,0 +1,478 @@
+<!doctype html>
+<html lang="en" dir="ltr" data-theme="light">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Certifada · Design proposal</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Kufi+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+<style>
+:root{
+  --brand-50:#EEF2FF; --brand-100:#E0E7FF; --brand-200:#C7D2FE; --brand-500:#6366F1; --brand-600:#4F46E5; --brand-700:#4338CA;
+  --gold:#D9A441; --gold-soft:#FBF1DC; --gold-ink:#8A5A0B;
+  --ink-900:#0F172A; --ink-700:#334155; --ink-600:#475569; --ink-500:#64748B; --ink-400:#94A3B8;
+  --line:#E5E9F0; --line-soft:#EEF1F6; --bg:#F5F6FA; --surface:#FFFFFF; --surface-2:#F8FAFC;
+  --success:#0F9D6B; --success-soft:#DCFCE7; --warning:#C77700; --warning-soft:#FEF3C7;
+  --danger:#DC2626; --danger-soft:#FEE2E2; --info:#0284C7; --info-soft:#E0F2FE;
+  --radius-sm:8px; --radius-md:12px; --radius-lg:16px; --radius-xl:22px;
+  --shadow-sm:0 1px 2px rgba(15,23,42,.06), 0 1px 3px rgba(15,23,42,.04);
+  --shadow-md:0 8px 24px rgba(15,23,42,.08);
+  --shadow-lg:0 18px 50px rgba(15,23,42,.14);
+  --ring:0 0 0 4px rgba(79,70,229,.18);
+}
+html[data-theme="dark"]{
+  --brand-50:#1E1B4B; --brand-100:#272264; --brand-200:#312E81; --brand-500:#818CF8; --brand-600:#6366F1; --brand-700:#A5B4FC;
+  --gold:#E2B45A; --gold-soft:#2A2310; --gold-ink:#E9C97E;
+  --ink-900:#F1F5F9; --ink-700:#CBD5E1; --ink-600:#AEB9C9; --ink-500:#8A97A8; --ink-400:#64748B;
+  --line:#23304a; --line-soft:#1a2436; --bg:#0A0F1C; --surface:#111a2e; --surface-2:#0E1626;
+  --success:#34D399; --success-soft:#0c2b22; --warning:#FBBF24; --warning-soft:#2c2410;
+  --danger:#F87171; --danger-soft:#2c1616; --info:#38BDF8; --info-soft:#0b2434;
+  --shadow-sm:0 1px 2px rgba(0,0,0,.4); --shadow-md:0 10px 30px rgba(0,0,0,.45); --shadow-lg:0 22px 60px rgba(0,0,0,.55);
+  --ring:0 0 0 4px rgba(129,140,248,.25);
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink-700);font-family:"Inter","Noto Kufi Arabic",system-ui,sans-serif;font-size:14px;line-height:1.6;-webkit-font-smoothing:antialiased;transition:background .25s,color .25s}
+html[dir="rtl"] body{font-family:"Noto Kufi Arabic","Inter",system-ui,sans-serif}
+h1,h2,h3,h4{color:var(--ink-900);margin:0;font-weight:600;letter-spacing:-.01em}
+p{margin:0}
+a{color:var(--brand-600);text-decoration:none}
+.material-icons{font-size:20px;line-height:1;vertical-align:middle}
+.wrap{max-width:1180px;margin:0 auto;padding:0 24px 80px}
+.muted{color:var(--ink-500)}
+.small{font-size:12.5px}
+
+/* top control bar */
+.topctrl{position:sticky;top:0;z-index:50;background:color-mix(in srgb,var(--surface) 86%, transparent);backdrop-filter:blur(10px);border-bottom:1px solid var(--line);}
+.topctrl .row{max-width:1180px;margin:0 auto;padding:12px 24px;display:flex;align-items:center;gap:14px}
+.brandmark{width:30px;height:30px;border-radius:9px;background:var(--brand-600);color:#fff;display:grid;place-items:center;box-shadow:var(--shadow-sm)}
+.brandmark .material-icons{font-size:19px;color:#fff}
+.seg{display:inline-flex;background:var(--surface-2);border:1px solid var(--line);border-radius:999px;padding:3px}
+.seg button{border:0;background:transparent;color:var(--ink-500);font:inherit;font-size:12.5px;font-weight:500;padding:6px 14px;border-radius:999px;cursor:pointer;display:flex;align-items:center;gap:6px}
+.seg button.active{background:var(--surface);color:var(--ink-900);box-shadow:var(--shadow-sm)}
+.spacer{flex:1}
+
+section{padding-top:54px}
+.sec-h{display:flex;align-items:baseline;gap:12px;margin-bottom:6px}
+.sec-h .n{font-size:12px;font-weight:600;color:var(--brand-600);background:var(--brand-50);border:1px solid var(--brand-100);border-radius:999px;padding:3px 10px}
+.sec-h h2{font-size:21px}
+.sec-sub{color:var(--ink-500);margin-bottom:22px;max-width:70ch}
+
+/* palette */
+.swatches{display:grid;grid-template-columns:repeat(auto-fit,minmax(108px,1fr));gap:12px}
+.sw{border:1px solid var(--line);border-radius:var(--radius-md);overflow:hidden;background:var(--surface)}
+.sw .chip{height:62px}
+.sw .meta{padding:8px 10px}
+.sw .meta b{display:block;color:var(--ink-900);font-weight:500;font-size:12.5px}
+.sw .meta span{font-size:11.5px;color:var(--ink-500);font-variant-numeric:tabular-nums}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-lg);box-shadow:var(--shadow-sm)}
+.pad{padding:20px 22px}
+.grid2{display:grid;grid-template-columns:1.3fr 1fr;gap:20px}
+.type-row{display:flex;align-items:baseline;gap:16px;padding:12px 0;border-bottom:1px dashed var(--line)}
+.type-row:last-child{border-bottom:0}
+.type-row .lbl{width:120px;flex:none;color:var(--ink-500);font-size:12px}
+
+/* generic UI */
+.btn{display:inline-flex;align-items:center;gap:8px;font:inherit;font-weight:500;font-size:13.5px;border-radius:var(--radius-sm);padding:10px 16px;border:1px solid transparent;cursor:pointer;transition:.15s}
+.btn .material-icons{font-size:18px}
+.btn-primary{background:var(--brand-600);color:#fff}
+.btn-primary:hover{background:var(--brand-700)}
+.btn-secondary{background:var(--surface);color:var(--ink-900);border-color:var(--line)}
+.btn-secondary:hover{background:var(--surface-2);border-color:var(--ink-400)}
+.btn-ghost{background:transparent;color:var(--ink-600)}
+.btn-ghost:hover{background:var(--surface-2)}
+.btn-danger{background:var(--danger);color:#fff}
+.btn-gold{background:var(--gold);color:#3d2806}
+.field{display:block;margin-bottom:16px}
+.field>label{display:block;font-size:12.5px;font-weight:500;color:var(--ink-700);margin-bottom:7px}
+.input{width:100%;height:42px;border:1px solid var(--line);background:var(--surface);color:var(--ink-900);border-radius:var(--radius-sm);padding:0 14px;font:inherit;font-size:14px;outline:none;transition:.15s}
+.input::placeholder{color:var(--ink-400)}
+.input:focus{border-color:var(--brand-500);box-shadow:var(--ring)}
+.input.err{border-color:var(--danger);box-shadow:0 0 0 4px var(--danger-soft)}
+.hint-err{color:var(--danger);font-size:12px;margin-top:6px;display:flex;gap:5px;align-items:center}
+.inwrap{position:relative}
+.inwrap .material-icons.lead{position:absolute;inset-inline-start:12px;top:50%;transform:translateY(-50%);color:var(--ink-400);font-size:19px}
+.inwrap .input.has-lead{padding-inline-start:40px}
+.badge{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:500;padding:4px 10px;border-radius:999px;border:1px solid transparent}
+.b-success{background:var(--success-soft);color:var(--success);border-color:color-mix(in srgb,var(--success) 22%,transparent)}
+.b-warning{background:var(--warning-soft);color:var(--warning)}
+.b-danger{background:var(--danger-soft);color:var(--danger)}
+.b-info{background:var(--info-soft);color:var(--info)}
+.b-neutral{background:var(--surface-2);color:var(--ink-500);border-color:var(--line)}
+.b-gold{background:var(--gold-soft);color:var(--gold-ink);border-color:color-mix(in srgb,var(--gold) 30%,transparent)}
+.dot{width:7px;height:7px;border-radius:50%;background:currentColor;display:inline-block}
+
+/* App shell mock */
+.browser{border:1px solid var(--line);border-radius:var(--radius-lg);overflow:hidden;box-shadow:var(--shadow-lg);background:var(--surface)}
+.browser .bar{display:flex;align-items:center;gap:7px;padding:11px 14px;background:var(--surface-2);border-bottom:1px solid var(--line)}
+.tl{width:11px;height:11px;border-radius:50%;background:var(--line)}
+.urlbar{flex:1;height:26px;border-radius:999px;background:var(--surface);border:1px solid var(--line);display:flex;align-items:center;gap:7px;padding:0 12px;color:var(--ink-400);font-size:12px;margin-inline-start:6px}
+.shell{display:grid;grid-template-columns:248px 1fr;min-height:560px;background:var(--bg)}
+
+.side{background:var(--surface);border-inline-end:1px solid var(--line);display:flex;flex-direction:column;padding:14px 12px}
+.side .logo{display:flex;align-items:center;gap:10px;padding:8px 8px 14px}
+.side .logo .name{font-weight:700;color:var(--ink-900);font-size:16px;letter-spacing:-.02em}
+.side .logo .name b{color:var(--brand-600)}
+.navsearch{height:36px;border:1px solid var(--line);border-radius:var(--radius-sm);display:flex;align-items:center;gap:8px;padding:0 10px;color:var(--ink-400);font-size:12.5px;margin-bottom:12px;background:var(--surface-2)}
+.navgrp{margin:6px 0}
+.navgrp .t{font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-400);font-weight:600;padding:8px 10px 4px}
+.nav{display:flex;align-items:center;gap:11px;padding:9px 11px;border-radius:var(--radius-sm);color:var(--ink-600);font-size:13.5px;font-weight:500;cursor:pointer;position:relative;margin:1px 0}
+.nav .material-icons{font-size:20px;color:var(--ink-400)}
+.nav:hover{background:var(--surface-2);color:var(--ink-900)}
+.nav.active{background:var(--brand-50);color:var(--brand-700)}
+.nav.active .material-icons{color:var(--brand-600)}
+.nav.active::before{content:"";position:absolute;inset-inline-start:0;top:8px;bottom:8px;width:3px;border-radius:999px;background:var(--brand-600)}
+.nav .count{margin-inline-start:auto;font-size:11px;background:var(--brand-100);color:var(--brand-700);border-radius:999px;padding:1px 8px;font-weight:600}
+.usercard{margin-top:auto;display:flex;align-items:center;gap:10px;padding:10px;border:1px solid var(--line);border-radius:var(--radius-md);background:var(--surface-2)}
+.avatar{width:34px;height:34px;border-radius:50%;background:var(--brand-600);color:#fff;display:grid;place-items:center;font-weight:600;font-size:13px;flex:none}
+
+.main{display:flex;flex-direction:column;min-width:0}
+.appbar{height:62px;border-bottom:1px solid var(--line);background:var(--surface);display:flex;align-items:center;gap:14px;padding:0 22px}
+.crumb{display:flex;align-items:center;gap:8px;color:var(--ink-500);font-size:13px}
+.crumb b{color:var(--ink-900);font-weight:600}
+.appsearch{margin-inline-start:8px;flex:1;max-width:340px;height:38px;border:1px solid var(--line);background:var(--surface-2);border-radius:999px;display:flex;align-items:center;gap:8px;padding:0 14px;color:var(--ink-400);font-size:13px}
+.iconbtn{width:38px;height:38px;border-radius:10px;border:1px solid transparent;display:grid;place-items:center;color:var(--ink-500);cursor:pointer;position:relative}
+.iconbtn:hover{background:var(--surface-2);color:var(--ink-900)}
+.iconbtn .pip{position:absolute;top:8px;inset-inline-end:9px;width:8px;height:8px;border-radius:50%;background:var(--danger);border:2px solid var(--surface)}
+.langtog{height:36px;border-radius:999px;border:1px solid var(--line);background:var(--surface-2);color:var(--ink-700);display:flex;align-items:center;gap:7px;padding:0 12px;font-weight:600;font-size:13px;cursor:pointer}
+
+.content{padding:24px 24px 30px;overflow:auto}
+.page-h{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;margin-bottom:20px;flex-wrap:wrap}
+.page-h h1{font-size:23px}
+.metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:20px}
+.metric{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-md);padding:16px 17px;box-shadow:var(--shadow-sm)}
+.metric .ic{width:38px;height:38px;border-radius:11px;display:grid;place-items:center;margin-bottom:12px}
+.metric .lbl{font-size:12.5px;color:var(--ink-500)}
+.metric .val{font-size:26px;font-weight:700;color:var(--ink-900);letter-spacing:-.02em;margin-top:2px}
+.metric .delta{font-size:12px;font-weight:500;margin-top:6px;display:inline-flex;align-items:center;gap:3px}
+.up{color:var(--success)} .down{color:var(--danger)}
+.row2{display:grid;grid-template-columns:1.6fr 1fr;gap:16px}
+.bars{display:flex;align-items:flex-end;gap:14px;height:170px;padding-top:8px}
+.bars .col{flex:1;display:flex;flex-direction:column;align-items:center;gap:8px;height:100%;justify-content:flex-end}
+.bars .bar{width:60%;border-radius:8px 8px 0 0;background:var(--brand-200)}
+.bars .col.hot .bar{background:var(--brand-600)}
+.bars .cap{font-size:11px;color:var(--ink-400)}
+.tbl{width:100%;border-collapse:collapse;font-size:13px}
+.tbl th{text-align:start;font-weight:500;color:var(--ink-500);font-size:11.5px;text-transform:uppercase;letter-spacing:.04em;padding:0 8px 10px}
+.tbl td{padding:11px 8px;border-top:1px solid var(--line-soft);color:var(--ink-700)}
+.tbl tr td:first-child{color:var(--ink-900);font-weight:500}
+.listrow{display:flex;align-items:center;gap:12px;padding:11px 0;border-top:1px solid var(--line-soft)}
+.listrow:first-child{border-top:0}
+.mini-ic{width:34px;height:34px;border-radius:10px;background:var(--brand-50);color:var(--brand-600);display:grid;place-items:center;flex:none}
+
+/* login */
+.loginframe{display:grid;grid-template-columns:1fr 1fr;min-height:540px;border-radius:var(--radius-lg);overflow:hidden;border:1px solid var(--line);box-shadow:var(--shadow-lg)}
+.loginbrand{background:var(--brand-700);color:#fff;padding:42px;display:flex;flex-direction:column;position:relative;overflow:hidden}
+.loginbrand .deco{position:absolute;inset:0;opacity:.5;background:
+  radial-gradient(420px 220px at 85% 8%, rgba(255,255,255,.16), transparent 60%),
+  radial-gradient(360px 300px at 10% 100%, rgba(217,164,65,.30), transparent 60%)}
+.loginbrand .top{display:flex;align-items:center;gap:10px;position:relative}
+.loginbrand .top .name{font-weight:700;font-size:17px}
+.loginbrand h2{color:#fff;font-size:27px;line-height:1.25;margin-top:auto;position:relative;font-weight:700;letter-spacing:-.02em}
+.loginbrand p.sub{color:rgba(255,255,255,.82);margin-top:12px;position:relative;max-width:34ch}
+.loginbrand ul{list-style:none;padding:0;margin:22px 0 0;position:relative;display:grid;gap:12px}
+.loginbrand li{display:flex;align-items:center;gap:10px;color:rgba(255,255,255,.92);font-size:13.5px}
+.loginbrand li .material-icons{font-size:19px;color:var(--gold)}
+.loginform{background:var(--surface);padding:42px 44px;display:flex;flex-direction:column;justify-content:center}
+.loginform h3{font-size:22px;margin-bottom:4px}
+.divider{display:flex;align-items:center;gap:12px;color:var(--ink-400);font-size:12px;margin:18px 0}
+.divider::before,.divider::after{content:"";height:1px;background:var(--line);flex:1}
+.socials{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+.social{height:44px;border:1px solid var(--line);border-radius:var(--radius-sm);display:grid;place-items:center;cursor:pointer;background:var(--surface);font-weight:600;color:var(--ink-700)}
+.social:hover{background:var(--surface-2);border-color:var(--ink-400)}
+.checkline{display:flex;align-items:center;justify-content:space-between;margin:2px 0 18px;font-size:13px}
+.toggle{width:40px;height:22px;border-radius:999px;background:var(--brand-600);position:relative;cursor:pointer;flex:none}
+.toggle::after{content:"";position:absolute;width:18px;height:18px;border-radius:50%;background:#fff;top:2px;inset-inline-start:2px;transition:.2s}
+html[dir="rtl"] .toggle::after{inset-inline-start:auto;inset-inline-end:2px}
+.toggle.off{background:var(--line)} .toggle.off::after{inset-inline-start:2px;inset-inline-end:auto}
+
+.alert{display:flex;gap:12px;padding:13px 15px;border-radius:var(--radius-md);border:1px solid;align-items:flex-start;margin-bottom:12px}
+.alert .material-icons{font-size:20px}
+.a-success{background:var(--success-soft);border-color:color-mix(in srgb,var(--success) 26%,transparent);color:var(--success)}
+.a-warning{background:var(--warning-soft);border-color:color-mix(in srgb,var(--warning) 30%,transparent);color:var(--warning)}
+.a-danger{background:var(--danger-soft);border-color:color-mix(in srgb,var(--danger) 26%,transparent);color:var(--danger)}
+.alert b{color:var(--ink-900)} .alert .tx{color:var(--ink-600)}
+.compgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:20px}
+.flex{display:flex} .wrapg{flex-wrap:wrap} .g8{gap:8px} .g12{gap:12px} .aic{align-items:center}
+.note{font-size:12px;color:var(--ink-400);margin-top:10px}
+@media(max-width:880px){.grid2,.row2,.metrics,.loginframe{grid-template-columns:1fr}.metrics{grid-template-columns:repeat(2,1fr)}.shell{grid-template-columns:1fr}.side{display:none}}
+</style>
+</head>
+<body>
+
+<div class="topctrl">
+  <div class="row">
+    <div class="brandmark"><span class="material-icons">workspace_premium</span></div>
+    <div>
+      <div style="font-weight:700;color:var(--ink-900);font-size:15px;letter-spacing:-.01em">Certifada · Design proposal</div>
+      <div class="small muted">Proposed direction — core shell, login, dashboard &amp; components</div>
+    </div>
+    <div class="spacer"></div>
+    <div class="seg" id="themeSeg">
+      <button data-theme-val="light" class="active"><span class="material-icons" style="font-size:16px">light_mode</span>Light</button>
+      <button data-theme-val="dark"><span class="material-icons" style="font-size:16px">dark_mode</span>Dark</button>
+    </div>
+    <div class="seg" id="dirSeg">
+      <button data-dir-val="ltr" class="active">LTR · EN</button>
+      <button data-dir-val="rtl">RTL · ع</button>
+    </div>
+  </div>
+</div>
+
+<div class="wrap">
+
+  <!-- PALETTE -->
+  <section id="palette">
+    <div class="sec-h"><span class="n">01</span><h2>Palette &amp; type</h2></div>
+    <p class="sec-sub">A trustworthy indigo as the brand anchor, warm gold as a premium accent for verified/credential moments, and a calm slate neutral scale. Semantic colors are reserved for status. Everything works in light and dark.</p>
+
+    <div class="card pad" style="margin-bottom:18px">
+      <div class="small muted" style="margin-bottom:10px;font-weight:600">Brand · indigo</div>
+      <div class="swatches" style="margin-bottom:20px">
+        <div class="sw"><div class="chip" style="background:#EEF2FF"></div><div class="meta"><b>50</b><span>#EEF2FF</span></div></div>
+        <div class="sw"><div class="chip" style="background:#E0E7FF"></div><div class="meta"><b>100</b><span>#E0E7FF</span></div></div>
+        <div class="sw"><div class="chip" style="background:#C7D2FE"></div><div class="meta"><b>200</b><span>#C7D2FE</span></div></div>
+        <div class="sw"><div class="chip" style="background:#6366F1"></div><div class="meta"><b>500</b><span>#6366F1</span></div></div>
+        <div class="sw"><div class="chip" style="background:#4F46E5"></div><div class="meta"><b>600 · base</b><span>#4F46E5</span></div></div>
+        <div class="sw"><div class="chip" style="background:#4338CA"></div><div class="meta"><b>700</b><span>#4338CA</span></div></div>
+      </div>
+      <div class="small muted" style="margin-bottom:10px;font-weight:600">Neutral · slate &amp; gold accent</div>
+      <div class="swatches" style="margin-bottom:20px">
+        <div class="sw"><div class="chip" style="background:#F8FAFC"></div><div class="meta"><b>Surface</b><span>#F8FAFC</span></div></div>
+        <div class="sw"><div class="chip" style="background:#E5E9F0"></div><div class="meta"><b>Line</b><span>#E5E9F0</span></div></div>
+        <div class="sw"><div class="chip" style="background:#94A3B8"></div><div class="meta"><b>Muted</b><span>#94A3B8</span></div></div>
+        <div class="sw"><div class="chip" style="background:#475569"></div><div class="meta"><b>Body</b><span>#475569</span></div></div>
+        <div class="sw"><div class="chip" style="background:#0F172A"></div><div class="meta"><b>Ink</b><span>#0F172A</span></div></div>
+        <div class="sw"><div class="chip" style="background:#D9A441"></div><div class="meta"><b>Gold</b><span>#D9A441</span></div></div>
+      </div>
+      <div class="small muted" style="margin-bottom:10px;font-weight:600">Semantic</div>
+      <div class="swatches">
+        <div class="sw"><div class="chip" style="background:#0F9D6B"></div><div class="meta"><b>Success</b><span>#0F9D6B</span></div></div>
+        <div class="sw"><div class="chip" style="background:#C77700"></div><div class="meta"><b>Warning</b><span>#C77700</span></div></div>
+        <div class="sw"><div class="chip" style="background:#DC2626"></div><div class="meta"><b>Danger</b><span>#DC2626</span></div></div>
+        <div class="sw"><div class="chip" style="background:#0284C7"></div><div class="meta"><b>Info</b><span>#0284C7</span></div></div>
+      </div>
+    </div>
+
+    <div class="card pad">
+      <div class="type-row"><div class="lbl">Display / 28</div><div style="font-size:28px;font-weight:700;color:var(--ink-900);letter-spacing:-.02em">Certified credentials, beautifully managed</div></div>
+      <div class="type-row"><div class="lbl">H1 / 23</div><div style="font-size:23px;font-weight:600;color:var(--ink-900)">Dashboard overview</div></div>
+      <div class="type-row"><div class="lbl">H3 / 16</div><div style="font-size:16px;font-weight:600;color:var(--ink-900)">Recent certificates</div></div>
+      <div class="type-row"><div class="lbl">Body / 14</div><div>Inter for Latin text — clean, legible, and modern at small sizes for dense data screens.</div></div>
+      <div class="type-row"><div class="lbl">Arabic</div><div style="font-family:'Noto Kufi Arabic'">نظام إدارة الشهادات المعتمدة — خط نوتو كوفي عربي يدعم الواجهة من اليمين إلى اليسار</div></div>
+    </div>
+  </section>
+
+  <!-- SHELL -->
+  <section id="shell">
+    <div class="sec-h"><span class="n">02</span><h2>App shell &amp; dashboard</h2></div>
+    <p class="sec-sub">A real left navigation (today it's an empty stub), a refined top bar with search, language, theme, notifications and account, and a dashboard built from metric cards, a simple chart, and a recent-activity table.</p>
+
+    <div class="browser">
+      <div class="bar"><span class="tl"></span><span class="tl"></span><span class="tl"></span>
+        <div class="urlbar"><span class="material-icons" style="font-size:14px">lock</span>app.certifada.com/land/dashboard</div>
+      </div>
+      <div class="shell">
+        <!-- sidebar -->
+        <aside class="side">
+          <div class="logo"><div class="brandmark"><span class="material-icons">workspace_premium</span></div><div class="name">Certi<b>fada</b></div></div>
+          <div class="navsearch"><span class="material-icons" style="font-size:18px">search</span><span data-i18n="search">Search…</span></div>
+          <div class="navgrp">
+            <div class="t" data-i18n="g-main">Main</div>
+            <div class="nav active"><span class="material-icons">dashboard</span><span data-i18n="dashboard">Dashboard</span></div>
+            <div class="nav"><span class="material-icons">verified</span><span data-i18n="certs">Certificates</span><span class="count">128</span></div>
+            <div class="nav"><span class="material-icons">dashboard_customize</span><span data-i18n="templates">Templates</span></div>
+            <div class="nav"><span class="material-icons">palette</span><span data-i18n="branding">Branding</span></div>
+          </div>
+          <div class="navgrp">
+            <div class="t" data-i18n="g-insight">Insights</div>
+            <div class="nav"><span class="material-icons">bar_chart</span><span data-i18n="reports">Reports</span></div>
+            <div class="nav"><span class="material-icons">mail</span><span data-i18n="email">Email templates</span></div>
+          </div>
+          <div class="navgrp">
+            <div class="t" data-i18n="g-admin">Administration</div>
+            <div class="nav"><span class="material-icons">admin_panel_settings</span><span data-i18n="roles">Roles &amp; users</span></div>
+            <div class="nav"><span class="material-icons">settings</span><span data-i18n="settings">Settings</span></div>
+          </div>
+          <div class="usercard">
+            <div class="avatar">MM</div>
+            <div style="min-width:0">
+              <div style="font-weight:600;color:var(--ink-900);font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Mostafa Mahmoud</div>
+              <div class="small muted" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Administrator</div>
+            </div>
+            <span class="material-icons" style="margin-inline-start:auto;color:var(--ink-400);font-size:18px">unfold_more</span>
+          </div>
+        </aside>
+        <!-- main -->
+        <div class="main">
+          <div class="appbar">
+            <div class="crumb"><span class="material-icons" style="font-size:18px">home</span><span>/</span><b data-i18n="dashboard">Dashboard</b></div>
+            <div class="appsearch"><span class="material-icons" style="font-size:18px">search</span><span data-i18n="search-any">Search certificates, people…</span></div>
+            <div class="spacer"></div>
+            <div class="langtog">ع<span class="material-icons" style="font-size:18px">language</span></div>
+            <div class="iconbtn"><span class="material-icons">light_mode</span></div>
+            <div class="iconbtn"><span class="material-icons">notifications</span><span class="pip"></span></div>
+            <div class="iconbtn"><span class="material-icons">settings</span></div>
+            <div class="avatar" style="width:36px;height:36px">MM</div>
+          </div>
+          <div class="content">
+            <div class="page-h">
+              <div>
+                <h1 data-i18n="dashboard">Dashboard</h1>
+                <p class="muted small" data-i18n="welcome">Welcome back — here's what's happening with your certificates.</p>
+              </div>
+              <button class="btn btn-primary"><span class="material-icons">add</span><span data-i18n="new-cert">New certificate</span></button>
+            </div>
+
+            <div class="metrics">
+              <div class="metric"><div class="ic" style="background:var(--brand-50);color:var(--brand-600)"><span class="material-icons">verified</span></div><div class="lbl" data-i18n="m1">Certificates issued</div><div class="val">2,847</div><div class="delta up"><span class="material-icons" style="font-size:15px">trending_up</span>+12.5%</div></div>
+              <div class="metric"><div class="ic" style="background:var(--gold-soft);color:var(--gold-ink)"><span class="material-icons">dashboard_customize</span></div><div class="lbl" data-i18n="m2">Active templates</div><div class="val">36</div><div class="delta up"><span class="material-icons" style="font-size:15px">trending_up</span>+3</div></div>
+              <div class="metric"><div class="ic" style="background:var(--warning-soft);color:var(--warning)"><span class="material-icons">hourglass_top</span></div><div class="lbl" data-i18n="m3">Pending approval</div><div class="val">18</div><div class="delta down"><span class="material-icons" style="font-size:15px">trending_down</span>-4</div></div>
+              <div class="metric"><div class="ic" style="background:var(--info-soft);color:var(--info)"><span class="material-icons">group</span></div><div class="lbl" data-i18n="m4">Active users</div><div class="val">214</div><div class="delta up"><span class="material-icons" style="font-size:15px">trending_up</span>+8.1%</div></div>
+            </div>
+
+            <div class="row2">
+              <div class="card pad">
+                <div class="flex aic" style="justify-content:space-between;margin-bottom:6px">
+                  <h3 style="font-size:15px" data-i18n="issued-over">Certificates issued</h3>
+                  <span class="badge b-neutral" data-i18n="last6">Last 6 months</span>
+                </div>
+                <div class="bars">
+                  <div class="col"><div class="bar" style="height:42%"></div><div class="cap">Jan</div></div>
+                  <div class="col"><div class="bar" style="height:58%"></div><div class="cap">Feb</div></div>
+                  <div class="col"><div class="bar" style="height:50%"></div><div class="cap">Mar</div></div>
+                  <div class="col"><div class="bar" style="height:74%"></div><div class="cap">Apr</div></div>
+                  <div class="col"><div class="bar" style="height:66%"></div><div class="cap">May</div></div>
+                  <div class="col hot"><div class="bar" style="height:92%"></div><div class="cap">Jun</div></div>
+                </div>
+              </div>
+              <div class="card pad">
+                <h3 style="font-size:15px;margin-bottom:6px" data-i18n="recent">Recent certificates</h3>
+                <div class="listrow"><div class="mini-ic"><span class="material-icons" style="font-size:18px">workspace_premium</span></div><div style="min-width:0;flex:1"><div style="color:var(--ink-900);font-weight:500;font-size:13px">Sara Al‑Amiri</div><div class="small muted">Project Management Pro</div></div><span class="badge b-success"><span class="dot"></span><span data-i18n="active">Active</span></span></div>
+                <div class="listrow"><div class="mini-ic"><span class="material-icons" style="font-size:18px">workspace_premium</span></div><div style="min-width:0;flex:1"><div style="color:var(--ink-900);font-weight:500;font-size:13px">Omar Khalid</div><div class="small muted">Data Analytics</div></div><span class="badge b-warning" data-i18n="pending">Pending</span></div>
+                <div class="listrow"><div class="mini-ic"><span class="material-icons" style="font-size:18px">workspace_premium</span></div><div style="min-width:0;flex:1"><div style="color:var(--ink-900);font-weight:500;font-size:13px">Layla Hassan</div><div class="small muted">UX Foundations</div></div><span class="badge b-gold"><span class="material-icons" style="font-size:14px">verified</span><span data-i18n="verified">Verified</span></span></div>
+                <div class="listrow"><div class="mini-ic"><span class="material-icons" style="font-size:18px">workspace_premium</span></div><div style="min-width:0;flex:1"><div style="color:var(--ink-900);font-weight:500;font-size:13px">Yousef Nabil</div><div class="small muted">Cloud Practitioner</div></div><span class="badge b-danger" data-i18n="expired">Expired</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <p class="note">Light/dark and LTR/RTL are driven by the toggles above — the real header already supports both.</p>
+  </section>
+
+  <!-- LOGIN -->
+  <section id="login">
+    <div class="sec-h"><span class="n">03</span><h2>Sign in</h2></div>
+    <p class="sec-sub">A split layout: a branded panel that sells the product, and a focused form with email/password, social sign‑in, and clear states. (The form is now wired to the real auth call after the earlier fix.)</p>
+    <div class="loginframe">
+      <div class="loginbrand">
+        <div class="deco"></div>
+        <div class="top"><div class="brandmark" style="background:rgba(255,255,255,.16)"><span class="material-icons">workspace_premium</span></div><div class="name">Certifada</div></div>
+        <h2 data-i18n="login-head">Issue, manage and verify certificates in one place.</h2>
+        <p class="sub" data-i18n="login-sub">Design templates, automate issuance, and let recipients verify instantly.</p>
+        <ul>
+          <li><span class="material-icons">check_circle</span><span data-i18n="lf1">Drag‑and‑drop certificate designer</span></li>
+          <li><span class="material-icons">check_circle</span><span data-i18n="lf2">Branded, multi‑tenant workspaces</span></li>
+          <li><span class="material-icons">check_circle</span><span data-i18n="lf3">Instant public verification</span></li>
+        </ul>
+      </div>
+      <div class="loginform">
+        <h3 data-i18n="welcome-back">Welcome back</h3>
+        <p class="muted small" style="margin-bottom:22px" data-i18n="signin-sub">Sign in to your Certifada workspace</p>
+        <div class="field"><label data-i18n="email">Email</label>
+          <div class="inwrap"><span class="material-icons lead">mail</span><input class="input has-lead" placeholder="you@company.com" value="mostafa@binghatti.com"></div>
+        </div>
+        <div class="field"><label data-i18n="password">Password</label>
+          <div class="inwrap"><span class="material-icons lead">lock</span><input class="input has-lead" type="password" placeholder="••••••••" value="123456">
+          <span class="material-icons" style="position:absolute;inset-inline-end:12px;top:11px;color:var(--ink-400);cursor:pointer">visibility_off</span></div>
+        </div>
+        <div class="checkline">
+          <span class="flex aic g8"><span class="toggle"></span><span data-i18n="remember">Remember me</span></span>
+          <a href="#" data-i18n="forgot">Forgot password?</a>
+        </div>
+        <button class="btn btn-primary" style="width:100%;justify-content:center;height:46px" data-i18n="signin">Sign in</button>
+        <div class="divider" data-i18n="or">or continue with</div>
+        <div class="socials">
+          <div class="social" style="color:#DB4437">G</div>
+          <div class="social" style="color:#1877F2">f</div>
+          <div class="social" style="color:#00A4EF">⊞</div>
+        </div>
+        <p class="small muted" style="text-align:center;margin-top:20px"><span data-i18n="noacct">New to Certifada?</span> <a href="#" data-i18n="create">Create an account</a></p>
+      </div>
+    </div>
+  </section>
+
+  <!-- COMPONENTS -->
+  <section id="components">
+    <div class="sec-h"><span class="n">04</span><h2>Core components</h2></div>
+    <p class="sec-sub">The shared building blocks restyled once, used everywhere — buttons, inputs with states, status badges, alerts, and tables.</p>
+    <div class="compgrid">
+      <div class="card pad">
+        <h3 style="font-size:14px;margin-bottom:14px">Buttons</h3>
+        <div class="flex wrapg g8" style="margin-bottom:10px">
+          <button class="btn btn-primary"><span class="material-icons">add</span>Primary</button>
+          <button class="btn btn-secondary">Secondary</button>
+          <button class="btn btn-ghost">Ghost</button>
+        </div>
+        <div class="flex wrapg g8">
+          <button class="btn btn-gold"><span class="material-icons">verified</span>Verify</button>
+          <button class="btn btn-danger"><span class="material-icons">delete</span>Delete</button>
+        </div>
+      </div>
+      <div class="card pad">
+        <h3 style="font-size:14px;margin-bottom:14px">Inputs</h3>
+        <div class="field" style="margin-bottom:12px"><label>Default</label><input class="input" placeholder="Certificate title"></div>
+        <div class="field" style="margin-bottom:12px"><label>Focused</label><input class="input" value="Project Management" style="border-color:var(--brand-500);box-shadow:var(--ring)"></div>
+        <div class="field" style="margin-bottom:0"><label>Error</label><input class="input err" value="invalid@"><div class="hint-err"><span class="material-icons" style="font-size:15px">error</span>Enter a valid email address</div></div>
+      </div>
+      <div class="card pad">
+        <h3 style="font-size:14px;margin-bottom:14px">Status badges</h3>
+        <div class="flex wrapg g8">
+          <span class="badge b-success"><span class="dot"></span>Active</span>
+          <span class="badge b-warning">Pending</span>
+          <span class="badge b-danger">Expired</span>
+          <span class="badge b-info">Draft</span>
+          <span class="badge b-neutral">Archived</span>
+          <span class="badge b-gold"><span class="material-icons" style="font-size:14px">verified</span>Verified</span>
+        </div>
+        <h3 style="font-size:14px;margin:18px 0 10px">Alerts</h3>
+        <div class="alert a-success"><span class="material-icons">check_circle</span><div><b>Saved.</b> <span class="tx">Your template was published.</span></div></div>
+        <div class="alert a-danger" style="margin-bottom:0"><span class="material-icons">error</span><div><b>Action failed.</b> <span class="tx">Couldn't reach the server.</span></div></div>
+      </div>
+      <div class="card pad">
+        <h3 style="font-size:14px;margin-bottom:8px">Table</h3>
+        <table class="tbl">
+          <thead><tr><th>Recipient</th><th>Template</th><th>Status</th></tr></thead>
+          <tbody>
+            <tr><td>Sara Al‑Amiri</td><td class="muted">PM Pro</td><td><span class="badge b-success"><span class="dot"></span>Active</span></td></tr>
+            <tr><td>Omar Khalid</td><td class="muted">Data Analytics</td><td><span class="badge b-warning">Pending</span></td></tr>
+            <tr><td>Layla Hassan</td><td class="muted">UX Foundations</td><td><span class="badge b-gold"><span class="material-icons" style="font-size:13px">verified</span>Verified</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<script>
+const I18N={ar:{
+ search:'بحث…','search-any':'ابحث عن الشهادات والأشخاص…','g-main':'الرئيسية','g-insight':'تحليلات','g-admin':'الإدارة',
+ dashboard:'لوحة التحكم',certs:'الشهادات',templates:'القوالب',branding:'الهوية',reports:'التقارير',email:'قوالب البريد',
+ roles:'الأدوار والمستخدمون',settings:'الإعدادات',welcome:'مرحبًا بعودتك — إليك آخر مستجدات شهاداتك.','new-cert':'شهادة جديدة',
+ m1:'الشهادات الصادرة',m2:'القوالب النشطة',m3:'بانتظار الموافقة',m4:'المستخدمون النشطون','issued-over':'الشهادات الصادرة',
+ last6:'آخر ٦ أشهر',recent:'أحدث الشهادات',active:'نشطة',pending:'معلّقة',verified:'موثّقة',expired:'منتهية',
+ 'login-head':'إصدار وإدارة وتوثيق الشهادات في مكان واحد.','login-sub':'صمّم القوالب وأتمت الإصدار ودع المستلمين يوثّقون فورًا.',
+ lf1:'مصمّم شهادات بالسحب والإفلات',lf2:'مساحات عمل موسومة ومتعددة',lf3:'توثيق عام فوري','welcome-back':'مرحبًا بعودتك',
+ 'signin-sub':'سجّل الدخول إلى مساحة Certifada',email:'البريد الإلكتروني',password:'كلمة المرور',remember:'تذكّرني',
+ forgot:'نسيت كلمة المرور؟',signin:'تسجيل الدخول',or:'أو تابع عبر',noacct:'جديد في Certifada؟',create:'أنشئ حسابًا'
+}};
+const root=document.documentElement;
+document.getElementById('themeSeg').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;root.setAttribute('data-theme',b.dataset.themeVal);[...e.currentTarget.children].forEach(c=>c.classList.toggle('active',c===b));});
+document.getElementById('dirSeg').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;const d=b.dataset.dirVal;root.setAttribute('dir',d);[...e.currentTarget.children].forEach(c=>c.classList.toggle('active',c===b));
+ const ar=d==='rtl';document.querySelectorAll('[data-i18n]').forEach(el=>{const k=el.getAttribute('data-i18n');if(ar&&I18N.ar[k]){if(!el.dataset.en)el.dataset.en=el.textContent;el.textContent=I18N.ar[k];}else if(el.dataset.en){el.textContent=el.dataset.en;}});});
+</script>
+</body>
+</html>

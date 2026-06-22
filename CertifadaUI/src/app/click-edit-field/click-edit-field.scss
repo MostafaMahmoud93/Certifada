@@ -1,0 +1,31 @@
+:host { display: block; }
+
+.ce {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 4px 6px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 12px;
+}
+.ce:hover { background: var(--cf-surface-2, rgba(0, 0, 0, 0.04)); }
+
+.ce-label { color: var(--cf-ink-500, #64748b); white-space: nowrap; }
+.ce-value { font-weight: 500; color: var(--cf-ink-900, #0f172a); }
+
+.ce input,
+.ce select {
+  width: 100px;
+  border: 1px solid var(--cf-line, #cbd5e1);
+  background: var(--cf-surface, #fff);
+  color: var(--cf-ink-900, #0f172a);
+  border-radius: 4px;
+  padding: 2px 6px;
+  font: inherit;
+  font-size: 12px;
+  outline: none;
+}
+.ce input:focus,
+.ce select:focus { border-color: var(--cf-brand-500, #6366f1); }

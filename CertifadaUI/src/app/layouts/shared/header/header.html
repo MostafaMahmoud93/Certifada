@@ -1,0 +1,45 @@
+<div id="theme-transition-circle"></div>
+
+<header class="cf-hd">
+  <button class="cf-hd-brand" (click)="goToLanding()">
+    <span class="cf-hd-mark"><i class="material-icons">workspace_premium</i></span>
+    <span class="cf-hd-name">{{ 'APP.TITLE' | transloco }}</span>
+  </button>
+
+  <div class="cf-hd-search">
+    <i class="material-icons">search</i>
+    <input type="text" placeholder="Search…" aria-label="Search" />
+  </div>
+
+  <div class="cf-hd-spacer"></div>
+
+  <div class="cf-hd-actions">
+    <button class="cf-hd-lang" (click)="toggleDirection()" aria-label="Change language">
+      <span>{{ currentDir === 'ltr' ? 'ع' : 'En' }}</span>
+      <i class="material-icons">language</i>
+    </button>
+
+    <button class="cf-hd-icon" (click)="toggleTheme($event)" aria-label="Toggle theme">
+      <i *ngIf="isDark" class="material-icons">light_mode</i>
+      <i *ngIf="!isDark" class="material-icons">dark_mode</i>
+    </button>
+
+    <button class="cf-hd-icon" aria-label="Notifications">
+      <i class="material-icons">notifications</i>
+      <span class="cf-hd-pip"></span>
+    </button>
+
+    <button class="cf-hd-icon" aria-label="Settings">
+      <i class="material-icons">settings</i>
+    </button>
+
+    <span class="cf-hd-sep"></span>
+
+    <button class="cf-hd-avatar" (click)="showPopup = true" aria-label="Account">
+      <i class="material-icons">person</i>
+    </button>
+  </div>
+</header>
+
+<app-toast></app-toast>
+<app-signature-popup *ngIf="showPopup" (CloseSignPopup)="showPopup = false"></app-signature-popup>

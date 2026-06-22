@@ -1,0 +1,215 @@
+<div class=" px-1 py-2 space-y-10 border rounded-lg dark:border-gray-700 m-4">
+  <!-- Branch Creation -->
+  <div class="bg-gray-50 dark:bg-gray-800 p-6 rounded-md shadow m-2 sm:space-y-0 sm:flex sm:items-end sm:gap-4">
+    <div class="flex-1">
+      <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 ">Branch Name</label>
+      <input type="text" [(ngModel)]="newBranchName"  placeholder="Enter branch name"
+        class="w-full px-3 py-2 border rounded text-sm bg-white dark:bg-gray-900 dark:text-white border-gray-300 dark:border-gray-600"/>
+    </div>
+    <div class="flex-1">
+      <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Copy From</label>
+      <select [(ngModel)]="selectedCopyBranch"  class="w-full px-3 py-1 border rounded text-sm bg-white dark:bg-gray-900 dark:text-white border-gray-300 dark:border-gray-600">
+        <option value="" disabled selected>Copy from existing (optional)</option>
+        <option *ngFor="let branch of branches" [value]="branch.name">{{ branch.name }}</option>
+      </select>
+    </div>
+    <div class="pt-2 sm:pt-0">
+      <button (click)="addBranch()" 
+      class="w-full sm:w-auto px-4 py-2 bg-blue-600 dark:bg-green-600 text-white dark:text-gray-300 rounded hover:bg-blue-700 dark:hover:bg-green-700 transition text-sm">
+        Add Branch
+      </button>
+    </div>
+  </div>
+
+ <!-- 🔁 Branch Cards -->
+<div *ngFor="let branch of branches" class="m-2 rounded-lg bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 shadow-md p-6 transition hover:shadow-lg space-y-6">
+
+  <!-- Branch Header -->
+  <div class="flex justify-between items-center border-b dark:border-gray-700 pb-3">
+    <h2 class="text-xl text-gray-800 dark:text-gray-300 flex items-center gap-2">
+      <i class="material-icons">add_business</i> {{ branch.name }}
+    </h2>
+    
+    <div class="flex items-center gap-2 ml-auto ">
+      <!-- Delete Branch -->
+      <button (click)="deleteBranch(branch.name)"
+              class="text-gray-600 hover:text-red-500 rounded text-sm font-medium">
+        <i class="material-icons text-2xl"
+          matTooltip="Delete Branch"
+          matTooltipPosition="above">delete</i>
+      </button>
+
+      <!-- Expand/Collapse Toggle -->
+      <button (click)="branch.expanded = !branch.expanded"
+              class="text-gray-600 hover:text-blue-500 dark:hover:text-green-500 rounded text-sm font-medium">
+        <i class="material-icons text-2xl"
+          matTooltip="{{ branch.expanded ? 'Collapse' : 'Expand'}}"
+          matTooltipPosition="above">
+          {{ branch.expanded ? 'expand_more' : 'expand_less' }}
+        </i>
+      </button>
+    </div>
+  </div>
+
+  <!-- Branding Details -->
+  <div *ngIf="branch.expanded" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 ">
+
+    <!-- 🔠 Font Upload (Drag + Drop) -->
+    <div class="space-y-3">
+      <div
+        class="relative border border-dashed border-gray-300 dark:border-gray-700 rounded p-4 text-center cursor-pointer hover:border-gray-400 dark:hover:border-gray-400 transition"
+        [class.border-purple-600]="branch.isDraggingFont"
+        (dragover)="onDragOver($event, branch, 'font')"
+        (dragleave)="onDragLeave($event, branch, 'font')"
+        (drop)="onDropFont($event, branch)"
+      >
+        <p class="text-sm text-gray-600 dark:text-gray-500">Drag & drop fonts here or click to upload</p>
+        <input type="file" accept=".ttf,.otf" (change)="onFontUpload($event, branch)" hidden #fontInput />
+        <button type="button"
+          (click)="fontInput.click()"
+          class="mt-2 px-3 py-1 text-sm rounded transition
+          bg-gray-300 
+          text-gray-500  
+          hover:bg-gray-500 
+          hover:text-white
+
+          dark:bg-gray-800 
+          dark:text-gray-500  
+          dark:hover:bg-gray-500 
+          dark:hover:text-white
+          ">
+          Upload Fonts
+        </button>
+      </div>
+      
+      <div *ngIf="branch.isFontUploading" class="flex items-center gap-2 text-blue-600 text-sm">
+        <span class="h-4 w-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></span>
+        Uploading fonts...
+      </div>
+      <div class="grid grid-cols-1 sm:grid-cols-1 gap-4 ">
+        <div
+            *ngFor="let font of branch.fonts; let i = index"
+            class="relative group p-4 border dark:border-gray-700 rounded text-center bg-gray-50 dark:bg-gray-800 hover:border-gray-400"
+            [ngStyle]="{ fontFamily: font.name }"
+          >
+            <!-- Delete Icon -->
+            <button
+              class="absolute top-2 right-2 text-red-500 hover:text-red-700 opacity-0 group-hover:opacity-100 transition dark:border-gray-700"
+              (click)="removeFont(branch, i)"
+            >
+              ✖
+            </button>
+
+            <h4 class="font-bold mb-1 dark:text-gray-300">{{ font.name }}</h4>
+            <p class="text-lg dark:text-gray-300">The quick brown fox jumps over the lazy dog.</p>
+          </div>
+      </div>
+    </div>
+
+    <!-- 🖼️ Logo Upload (Drag + Drop) -->
+    <div class="space-y-3">
+      <div
+        class="relative border border-dashed border-gray-300 rounded p-4 text-center cursor-pointer dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-400 transition"
+        [class.border-green-600]="branch.isDraggingLogo"
+        (dragover)="onDragOver($event, branch, 'logo')"
+        (dragleave)="onDragLeave($event, branch, 'logo')"
+        (drop)="onDropLogo($event, branch)"
+      >
+        <p class="text-sm text-gray-600 dark:text-gray-500">Drag & drop logo here or click to upload</p>
+        <input type="file" accept="image/*" (change)="onLogoUpload($event, branch)" hidden #logoInput />
+        <button type="button"
+          (click)="logoInput.click()"
+          class="mt-2 px-3 py-1 text-sm rounded transition
+          bg-gray-300 
+          text-gray-500  
+          hover:bg-gray-500 
+          hover:text-white
+
+          dark:bg-gray-800 
+          dark:text-gray-500  
+          dark:hover:bg-gray-500 
+          dark:hover:text-white"> 
+          Upload Logo
+        </button>
+      </div>
+      <div *ngIf="branch.isLogoUploading" class="flex items-center gap-2 text-green-600 text-sm">
+           <span class="h-4 w-4 border-2 border-green-500 border-t-transparent rounded-full animate-spin"></span>
+           Uploading logo...
+      </div>
+      <div *ngIf="branch.logoPreview" class="relative group bg-white dark:bg-gray-800 border p-4 rounded text-center dark:border-gray-700">
+        <!-- Delete Button -->
+        <button
+          class="absolute top-2 right-2 text-red-500 hover:text-red-700 opacity-0 group-hover:opacity-100 transition"
+          (click)="removeLogo(branch)"> ✖
+        </button>
+        <img [src]="branch.logoPreview" class="h-24 mx-auto object-contain rounded-full" />
+      </div>
+    </div>
+
+    <!-- 🎨 Colors -->
+      <div class="space-y-3 bg-gray-100 dark:bg-gray-800 border rounded border-gray-200 dark:border-gray-700">
+        <h4 class="text-sm text-gray-700 dark:text-gray-300 mb-2 p-4">Color Palette</h4>
+        <div class="flex flex-wrap gap-6 justify-center items-center px-4 pb-4">
+          <div
+            *ngFor="let color of branch.colorPalette; let i = index"
+            class="relative flex flex-col items-center space-y-1 group"
+          >
+            <!-- Color Circle that opens color picker -->
+            <div
+              class="w-16 h-16 rounded-full border-2 border-gray-300 dark:border-gray-600 shadow-md cursor-pointer flex items-center justify-center"
+              (click)="colorInputs.get(i)?.nativeElement?.click()"
+            >
+              <div
+                class="w-14 h-14 rounded-full"
+                [style.background]="color"
+              ></div>
+
+              <!-- Remove button, shows on hover -->
+              <button
+                *ngIf="branch.colorPalette.length > 1"
+                (click)="removeColor(i, branch); $event.stopPropagation()"
+                class="absolute top-0 right-0 -mt-2 -mr-2 w-6 h-6 rounded-full bg-red-600 text-white text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition"
+                aria-label="Remove color"
+                type="button"
+                title="Remove color"
+              >
+                &times;
+              </button>
+            </div>
+
+            <!-- Hidden native input -->
+            <input
+              type="color"
+              [value]="color"
+              #colorInput
+              (input)="onColorChange(i, colorInput.value, branch)"
+              class="hidden"
+            />
+            <span class="text-xs text-gray-600 dark:text-gray-400">{{ color }}</span>
+          </div>
+
+          <!-- Add Color Button -->
+          <div *ngIf="branch.colorPalette.length < maxColors" class="flex flex-col items-center space-y-1">
+            <button
+              (click)="addColor(branch)"
+              class="w-16 h-16 rounded-full border-2 border-dashed border-gray-400 dark:border-gray-600 text-gray-600 dark:text-gray-400 flex items-center justify-center text-4xl hover:bg-gray-200 dark:hover:bg-gray-700 transition"
+              aria-label="Add color"
+              type="button">+
+            </button>
+            <span class="text-xs text-gray-600 dark:text-gray-400">Add</span>
+          </div>
+        </div>
+      </div>
+  </div>
+</div>
+
+  <!-- Export & Import Button -->
+  <div class="flex justify-end items-center space-x-4 m-4">
+    <button *ngIf="!isBranchesEmpty()"
+      (click)="saveBrandingToLocalStorage()"
+          class="px-4 py-2 bg-blue-600 dark:bg-green-500 text-white rounded-lg hover:bg-blue-700 dark:hover:bg-green-800 transition">
+      <i class="material-icons text-base">save</i>
+      Save
+    </button>
+  </div>
+</div>

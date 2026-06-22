@@ -1,0 +1,54 @@
+<div class="space-y-4 p-4">
+  <!-- Subject Field -->
+  <div>
+    <label class="block font-medium text-sm mb-1 dark:text-gray-300">Email Subject</label>
+    <input type="text"
+           [(ngModel)]="subject"
+           (focus)="focusedField = 'subject'"
+           (ngModelChange)="subjectChange.emit($event)"
+           class="w-full border px-3 py-2 rounded dark:bg-gray-900 dark:border-gray-700 dark:text-gray-300" />
+  </div>
+
+   <div>
+    <label class="block font-medium text-sm mb-1 dark:text-gray-300">Email Body</label>
+    <div [class.dark-theme]="this.theme">
+      <quill-editor [(ngModel)]="body"
+                    (ngModelChange)="bodyChange.emit($event)"
+                    [modules]="quillModules"
+                    (onFocus)="focusedField = 'body'"
+                    [style]="{ height: '180px', width: '100%'}"
+                  class="p-1">
+      </quill-editor>
+    </div>
+  </div>
+
+  <!-- Placeholder Buttons -->
+  <div>
+    <h4 class="text-sm font-semibold mb-1 text-gray-700 dark:text-gray-300">Insert Placeholder</h4>
+    <div class="flex flex-wrap gap-2">
+      <button *ngFor="let p of placeholders"
+              (click)="insertPlaceholder( p.value)"
+              class="text-xs px-2 py-1 bg-gray-200 hover:bg-gray-300 rounded dark:bg-gray-900 dark:border-gray-700 dark:text-gray-300">
+        {{ p.label }}
+      </button>
+    </div>
+  </div>
+
+  <!-- Validation Warnings -->
+  <div *ngIf="validationErrors.length" class="bg-red-50 border border-red-300 text-red-700 p-3 rounded">
+    <h4 class="font-semibold text-sm mb-1">Validation Issues</h4>
+    <ul class="text-sm list-disc pl-5">
+      <li *ngFor="let error of validationErrors">{{ error }}</li>
+    </ul>
+  </div>
+
+  <!-- Preview -->
+  <div class="bg-gray-50 border mt-6 p-4 rounded dark:bg-gray-900 dark:border-gray-700 dark:text-gray-300">
+    <h4 class="font-semibold text-sm mb-2 text-gray-800 dark:text-gray-300">Preview</h4>
+    <div class="text-sm leading-relaxed whitespace-pre-wrap dark:bg-gray-900 dark:border-gray-700 dark:text-gray-300">
+      <strong>Subject:</strong><p class="mt-2" [innerHTML]="previewSubject"></p>
+      <strong>Body:</strong>
+      <div class="mt-2" [innerHTML]="previewBody"></div>
+    </div>
+  </div>
+</div>

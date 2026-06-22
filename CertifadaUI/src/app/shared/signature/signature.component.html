@@ -1,0 +1,64 @@
+<div class="fixed inset-0 bg-gray-500 bg-opacity-50 flex justify-center items-center">
+  <div class="bg-white p-6 rounded-lg shadow-lg max-w-lg w-full dark:bg-gray-900">
+    <h3 class="text-xl font-semibold mb-4 dark:text-gray-300">
+     <div *ngIf="hasSavedSignature">Edit Signature</div>
+     <div *ngIf="!hasSavedSignature">Add Signature</div> 
+    </h3>
+
+    <!-- STEP 1: Choose if no saved signature -->
+    <div *ngIf="currentMode === 'initial' && !hasSavedSignature" class="space-y-4 dark:text-gray-300">
+      <p>Select how you'd like to provide your signature:</p>
+      <div class="flex gap-4">
+        <button (click)="chooseMode('sign')" class="px-4 py-2 bg-blue-500 text-white rounded">Sign on Canvas</button>
+        <button (click)="chooseMode('upload')" class="px-4 py-2 bg-blue-500 text-white rounded">Upload Image</button>
+      </div>
+    </div>
+
+    <!-- STEP 2: Signature already saved -->
+    <div *ngIf="currentMode === 'view' && hasSavedSignature">
+      <div *ngIf="isImageUpload && imageUrl">
+        <img [src]="imageUrl" alt="Saved Signature" class="mb-4 max-w-full h-auto">
+      </div>
+
+      <div *ngIf="!isImageUpload">
+        <canvas #canvas width="400" height="200" class="border border-gray-300 mb-4"></canvas>
+      </div>
+
+      <div class="flex gap-4">
+        <button (click)="isImageUpload ? clearImage() : clearCanvas()" class="px-4 py-2 bg-yellow-500 text-white rounded">Clear</button>
+        <button (click)="reset()" class="px-4 py-2 bg-gray-400 text-white rounded">Change Option</button>
+      </div>
+    </div>
+
+    <!-- STEP 3: Signing on Canvas -->
+    <div *ngIf="currentMode === 'sign'">
+      <div class="flex gap-2 mb-2">
+        <button (click)="changePenColor('black')" class="w-6 h-6 rounded-full" style="background:black"></button>
+        <button (click)="changePenColor('red')" class="w-6 h-6 rounded-full" style="background:red"></button>
+        <button (click)="changePenColor('blue')" class="w-6 h-6 rounded-full" style="background:blue"></button>
+      </div>
+      <canvas #canvas width="400" height="200" class="border border-gray-300 mb-4"></canvas>
+      <div class="flex gap-4">
+        <button (click)="clearCanvas()" class="px-4 py-2 bg-gray-300 rounded">Clear</button>
+        <button (click)="saveSignature()" class="px-4 py-2 bg-green-500 text-white rounded">Save</button>
+      </div>
+    </div>
+
+    <!-- STEP 4: Upload Image -->
+    <div *ngIf="currentMode === 'upload'">
+      <input type="file" accept="image/*" (change)="onFileSelected($event)" class="mb-4" />
+      <div *ngIf="imageUrl" class="mb-4">
+        <img [src]="imageUrl" class="max-w-full h-auto">
+      </div>
+      <div class="flex gap-4">
+        <button (click)="clearImage()" class="px-4 py-2 bg-gray-300 rounded">Clear</button>
+        <button (click)="saveSignature()" class="px-4 py-2 bg-green-500 text-white rounded">Save</button>
+      </div>
+    </div>
+
+    <!-- Close always available -->
+    <div class="mt-4">
+      <button (click)="closePopup()" class="px-4 py-2 bg-red-500 text-white rounded">Close</button>
+    </div>
+  </div>
+</div>

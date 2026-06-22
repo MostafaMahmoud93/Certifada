@@ -1,0 +1,4 @@
+﻿namespace Certifada.Infrastructure.Configuration
+{
+
+}

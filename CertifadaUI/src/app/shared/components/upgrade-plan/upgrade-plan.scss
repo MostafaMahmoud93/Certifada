@@ -1,0 +1,20 @@
+    .upgrade-dialog {
+      text-align: center;
+      padding: 20px;
+      font-family: 'Segoe UI', sans-serif;
+    }
+    h2 {
+      margin-bottom: 12px;
+      font-weight: 600;
+      color: #1e293b;
+    }
+    p {
+      color: #475569;
+      font-size: 15px;
+      margin-bottom: 20px;
+    }
+    .actions {
+      display: flex;
+      justify-content: center;
+      gap: 12px;
+    }

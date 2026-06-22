@@ -1,0 +1,1495 @@
+<!-- ============================ Action bar ============================ -->
+<div class="actionbar">
+  <div class="doc-field" [attr.data-tip]="'canvas.namePh' | transloco">
+    <span class="material-icons">description</span>
+    <input class="name-input" [(ngModel)]="name" [placeholder]="'canvas.namePh' | transloco" />
+  </div>
+
+  <div class="size-field" [class.open]="sizeMenu()" (click)="$event.stopPropagation()">
+    <span class="material-icons">aspect_ratio</span>
+    <button class="size-btn" [attr.data-tip]="width + ' × ' + height + ' px'" (click)="sizeMenu.set(!sizeMenu())">
+      <span class="size-lbl">{{ currentSizeLabel() }}</span>
+      <span class="material-icons caret">expand_more</span>
+    </button>
+    @if (sizeMenu()) {
+      <div class="size-menu">
+        @for (p of presets; track p.label) {
+          <button class="size-opt" [class.on]="p.w === width && p.h === height" (click)="applyPreset(p); sizeMenu.set(false)">
+            <span class="so-ic"><span class="material-icons">{{ sizeIcon(p) }}</span></span>
+            <span class="so-main"><b>{{ p.label }}</b><small>{{ p.w }} × {{ p.h }} px</small></span>
+            @if (p.w === width && p.h === height) { <span class="material-icons so-chk">check</span> }
+          </button>
+        }
+      </div>
+    }
+  </div>
+
+  <div class="spacer"></div>
+
+  <div class="seg">
+    <button class="btn btn-sm btn-icon" [class.on]="showRuler()" (click)="toggleRuler()" [attr.data-tip]="'canvas.ruler' | transloco" [attr.aria-label]="'canvas.ruler' | transloco"><span class="material-icons">straighten</span></button>
+    <button class="btn btn-sm btn-icon" [class.on]="showGrid()" (click)="toggleGrid()" [attr.data-tip]="'canvas.grid' | transloco" [attr.aria-label]="'canvas.grid' | transloco"><span class="material-icons">grid_on</span></button>
+    <button class="btn btn-sm btn-icon" [class.on]="snap()" (click)="toggleSnap()" [attr.data-tip]="'canvas.snap' | transloco" [attr.aria-label]="'canvas.snap' | transloco"><span class="material-icons">gps_fixed</span></button>
+    <button class="btn btn-sm btn-icon" [class.on]="guidesOn()" (click)="toggleGuides()" [attr.data-tip]="'canvas.guides' | transloco" [attr.aria-label]="'canvas.guides' | transloco"><span class="material-icons">view_week</span></button>
+  </div>
+  <button class="btn btn-sm btn-icon" [class.on]="fs()" (click)="toggleFullscreen()" [attr.data-tip]="(fs() ? 'canvas.exitFullscreen' : 'canvas.fullscreen') | transloco" [attr.aria-label]="(fs() ? 'canvas.exitFullscreen' : 'canvas.fullscreen') | transloco"><span class="material-icons">{{ fs() ? 'fullscreen_exit' : 'fullscreen' }}</span></button>
+
+  <div class="tb-sep"></div>
+
+  <div class="view-wrap">
+    <button class="btn btn-sm cap" [class.on]="viewMenu()" (click)="$event.stopPropagation(); viewMenu.set(!viewMenu())" [attr.data-tip]="'canvas.vm.viewOptions' | transloco" [attr.aria-label]="'canvas.vm.viewOptions' | transloco"><span class="material-icons">tune</span><span class="material-icons caret">expand_more</span></button>
+    @if (viewMenu()) {
+      <div class="panel-menu view-menu" (click)="$event.stopPropagation()">
+        <div class="pm-label"><span class="material-icons">grid_on</span> {{ 'canvas.vm.grid' | transloco }}</div>
+        <label class="vm-row"><span>{{ 'canvas.vm.size' | transloco }}</span><input type="range" min="8" max="80" step="2" [value]="gridSize" (input)="setGridSize($any($event.target).value)" /><span class="vm-val">{{ gridSize }}</span></label>
+        <div class="vm-seg">
+          <button [class.on]="!gridDots()" (click)="gridDots.set(false)"><span class="material-icons">grid_4x4</span> {{ 'canvas.vm.lines' | transloco }}</button>
+          <button [class.on]="gridDots()" (click)="gridDots.set(true)"><span class="material-icons">more_horiz</span> {{ 'canvas.vm.dots' | transloco }}</button>
+        </div>
+        <div class="pm-label"><span class="material-icons">gps_fixed</span> {{ 'canvas.vm.snapping' | transloco }}</div>
+        <label class="vm-toggle"><span class="vt-label"><span class="material-icons">grid_on</span> {{ 'canvas.vm.snapGrid' | transloco }}</span><span class="vt-switch"><input type="checkbox" [checked]="snap()" (change)="toggleSnap()" /><i></i></span></label>
+        <label class="vm-toggle"><span class="vt-label"><span class="material-icons">align_horizontal_center</span> {{ 'canvas.vm.snapObjects' | transloco }}</span><span class="vt-switch"><input type="checkbox" [checked]="guidesOn()" (change)="toggleGuides()" /><i></i></span></label>
+        <label class="vm-row"><span>{{ 'canvas.vm.strength' | transloco }}</span><input type="range" min="2" max="20" [value]="snapTol" (input)="setSnapTol($any($event.target).value)" /><span class="vm-val">{{ snapTol }}px</span></label>
+        <div class="pm-label"><span class="material-icons">layers</span> {{ 'canvas.vm.overlays' | transloco }}</div>
+        <label class="vm-toggle"><span class="vt-label"><span class="material-icons">grid_3x3</span> {{ 'canvas.vm.thirds' | transloco }}</span><span class="vt-switch"><input type="checkbox" [checked]="showThirds()" (change)="showThirds.set(!showThirds())" /><i></i></span></label>
+        <label class="vm-toggle"><span class="vt-label"><span class="material-icons">crop_free</span> {{ 'canvas.vm.margins' | transloco }}</span><span class="vt-switch"><input type="checkbox" [checked]="showMargins()" (change)="showMargins.set(!showMargins())" /><i></i></span></label>
+        <label class="vm-toggle"><span class="vt-label"><span class="material-icons">straighten</span> {{ 'canvas.vm.distances' | transloco }}</span><span class="vt-switch"><input type="checkbox" [checked]="showDist()" (change)="toggleDist()" /><i></i></span></label>
+        <label class="vm-row"><span>{{ 'canvas.vm.inset' | transloco }}</span><input type="range" min="2" max="20" [(ngModel)]="marginPct" /><span class="vm-val">{{ marginPct }}%</span></label>
+        <div class="pm-label"><span class="material-icons">straighten</span> {{ 'canvas.vm.rulerGuides' | transloco }}</div>
+        <div class="vm-acts">
+          <button (click)="addCenterGuides()">{{ 'canvas.vm.center' | transloco }}</button>
+          <button (click)="addMarginGuides()">{{ 'canvas.vm.marginsBtn' | transloco }}</button>
+          <button (click)="clearGuides()">{{ 'canvas.vm.clear' | transloco }}</button>
+        </div>
+        <div class="vm-add">
+          <input type="number" [(ngModel)]="guideAt" min="0" [title]="'canvas.vm.posPx' | transloco" />
+          <button (click)="addGuideAt('v')" [title]="'canvas.vm.addV' | transloco">+ V</button>
+          <button (click)="addGuideAt('h')" [title]="'canvas.vm.addH' | transloco">+ H</button>
+        </div>
+        <p class="vm-tip">{{ 'canvas.vm.tip' | transloco }}</p>
+      </div>
+    }
+  </div>
+
+  <div class="panel-wrap">
+    <button class="btn btn-sm cap" [class.on]="panelMenu()" (click)="$event.stopPropagation(); panelMenu.set(!panelMenu())" [attr.data-tip]="'canvas.pm.options' | transloco" [attr.aria-label]="'canvas.pm.options' | transloco"><span class="material-icons">view_sidebar</span><span class="material-icons caret">expand_more</span></button>
+    @if (panelMenu()) {
+      <div class="panel-menu" (click)="$event.stopPropagation()">
+        <div class="pm-label">{{ 'canvas.pm.position' | transloco }}</div>
+        <div class="pm-pos">
+          <button [class.on]="propPos() === 'right'" (click)="setPropPos('right')">{{ 'canvas.pm.right' | transloco }}</button>
+          <button [class.on]="propPos() === 'left'" (click)="setPropPos('left')">{{ 'canvas.pm.left' | transloco }}</button>
+          <button [class.on]="propPos() === 'top'" (click)="setPropPos('top')">{{ 'canvas.pm.top' | transloco }}</button>
+          <button [class.on]="propPos() === 'bottom'" (click)="setPropPos('bottom')">{{ 'canvas.pm.bottom' | transloco }}</button>
+        </div>
+        <div class="pm-sep"></div>
+        <label class="pm-check"><input type="checkbox" [checked]="propAuto()" (change)="togglePropAuto()" /> {{ 'canvas.pm.autoHide' | transloco }}</label>
+      </div>
+    }
+  </div>
+
+  <div class="tb-sep"></div>
+
+  <div class="zoom seg-z">
+    <button class="btn btn-sm btn-icon" (click)="zoomOut()" [attr.data-tip]="'canvas.zoomOut' | transloco" [attr.aria-label]="'canvas.zoomOut' | transloco"><span class="material-icons">remove</span></button>
+    <span class="zoom-val" (click)="zoomReset()" [attr.data-tip]="'canvas.zoomReset' | transloco">{{ (viewZoom() * 100) | number:'1.0-0' }}%</span>
+    <button class="btn btn-sm btn-icon" (click)="zoomIn()" [attr.data-tip]="'canvas.zoomIn' | transloco" [attr.aria-label]="'canvas.zoomIn' | transloco"><span class="material-icons">add</span></button>
+    <button class="btn btn-sm btn-icon zoom-fit" (click)="zoomToFit()" [attr.data-tip]="'canvas.fit' | transloco" [attr.aria-label]="'canvas.fit' | transloco"><span class="material-icons">fit_screen</span></button>
+  </div>
+
+  <div class="tb-sep"></div>
+
+  <button class="btn btn-sm btn-icon" [disabled]="!svc.canUndo()" (click)="svc.undo()" [attr.data-tip]="'canvas.undo' | transloco" [attr.aria-label]="'canvas.undo' | transloco"><span class="material-icons">undo</span></button>
+  <button class="btn btn-sm btn-icon" [disabled]="!svc.canRedo()" (click)="svc.redo()" [attr.data-tip]="'canvas.redo' | transloco" [attr.aria-label]="'canvas.redo' | transloco"><span class="material-icons">redo</span></button>
+
+  <div class="history-wrap" (click)="$event.stopPropagation()">
+    <button class="btn hist-btn" [class.on]="historyOpen()" (click)="historyOpen.set(!historyOpen())" [attr.data-tip]="'canvas.historyTip' | transloco" [attr.aria-label]="'canvas.history' | transloco">
+      <span class="material-icons">history</span>
+      <span class="hist-lbl">{{ 'canvas.history' | transloco }}</span>
+      @if (versionsDirty()) { <span class="hist-dot" title="Unsaved changes"></span> }
+      <span class="material-icons hist-caret">expand_more</span>
+    </button>
+    @if (historyOpen()) {
+      <div class="panel-menu history-menu">
+        <div class="hist-tabs">
+          <button [class.on]="historyTab() === 'steps'" (click)="historyTab.set('steps')"><span class="material-icons">history</span> Steps</button>
+          <button [class.on]="historyTab() === 'versions'" (click)="historyTab.set('versions')"><span class="material-icons">bookmarks</span> Versions</button>
+        </div>
+
+        @if (historyTab() === 'steps') {
+          <div class="pm-label">{{ svc.history().length }} {{ svc.history().length === 1 ? 'step' : 'steps' }} · click to revert</div>
+          <div class="hist-list">
+            @for (h of historyView(); track h.i) {
+              <button class="hist-row" [class.cur]="h.i === svc.historyIndex()" [class.future]="h.i > svc.historyIndex()" (click)="revertHistory(h.i)" [title]="h.i === svc.historyIndex() ? 'Current state' : 'Revert to this point'">
+                <span class="hi-ic"><span class="material-icons">{{ h.icon }}</span></span>
+                <span class="hi-main">
+                  <span class="hi-label">{{ h.label }}</span>
+                  <span class="hi-time">{{ ago(h.at) }}</span>
+                </span>
+                @if (h.i === svc.historyIndex()) { <span class="hi-now">now</span> }
+                @else if (h.i < svc.historyIndex()) { <span class="material-icons hi-rev">undo</span> }
+              </button>
+            }
+          </div>
+        } @else {
+          <div class="ver-status" [class.dirty]="versionsDirty()">
+            <span class="material-icons">{{ !versions().length ? 'bookmark_border' : (versionsDirty() ? 'edit' : 'cloud_done') }}</span>
+            {{ !versions().length ? 'No checkpoint saved yet' : (versionsDirty() ? 'Unsaved changes since last version' : 'Up to date with latest version') }}
+          </div>
+          <button class="ver-save" [class.glow]="versionsDirty()" (click)="saveVersion()"><span class="material-icons">bookmark_add</span> Save current as version</button>
+          @if (versions().length === 0) {
+            <p class="hint ver-empty"><span class="material-icons">bookmarks</span> Save checkpoints of your design and return to any of them anytime.</p>
+          } @else {
+            <div class="ver-list">
+              @for (v of versions(); track v.id) {
+                <div class="ver-row" [class.pending]="verConfirm()?.id === v.id">
+                  <div class="ver-thumb">@if (v.thumb) { <img [src]="v.thumb" alt="" /> } @else { <span class="material-icons">image</span> }</div>
+                  <div class="ver-main">
+                    <input class="ver-name" [value]="v.name" (change)="renameVersion(v, $any($event.target).value)" title="Rename" />
+                    <span class="ver-time">{{ v.meta }} · {{ ago(v.at) }}</span>
+                  </div>
+                  @if (verConfirm()?.id === v.id) {
+                    <div class="ver-confirm">
+                      <span>{{ verConfirm()?.action === 'delete' ? 'Delete?' : 'Revert?' }}</span>
+                      <button class="ok" (click)="verConfirm()?.action === 'delete' ? deleteVersion(v) : revertVersion(v)">Yes</button>
+                      <button class="no" (click)="verConfirm.set(null)">No</button>
+                    </div>
+                  } @else {
+                    <div class="ver-acts">
+                      <button (click)="askVer(v.id, 'revert')" title="Revert to this version"><span class="material-icons">restore</span></button>
+                      <button class="danger" (click)="askVer(v.id, 'delete')" title="Delete version"><span class="material-icons">delete</span></button>
+                    </div>
+                  }
+                </div>
+              }
+            </div>
+          }
+        }
+      </div>
+    }
+  </div>
+  <div class="tb-sep"></div>
+
+  <button class="btn act-btn" (click)="goBulk()" [attr.data-tip]="'canvas.bulkTip' | transloco"><span class="material-icons">dynamic_feed</span> {{ 'canvas.bulk' | transloco }}</button>
+
+  <div class="export-wrap">
+    <button class="btn act-btn" [class.on]="showExport()" (click)="showExport.set(!showExport())" [attr.data-tip]="'canvas.exportTip' | transloco"><span class="material-icons">download</span> {{ 'canvas.export' | transloco }} <span class="material-icons caret">expand_more</span></button>
+    @if (showExport()) {
+      <div class="export-menu" (mouseleave)="showExport.set(false)">
+        <button (click)="exportPng()">{{ 'canvas.png' | transloco }}</button>
+        <button (click)="exportPdf()">{{ 'canvas.pdf' | transloco }}</button>
+        <button (click)="exportSvg()">{{ 'canvas.svg' | transloco }}</button>
+        <button (click)="exportJson()">{{ 'canvas.jsonTpl' | transloco }}</button>
+      </div>
+    }
+  </div>
+
+  <button class="btn btn-primary save-btn" [disabled]="saving()" (click)="save()" [attr.data-tip]="'canvas.saveTip' | transloco">
+    <span class="material-icons">{{ saving() ? 'hourglass_top' : 'save' }}</span>
+    {{ saving() ? ('canvas.saving' | transloco) : ('canvas.save' | transloco) }}
+  </button>
+</div>
+
+@if (message(); as m) {
+  <div class="floating-msg" [class.ok]="m.ok" [class.err]="!m.ok">{{ m.text }}</div>
+}
+
+<!-- ============================ Workspace ============================ -->
+@if (propPos() === 'top') {
+  <aside class="panel ptop" [class.auto-collapsed]="isPropCollapsed()" [@panelToggle]="propPos()">
+    <button class="flyout-pin panel-pin" [class.on]="!propAuto()" (click)="togglePropAuto()" [title]="(propAuto() ? 'canvas.pinOpen' : 'canvas.pinAuto') | transloco"><span class="material-icons">push_pin</span></button>
+    <div class="panel-reveal-handle"><span class="material-icons">tune</span><span class="prh-label">{{ 'canvas.props' | transloco }}</span></div>
+    <app-properties-panel class="dock-top" />
+  </aside>
+}
+<div class="workspace" [class.prop-left]="propPos() === 'left'">
+  <!-- Icon rail -->
+  <nav class="rail">
+    @for (item of rail; track item.id) {
+      <button class="rail-btn" [class.on]="activePanel() === item.id" (click)="selectPanel(item.id)" (mouseenter)="onRailHover(item.id)" [title]="('canvas.rail.' + item.id) | transloco">
+        <span class="material-icons">{{ item.icon }}</span>
+        <small>{{ ('canvas.rail.' + item.id) | transloco }}</small>
+      </button>
+    }
+  </nav>
+
+  <!-- Flyout panel -->
+  @if (activePanel(); as p) {
+    <aside class="flyout" [class.auto]="!flyoutPinned()">
+      <button class="flyout-pin" [class.on]="flyoutPinned()" (click)="toggleFlyoutPin()" [title]="(flyoutPinned() ? 'canvas.pinAuto' : 'canvas.pinOpen') | transloco">
+        <span class="material-icons">push_pin</span>
+      </button>
+      @switch (p) {
+        @case ('design') {
+          <h3 class="flyout-title">{{ 'canvas.title.design' | transloco }}</h3>
+          <div class="panel-search"><span class="material-icons">search</span><input [value]="search()" (input)="search.set($any($event.target).value)" [placeholder]="'canvas.ds.searchPh' | transloco" /></div>
+          <div class="row orient">
+            <button class="btn btn-sm" (click)="setOrientation('landscape')" [title]="'canvas.ds.landscape' | transloco"><span class="material-icons">crop_landscape</span> {{ 'canvas.ds.landscape' | transloco }}</button>
+            <button class="btn btn-sm" (click)="setOrientation('portrait')" [title]="'canvas.ds.portrait' | transloco"><span class="material-icons">crop_portrait</span> {{ 'canvas.ds.portrait' | transloco }}</button>
+          </div>
+          <span class="grp-label">{{ 'canvas.ds.customSize' | transloco }}</span>
+          <div class="row cust">
+            <input type="number" min="50" max="5000" [(ngModel)]="customW" aria-label="Width" />
+            <span class="x">×</span>
+            <input type="number" min="50" max="5000" [(ngModel)]="customH" aria-label="Height" />
+            <button class="btn btn-primary" (click)="applyCustom()">{{ 'canvas.ds.apply' | transloco }}</button>
+          </div>
+          @for (g of filteredSizeGroups(); track g.label) {
+            <span class="grp-label">{{ g.label }}</span>
+            <div class="size-grid">
+              @for (s of g.items; track s.label) {
+                <button class="size-tile" [class.on]="width === s.w && height === s.h" (click)="applySize(s.w, s.h)" [title]="s.w + ' × ' + s.h">
+                  <span class="size-prev" [style.aspect-ratio]="s.w + ' / ' + s.h"></span>
+                  <span class="size-name">{{ s.label }}</span>
+                  <span class="size-dim">{{ s.w }}×{{ s.h }}</span>
+                </button>
+              }
+            </div>
+          }
+        }
+
+        @case ('templates') {
+          <h3 class="flyout-title">{{ 'canvas.title.templates' | transloco }}</h3>
+          <div class="panel-search"><span class="material-icons">search</span><input [value]="search()" (input)="search.set($any($event.target).value)" [placeholder]="'canvas.tpl.searchPh' | transloco" /></div>
+          <div class="tpl-cats">
+            @for (c of tplCategories; track c.id) {
+              <button class="tpl-cat" [class.on]="tplCat() === c.id" (click)="setTplCat(c.id)">{{ c.label }}</button>
+            }
+          </div>
+          <div class="tpl-grid">
+            @for (t of filteredTemplates(); track t.id) {
+              <button class="tpl-card" (click)="applyTemplate(t)" [title]="t.w + ' × ' + t.h">
+                <span class="tpl-prev" [style.aspect-ratio]="t.w + ' / ' + t.h" [style.background]="t.bg || '#ffffff'">
+                  @if (tplThumbs()[t.id]) { <img class="tpl-img" [src]="tplThumbs()[t.id]" alt="" /> }
+                  @else { <span class="tpl-bar" [style.background]="t.accent"></span> }
+                </span>
+                <span class="tpl-name">{{ t.name }}</span>
+                <span class="tpl-dim">{{ t.w }}×{{ t.h }}</span>
+              </button>
+            }
+          </div>
+          @if (filteredTemplates().length === 0) { <p class="hint">{{ 'canvas.tpl.none' | transloco }}</p> }
+        }
+
+        @case ('ai') {
+          <div class="ai-head">
+            <h3 class="flyout-title">{{ 'canvas.title.ai' | transloco }}</h3>
+            <button class="ai-gear" (click)="aiSettings.set(!aiSettings())" [title]="'canvas.ai.settings' | transloco"><span class="material-icons">settings</span></button>
+          </div>
+          @if (aiSettings()) {
+            <div class="ai-config">
+              <label>{{ 'canvas.ai.provider' | transloco }}
+                <select [(ngModel)]="aiProvider">
+                  <option value="anthropic">{{ 'canvas.ai.pAnthropic' | transloco }}</option>
+                  <option value="openai">{{ 'canvas.ai.pOpenai' | transloco }}</option>
+                  <option value="custom">{{ 'canvas.ai.pCustom' | transloco }}</option>
+                </select>
+              </label>
+              <label>{{ 'canvas.ai.apiKey' | transloco }}
+                <input type="password" [(ngModel)]="aiKey" [placeholder]="'canvas.ai.apiKeyPh' | transloco" autocomplete="off" />
+              </label>
+              <label>{{ 'canvas.ai.model' | transloco }}
+                <input type="text" [(ngModel)]="aiModel" [placeholder]="'canvas.ai.modelPh' | transloco" />
+              </label>
+              @if (aiProvider === 'custom') {
+                <label>{{ 'canvas.ai.endpoint' | transloco }}
+                  <input type="text" [(ngModel)]="aiUrl" [placeholder]="'canvas.ai.endpointPh' | transloco" />
+                </label>
+              }
+              <button class="btn btn-primary btn-block" (click)="saveAiConfig()">{{ 'canvas.ai.saveSettings' | transloco }}</button>
+              <p class="hint">{{ 'canvas.ai.configHint' | transloco }}</p>
+            </div>
+          }
+          <div class="ai-chat">
+            @for (m of aiMsgs(); track $index) {
+              <div class="ai-msg" [class.user]="m.role === 'user'" [class.bot]="m.role === 'assistant'" [class.err]="m.role === 'error'">{{ m.text }}</div>
+            }
+            @if (aiBusy()) { <div class="ai-msg bot ai-typing">{{ 'canvas.ai.designing' | transloco }}</div> }
+            @if (aiMsgs().length === 0 && !aiBusy()) {
+              <p class="hint">{{ 'canvas.ai.emptyHint' | transloco }}</p>
+              <div class="ai-suggest">
+                @for (s of aiSuggestions; track s) {
+                  <button class="ai-chip" (click)="useAiSuggestion(s)">{{ s }}</button>
+                }
+              </div>
+            }
+          </div>
+          <div class="ai-input">
+            <textarea [(ngModel)]="aiInput" rows="2" [placeholder]="'canvas.ai.inputPh' | transloco" (keydown.enter)="$event.preventDefault(); sendAi()"></textarea>
+            <button class="btn btn-primary" [disabled]="aiBusy()" (click)="sendAi()" [title]="'canvas.ai.send' | transloco"><span class="material-icons">send</span></button>
+          </div>
+        }
+
+        @case ('text') {
+          <h3 class="flyout-title">{{ 'canvas.title.text' | transloco }}</h3>
+
+          <div class="txt-add">
+            <button class="add-tile head" (click)="svc.addHeading()">Add a heading</button>
+            <button class="add-tile sub" (click)="svc.addText('Subheading', { fontSize: 28, fontWeight: '600' })">Add a subheading</button>
+            <button class="add-tile body" (click)="svc.addText('A little bit of body text', { fontSize: 16 })">Add body text</button>
+          </div>
+
+          @if (textFx(); as fx) {
+            <section class="txt-sec">
+              <div class="sec-h static"><span class="material-icons">auto_fix_high</span> Effects · selected text</div>
+              <div class="sec-b">
+            <div class="fx-studio">
+              <label class="fx-toggle"><input type="checkbox" [checked]="fx.shadow" (change)="setFx({ shadow: $any($event.target).checked })" /><span class="material-icons">filter_drama</span> Shadow</label>
+              @if (fx.shadow) {
+                <div class="fx-row">
+                  <input type="color" [value]="hex(fx.shadowColor)" (input)="setFx({ shadowColor: $any($event.target).value })" title="Colour" />
+                  <input type="range" min="0" max="30" [value]="fx.shadowBlur" (input)="setFx({ shadowBlur: $any($event.target).value })" title="Blur" />
+                  <input type="range" min="0" max="20" [value]="fx.shadowOffset" (input)="setFx({ shadowOffset: $any($event.target).value })" title="Distance" />
+                </div>
+              }
+              <label class="fx-toggle"><input type="checkbox" [checked]="fx.outline" (change)="setFx({ outline: $any($event.target).checked })" /><span class="material-icons">format_color_text</span> Outline</label>
+              @if (fx.outline) {
+                <div class="fx-row">
+                  <input type="color" [value]="fx.outlineColor" (input)="setFx({ outlineColor: $any($event.target).value })" title="Colour" />
+                  <input type="range" min="0.5" max="8" step="0.5" [value]="fx.outlineWidth" (input)="setFx({ outlineWidth: $any($event.target).value })" title="Width" />
+                </div>
+              }
+              <label class="fx-toggle"><input type="checkbox" [checked]="fx.gradient" (change)="setFx({ gradient: $any($event.target).checked })" /><span class="material-icons">gradient</span> Gradient fill</label>
+              @if (fx.gradient) {
+                <div class="fx-row">
+                  <input type="color" [value]="fx.gradFrom" (input)="setFx({ gradFrom: $any($event.target).value })" />
+                  <input type="color" [value]="fx.gradTo" (input)="setFx({ gradTo: $any($event.target).value })" />
+                  <select [value]="fx.gradDir" (change)="setFx({ gradDir: $any($event.target).value })"><option value="h">Horizontal</option><option value="v">Vertical</option><option value="d">Diagonal</option></select>
+                </div>
+              }
+              <div class="fx-slider"><label>Curve</label><input type="range" min="-100" max="100" [value]="fx.curve" (input)="setFx({ curve: $any($event.target).value })" /><span>{{ fx.curve }}</span></div>
+              <div class="fx-slider"><label>Spacing</label><input type="range" min="-50" max="800" [value]="fx.letterSpacing" (input)="setFx({ letterSpacing: $any($event.target).value })" /></div>
+              <div class="fx-slider"><label>Line height</label><input type="range" min="0.8" max="2.5" step="0.05" [value]="fx.lineHeight" (input)="setFx({ lineHeight: $any($event.target).value })" /></div>
+              <div class="fx-quick">
+                <button (click)="fxCase('upper')" title="UPPERCASE">AA</button>
+                <button (click)="fxCase('title')" title="Title Case">Tt</button>
+                <button (click)="fxCase('lower')" title="lowercase">aa</button>
+                <span class="fx-sp"></span>
+                @for (c of highlightSwatches; track c) {
+                  <button class="hl" [class.none]="!c" [style.background]="c || 'transparent'" (click)="fxHighlight(c)" [title]="c || 'No highlight'">@if (!c) { <span class="material-icons">format_color_reset</span> }</button>
+                }
+              </div>
+            </div>
+              </div>
+            </section>
+          }
+
+          <section class="txt-sec">
+            <button class="sec-h" (click)="toggleSec('styles')"><span class="material-icons">style</span> Text styles<span class="material-icons caret">{{ secOpen('styles') ? 'expand_less' : 'expand_more' }}</span></button>
+            @if (secOpen('styles')) {
+              <div class="sec-b">
+                <div class="txt-gallery">
+                  @for (t of textStyles; track t.label) {
+                    <button class="txt-card" (click)="addStyle(t)" [style.fontFamily]="t.opts.fontFamily || 'Inter'" [style.fontWeight]="t.opts.fontWeight || '400'" [style.fontStyle]="t.opts.fontStyle || 'normal'">{{ t.label }}</button>
+                  }
+                </div>
+                <span class="grp-label">Font pairings</span>
+                <div class="txt-pairs">
+                  @for (p of pairFonts; track p.label) {
+                    <button class="pair" (click)="addPair(p)"><span class="ph" [style.fontFamily]="p.head">{{ p.label }}</span><small class="pb" [style.fontFamily]="p.body">{{ p.head }} + {{ p.body }}</small></button>
+                  }
+                </div>
+              </div>
+            }
+          </section>
+
+          <section class="txt-sec">
+            <button class="sec-h" (click)="toggleSec('phrases')"><span class="material-icons">workspace_premium</span> Certificate text<span class="material-icons caret">{{ secOpen('phrases') ? 'expand_less' : 'expand_more' }}</span></button>
+            @if (secOpen('phrases')) {
+              <div class="sec-b">
+                <div class="txt-phrases">
+                  @for (p of certPhrases; track p.text) {
+                    <button class="phrase" (click)="addPhrase(p)">{{ p.text }}</button>
+                  }
+                </div>
+              </div>
+            }
+          </section>
+
+          <section class="txt-sec">
+            <button class="sec-h" (click)="toggleSec('fonts')"><span class="material-icons">font_download</span> Fonts<span class="material-icons caret">{{ secOpen('fonts') ? 'expand_less' : 'expand_more' }}</span></button>
+            @if (secOpen('fonts')) {
+              <div class="sec-b">
+                <label class="upload-font"><span class="material-icons">upload_file</span> Upload a font (.ttf / .otf / .woff)
+                  <input type="file" accept=".ttf,.otf,.woff,.woff2,font/*" hidden (change)="onFontUpload($event)" /></label>
+                @if (svc.userFonts().length) {
+                  <span class="grp-label">Your fonts</span>
+                  <div class="font-showcase">
+                    @for (f of svc.userFonts(); track f) {
+                      <button class="show-tile" [style.fontFamily]="f" (click)="addFontText(f, f)" [title]="f">{{ f }}</button>
+                    }
+                  </div>
+                }
+                <span class="grp-label">Arabic display fonts</span>
+                <div class="font-showcase">
+                  @for (f of arabicShowcase; track f.family) {
+                    <button class="show-tile" [style.fontFamily]="f.family" (click)="addFontText(f.family, f.sample)" [title]="f.family">{{ f.sample }}</button>
+                  }
+                </div>
+              </div>
+            }
+          </section>
+
+          <p class="hint">Select a text layer to edit its <b>effects</b>. Apply any font from the <b>Font</b> dropdown in properties.</p>
+        }
+
+        @case ('elements') {
+          <h3 class="flyout-title">{{ 'canvas.title.elements' | transloco }}</h3>
+          <div class="panel-search"><span class="material-icons">search</span><input [value]="search()" (input)="search.set($any($event.target).value)" placeholder="Search icons & badges…" /></div>
+          <div class="tabs">
+            <button [class.on]="elementsTab() === 'shapes'" (click)="elementsTab.set('shapes')">Shapes</button>
+            <button [class.on]="elementsTab() === 'decor'" (click)="elementsTab.set('decor')">Decor</button>
+            <button [class.on]="elementsTab() === 'icons'" (click)="elementsTab.set('icons')">Icons</button>
+            <button [class.on]="elementsTab() === 'badges'" (click)="elementsTab.set('badges')">Badges</button>
+          </div>
+          @if (elementsTab() === 'shapes' || elementsTab() === 'decor') {
+            <div class="el-style">
+              <div class="es-row">
+                <span class="es-mini">Fill</span>
+                <label class="es-color" [class.off]="shapeOutline"><input type="color" [(ngModel)]="shapeFill" /></label>
+                <button class="es-none" [class.on]="shapeOutline" (click)="shapeOutline = !shapeOutline" title="No fill (outline only)">⊘</button>
+                <span class="es-mini es-mini-2">Stroke</span>
+                <label class="es-color"><input type="color" [(ngModel)]="shapeStroke" /></label>
+              </div>
+              <div class="es-swatches">
+                @for (c of shapeSwatches; track c) { <button [style.background]="c" [class.sel]="shapeFill === c" (click)="shapeFill = c" [title]="c"></button> }
+              </div>
+              <div class="es-row">
+                <span class="es-lbl">Width</span>
+                <input class="es-range" type="range" min="0" max="12" [(ngModel)]="shapeStrokeW" title="Stroke width" />
+                <span class="es-val">{{ shapeStrokeW }}px</span>
+              </div>
+              <div class="es-row">
+                <span class="es-lbl">Opacity</span>
+                <input class="es-range" type="range" min="10" max="100" [(ngModel)]="shapeOpacity" title="Opacity" />
+                <span class="es-val">{{ shapeOpacity }}%</span>
+              </div>
+              <button class="es-apply" (click)="recolorSelected()" title="Apply to the selected element"><span class="material-icons">format_color_fill</span> Apply to selection</button>
+              <div class="es-presets">
+                @for (p of shapePresets; track p.name) {
+                  <button (click)="applyShapePreset(p)" [title]="p.name">
+                    <span class="es-chip" [style.background]="p.outline ? 'transparent' : p.fill" [style.border-color]="p.stroke"></span>{{ p.name }}
+                  </button>
+                }
+              </div>
+            </div>
+          }
+          @if (elementsTab() === 'shapes') {
+            <div class="grid-tiles">
+              <button (click)="addShape('rect')" title="Rectangle">▭</button>
+              <button (click)="addShape('roundRect')" title="Rounded">▢</button>
+              <button (click)="addShape('circle')" title="Circle">◯</button>
+              <button (click)="addShape('ellipse')" title="Ellipse">⬭</button>
+              <button (click)="addShape('triangle')" title="Triangle">△</button>
+              <button (click)="addShape('pentagon')" title="Pentagon">⬠</button>
+              <button (click)="addShape('hexagon')" title="Hexagon">⬡</button>
+              <button (click)="addShape('star')" title="Star">★</button>
+              <button (click)="addShape('diamond')" title="Diamond">◇</button>
+              <button (click)="addShape('shield')" title="Shield"><span class="material-icons">shield</span></button>
+              <button (click)="addShape('chevron')" title="Chevron"><span class="material-icons">double_arrow</span></button>
+              <button (click)="addShape('cross')" title="Cross / plus"><span class="material-icons">add</span></button>
+              <button (click)="addShape('parallelogram')" title="Parallelogram">▰</button>
+              <button (click)="addShape('bubble')" title="Speech bubble"><span class="material-icons">chat_bubble_outline</span></button>
+              <button (click)="addShape('blob')" title="Blob"><span class="material-icons">water_drop</span></button>
+              <button (click)="addShape('arrow')" title="Arrow">➜</button>
+              <button (click)="addShape('heart')" title="Heart">♥</button>
+              <button (click)="addShape('line')" title="Line">／</button>
+            </div>
+          } @else if (elementsTab() === 'decor') {
+            <div class="decor-tiles">
+              <button (click)="addSeal()"><span class="material-icons">workspace_premium</span> Award seal</button>
+              <button (click)="addRibbon()"><span class="material-icons">military_tech</span> Ribbon banner</button>
+              <button (click)="addFrame('single')"><span class="material-icons">crop_din</span> Frame</button>
+              <button (click)="addFrame('double')"><span class="material-icons">filter_frames</span> Double frame</button>
+              <button (click)="addDivider('plain')"><span class="material-icons">horizontal_rule</span> Divider</button>
+              <button (click)="addDivider('dashed')"><span class="material-icons">more_horiz</span> Dashed divider</button>
+              <button (click)="addDivider('ornament')"><span class="material-icons">auto_awesome</span> Ornament divider</button>
+            </div>
+            <p class="hint">Decorations are vector shapes — recolour them with <b>Fill</b> &amp; <b>Stroke</b> in the properties panel.</p>
+          } @else if (elementsTab() === 'icons') {
+            <div class="grid-tiles emoji">
+              @for (g of filteredIcons(); track g.c) { <button (click)="addIcon(g.c)" [title]="g.n">{{ g.c }}</button> }
+            </div>
+          } @else {
+            <div class="grid-tiles emoji">
+              @for (g of filteredBadges(); track g.c) { <button (click)="addIcon(g.c)" [title]="g.n">{{ g.c }}</button> }
+            </div>
+          }
+        }
+
+        @case ('images') {
+          <h3 class="flyout-title">{{ 'canvas.title.images' | transloco }}</h3>
+          <div class="img-actions">
+            <label class="img-upload"><span class="material-icons">add_photo_alternate</span> Upload image
+              <input type="file" accept="image/*" hidden (change)="onImageFile($event)" /></label>
+            <label class="img-upload ghost"><span class="material-icons">data_object</span> Import JSON
+              <input type="file" accept="application/json,.json" hidden (change)="importJson($event)" /></label>
+          </div>
+
+          @if (myImages().length) {
+            <div class="lib-head"><span class="grp-label">Your uploads</span><button class="link-btn" (click)="clearMyImages()">Clear</button></div>
+            <div class="img-lib">
+              @for (src of myImages(); track src) {
+                <button class="img-thumb" (click)="addLibraryImage(src)" title="Add to canvas"><img [src]="src" alt="" /></button>
+              }
+            </div>
+          } @else {
+            <p class="hint">Upload images to build a reusable library — they'll appear here for one-click reuse.</p>
+          }
+
+          @if (selectedImage()) {
+            <div class="img-edit">
+              <span class="grp-label">Filters</span>
+              <div class="img-presets">
+                @for (f of imgFilters; track f.name) {
+                  <button (click)="applyImgFilter(f)" [title]="f.name"><span class="ip-prev" [style.filter]="f.css"></span>{{ f.name }}</button>
+                }
+              </div>
+
+              <span class="grp-label">Tint</span>
+              <div class="img-tints">
+                <button class="none" [class.sel]="!imgFx()?.tint" (click)="tintImg('')" title="No tint"><span class="material-icons">block</span></button>
+                @for (c of imgTints; track c) {
+                  @if (c) { <button [style.background]="c" [class.sel]="imgFx()?.tint === c" (click)="tintImg(c)" [title]="c"></button> }
+                }
+              </div>
+
+              <div class="adj-head"><span class="grp-label">Adjust</span><button class="link-btn" (click)="resetImgFx()">Reset</button></div>
+              <label class="adj"><span>Brightness</span><input type="range" min="-50" max="50" [value]="pct(imgFx()?.brightness)" (input)="adjImg('brightness', $any($event.target).value)" /></label>
+              <label class="adj"><span>Contrast</span><input type="range" min="-50" max="50" [value]="pct(imgFx()?.contrast)" (input)="adjImg('contrast', $any($event.target).value)" /></label>
+              <label class="adj"><span>Saturation</span><input type="range" min="-50" max="50" [value]="pct(imgFx()?.saturation)" (input)="adjImg('saturation', $any($event.target).value)" /></label>
+              <label class="adj"><span>Blur</span><input type="range" min="0" max="30" [value]="pct(imgFx()?.blur)" (input)="adjImg('blur', $any($event.target).value)" /></label>
+
+              <span class="grp-label">Mask shape</span>
+              <div class="img-masks">
+                @for (m of imgMasks; track m.kind) {
+                  <button (click)="maskImage(m.kind)" [title]="m.label"><span class="material-icons">{{ m.icon }}</span></button>
+                }
+              </div>
+
+              <span class="grp-label">Crop ratio</span>
+              <div class="img-crops">
+                @for (cr of imgRatios; track cr.label) { <button (click)="cropImg(cr.r)">{{ cr.label }}</button> }
+              </div>
+
+              <span class="grp-label">Arrange</span>
+              <div class="img-quick">
+                <button (click)="svc.flipActive('x')" title="Flip horizontal"><span class="material-icons">swap_horiz</span></button>
+                <button (click)="svc.flipActive('y')" title="Flip vertical"><span class="material-icons">swap_vert</span></button>
+                <button (click)="rotateImg()" title="Rotate 90°"><span class="material-icons">rotate_right</span></button>
+                <button (click)="toggleImageBorder()" title="Toggle border"><span class="material-icons">border_outer</span></button>
+                <button (click)="toggleImageShadow()" title="Toggle shadow"><span class="material-icons">filter_drama</span></button>
+                <button (click)="mReplaceImg()" title="Replace image"><span class="material-icons">find_replace</span></button>
+                <button (click)="useImageAsBg()" title="Use as background"><span class="material-icons">wallpaper</span></button>
+              </div>
+
+              <label class="img-op">Opacity
+                <input type="range" min="10" max="100" [value]="imgOpacity()" (input)="setImageOpacity($any($event.target).value)" />
+                <span class="io-val">{{ imgOpacity() }}%</span>
+              </label>
+            </div>
+          } @else {
+            <p class="hint">Select an image on the canvas to apply <b>filters</b>, <b>mask shapes</b>, borders, shadows and more.</p>
+          }
+        }
+
+        @case ('backgrounds') {
+          <h3 class="flyout-title">{{ 'canvas.title.backgrounds' | transloco }}</h3>
+
+          <div class="bg-tabs">
+            <button [class.on]="bgTab() === 'bg'" (click)="bgTab.set('bg')"><span class="material-icons">wallpaper</span> Background</button>
+            <button [class.on]="bgTab() === 'frames'" (click)="bgTab.set('frames')"><span class="material-icons">filter_frames</span> Border frames</button>
+          </div>
+
+          @if (bgTab() === 'bg') {
+          @if (myBgs().length) {
+            <span class="grp-label">Saved</span>
+            <div class="bg-saved">
+              @for (r of myBgs(); track $index) {
+                <span class="bg-saved-chip">
+                  <button class="bg-saved-sw" [style.background]="bgCss(r)" (click)="applyBg(r)" [title]="r.type"></button>
+                  <button class="bg-saved-del" (click)="deleteBg(r)" title="Remove"><span class="material-icons">close</span></button>
+                </span>
+              }
+            </div>
+          }
+
+          <span class="grp-label">Solid colours</span>
+          <div class="swatch-row">
+            @for (c of bgSolids; track c) {
+              <button class="swatch" [style.background]="c" [title]="c" (click)="setBgColor(c)"></button>
+            }
+            <label class="swatch custom" title="Custom colour">
+              <span class="material-icons">colorize</span>
+              <input type="color" hidden (input)="setBgColor($any($event.target).value)" />
+            </label>
+          </div>
+
+          <span class="grp-label">Gradient presets</span>
+          <div class="bg-grad-row">
+            @for (g of bgGradients; track $index) {
+              <button class="bg-grad" [style.background]="'linear-gradient(135deg,' + g[0] + ',' + g[1] + ')'" (click)="setBgGradient(g)"></button>
+            }
+          </div>
+
+          <span class="grp-label">Gradient builder</span>
+          <div class="bg-builder">
+            <div class="bg-preview" [style.background]="bgGradPreview()"></div>
+            <div class="bgb-row">
+              <label class="bgb-color" title="Start colour"><input type="color" [(ngModel)]="bgGradC1" (ngModelChange)="applyBgGradient()" /></label>
+              @if (bgGradUseMid) {
+                <label class="bgb-color" title="Middle colour"><input type="color" [(ngModel)]="bgGradMid" (ngModelChange)="applyBgGradient()" /></label>
+              }
+              <label class="bgb-color" title="End colour"><input type="color" [(ngModel)]="bgGradC2" (ngModelChange)="applyBgGradient()" /></label>
+              <button class="bgb-icon" (click)="swapBgColors()" title="Swap colours"><span class="material-icons">swap_horiz</span></button>
+              <button class="bgb-icon" (click)="shuffleGrad()" title="Shuffle colours"><span class="material-icons">casino</span></button>
+              <label class="bgb-chk"><input type="checkbox" [(ngModel)]="bgGradUseMid" (ngModelChange)="applyBgGradient()" /> 3-tone</label>
+            </div>
+            <div class="bgb-seg full">
+              <button [class.on]="!bgGradRadial" (click)="bgGradRadial = false; applyBgGradient()">Linear</button>
+              <button [class.on]="bgGradRadial" (click)="bgGradRadial = true; applyBgGradient()">Radial</button>
+            </div>
+            @if (!bgGradRadial) {
+              <div class="bgb-angle-row">
+                <input type="range" min="0" max="360" step="5" [(ngModel)]="bgGradAngle" (ngModelChange)="applyBgGradient()" />
+                <span class="bgb-deg">{{ bgGradAngle }}°</span>
+              </div>
+              <div class="bgb-dirs">
+                @for (d of gradDirs; track d) {
+                  <button [class.on]="+bgGradAngle === d" (click)="setGradAngle(d)" [title]="d + '°'"><span class="material-icons" [style.transform]="'rotate(' + d + 'deg)'">arrow_upward</span></button>
+                }
+              </div>
+            }
+          </div>
+
+          <span class="grp-label">Patterns</span>
+          <div class="bg-pat-colors">
+            <label title="Pattern colour"><input type="color" [(ngModel)]="bgPatternFg" /></label>
+            <label title="Page colour"><input type="color" [(ngModel)]="bgPatternBg" /></label>
+            <span class="hint-sm">Pick colours, then tap a pattern</span>
+          </div>
+          <div class="bg-patterns">
+            @for (p of bgPatterns; track p) {
+              <button [style.background]="patternPreview(p)" (click)="applyPattern(p)" [title]="p"></button>
+            }
+          </div>
+          <label class="adj"><span>Pattern size</span><input type="range" min="20" max="80" [(ngModel)]="bgPatternScale" (ngModelChange)="reapplyPattern()" /></label>
+
+          <button class="bg-save" (click)="saveBg()"><span class="material-icons">bookmark_add</span> Save current background</button>
+
+          <span class="grp-label">Background image</span>
+          <label class="img-upload"><span class="material-icons">add_photo_alternate</span> Upload background
+            <input type="file" accept="image/*" hidden (change)="onBgFile($event)" /></label>
+
+          @if (bgHasImage()) {
+            <div class="bgimg-ctrls">
+              <span class="grp-label">Image fit</span>
+              <div class="img-crops">
+                <button (click)="bgImgFit('cover')">Cover</button>
+                <button (click)="bgImgFit('contain')">Contain</button>
+                <button (click)="bgImgFit('stretch')">Stretch</button>
+              </div>
+              <label class="adj"><span>Blur</span><input type="range" min="0" max="40" value="0" (input)="bgImgBlur($any($event.target).value)" /></label>
+              <label class="adj"><span>Opacity</span><input type="range" min="10" max="100" value="100" (input)="bgImgOpacity($any($event.target).value)" /></label>
+              <button class="btn btn-block btn-danger" (click)="removeBg()">Remove background image</button>
+            </div>
+          }
+          } @else {
+            <span class="grp-label">Frame colour</span>
+            <div class="swatch-row">
+              @for (c of frameColors; track c) { <button class="swatch" [style.background]="c" [class.on]="frameColor === c" (click)="frameColor = c; recolorFrame()" [title]="c"></button> }
+              <label class="swatch custom" title="Custom colour"><span class="material-icons">colorize</span><input type="color" hidden [(ngModel)]="frameColor" (ngModelChange)="recolorFrame()" /></label>
+            </div>
+
+            <label class="adj"><span>Thickness</span><input type="range" min="0.5" max="3" step="0.1" [(ngModel)]="frameWeight" (ngModelChange)="recolorFrame()" /></label>
+            <label class="adj"><span>Inset</span><input type="range" min="0.01" max="0.12" step="0.005" [(ngModel)]="frameInset" (ngModelChange)="recolorFrame()" /></label>
+            <label class="adj"><span>Opacity</span><input type="range" min="20" max="100" [(ngModel)]="frameOpacity" (ngModelChange)="recolorFrame()" /></label>
+            <label class="vm-toggle"><span class="vt-label"><span class="material-icons">flip_to_back</span> Place behind content</span><span class="vt-switch"><input type="checkbox" [(ngModel)]="frameBehind" (ngModelChange)="recolorFrame()" /><i></i></span></label>
+
+            <span class="grp-label">Border frames</span>
+            <div class="frame-cats">
+              <button [class.on]="frameCat() === 'all'" (click)="frameCat.set('all')">All</button>
+              <button [class.on]="frameCat() === 'lines'" (click)="frameCat.set('lines')">Lines</button>
+              <button [class.on]="frameCat() === 'corners'" (click)="frameCat.set('corners')">Corners</button>
+              <button [class.on]="frameCat() === 'decorative'" (click)="frameCat.set('decorative')">Decorative</button>
+            </div>
+            <div class="frame-grid">
+              @for (f of framesView(); track f) {
+                <button class="frame-tile" [style.background]="framePreview(f)" (click)="applyFrame(f)" [title]="f"></button>
+              }
+            </div>
+            @if (hasFrame()) {
+              <button class="btn btn-block btn-danger frame-remove" (click)="removeFrame()"><span class="material-icons">delete</span> Remove frame</button>
+            }
+            <p class="hint">Frames scale with the page — set colour, thickness, inset & opacity, then tap a style.</p>
+          }
+        }
+
+        @case ('variables') {
+          <h3 class="flyout-title">{{ 'canvas.title.variables' | transloco }}</h3>
+          <p class="hint">Add dynamic fields like <b>{{ '{{' }}Name{{ '}}' }}</b> — each is filled per row when you generate certificates.</p>
+          <div class="panel-search"><span class="material-icons">search</span><input [value]="search()" (input)="search.set($any($event.target).value)" placeholder="Search variables…" /></div>
+
+          @if (usedVarList().length) {
+            <div class="var-head">
+              <span class="grp-label">On this canvas ({{ usedVarList().length }})</span>
+              <button class="link-btn" [class.on]="previewOn()" (click)="togglePreview()">{{ previewOn() ? 'Hide preview' : 'Preview data' }}</button>
+            </div>
+            <div class="var-sample">
+              @for (k of usedVarList(); track k) {
+                <div class="vs-row" [class.active]="k === activeFieldKey()">
+                  <button class="vs-key" (click)="selectVar(k)" title="Select on canvas">{{ '{{' }}{{ k }}{{ '}}' }}</button>
+                  <input class="vs-val" [value]="sampleData[k] || ''" (input)="onSampleChange(k, $any($event.target).value)" placeholder="sample value" />
+                  <button class="vs-x" (click)="removeVar(k)" title="Remove from canvas"><i class="material-icons">close</i></button>
+                </div>
+              }
+            </div>
+            <button class="bg-save" (click)="autofillSample()"><span class="material-icons">auto_fix_high</span> Auto-fill &amp; preview sample data</button>
+          }
+
+          <div class="ds-card">
+            <div class="ds-head">
+              <span class="ds-title"><span class="material-icons">table_rows</span> Sample dataset</span>
+              @if (sampleText.trim()) {
+                <button class="link-btn" (click)="clearDataset()">Clear</button>
+              } @else {
+                <button class="link-btn" (click)="loadExampleCsv()">Try example</button>
+              }
+            </div>
+            <textarea class="var-csv" [(ngModel)]="sampleText" (ngModelChange)="parseSampleCsv()" rows="3"
+                      placeholder="Paste CSV / TSV with a header row…&#10;Name,CourseName,IssueDate&#10;Jordan Lee,UX Design,Jun 16 2026"></textarea>
+            @if (records().length) {
+              <div class="ds-stepper">
+                <button class="ds-nav" (click)="stepRecord(-1)" title="Previous"><i class="material-icons">chevron_left</i></button>
+                <div class="ds-meta">
+                  <span class="ds-pos">Record {{ recordIdx() + 1 }} <em>/ {{ records().length }}</em></span>
+                  <span class="ds-bar"><i [style.width.%]="(recordIdx() + 1) / records().length * 100"></i></span>
+                </div>
+                <button class="ds-nav" (click)="stepRecord(1)" title="Next"><i class="material-icons">chevron_right</i></button>
+              </div>
+              <div class="ds-chips">
+                @for (c of recordCols(); track c) {
+                  <span class="ds-chip" [class.miss]="!isVarUsed(c)"
+                        (click)="isVarUsed(c) ? selectVar(c) : toggleVar(c)"
+                        [title]="isVarUsed(c) ? 'On canvas — click to select' : 'Click to add as variable'">
+                    <b>{{ c }}</b> {{ currentRecordVal(c) || '—' }}
+                  </span>
+                }
+              </div>
+              <div class="ds-actions">
+                <button class="cf-mini" (click)="addColumnsAsVars()"><span class="material-icons">playlist_add</span> Add all columns</button>
+                <button class="cf-mini" [class.on]="previewOn()" (click)="togglePreview()"><span class="material-icons">{{ previewOn() ? 'visibility' : 'visibility_off' }}</span> {{ previewOn() ? 'Previewing' : 'Preview' }}</button>
+              </div>
+            } @else if (sampleText.trim()) {
+              <p class="hint-sm">Add a header row and at least one data row to step through records.</p>
+            }
+          </div>
+
+          @for (g of filteredGroups(); track g.label) {
+            <span class="grp-label">{{ g.label }}</span>
+            <div class="var-list">
+              @for (v of g.vars; track v) {
+                <button class="var-row" [class.used]="isVarUsed(v)" [class.active]="v === activeFieldKey()"
+                        (click)="toggleVar(v)" [title]="isVarUsed(v) ? 'On canvas — click to remove' : 'Click to add'">
+                  <span>{{ '{{' }}{{ v }}{{ '}}' }}</span>
+                  <i class="material-icons">{{ isVarUsed(v) ? 'check' : 'add' }}</i>
+                </button>
+              }
+            </div>
+          }
+
+          <span class="grp-label">Dynamic signatures</span>
+          <div class="sig-profile">
+            @if (profileSig()) {
+              <img [src]="profileSig()" alt="" />
+              <div class="sig-profile-txt"><b>Your signature</b><span>Auto-filled into every signature when generating in bulk.</span></div>
+            } @else {
+              <span class="material-icons">draw</span>
+              <div class="sig-profile-txt"><b>No signature saved yet</b><span>Add one from the profile menu — it fills all signatures in bulk.</span></div>
+            }
+          </div>
+          <p class="hint-sm">Each signature is a <b>variable</b> filled with your profile signature in bulk. Captions can include <b>{{ '{{' }}variables{{ '}}' }}</b> that merge from your data.</p>
+          <div class="sig-cards">
+            @for (s of signatures(); track s.key; let i = $index) {
+              <div class="sig-card" [class.used]="usedSigs().has(s.key)" [class.previewing]="isPreviewing(s.key)">
+                <div class="sig-head">
+                  <button class="sig-thumb" [class.on]="isPreviewing(s.key)" (click)="previewSig(s.key)" [title]="profileSig() ? (isPreviewing(s.key) ? 'Previewing — click to show placeholder' : 'Preview with your signature') : 'Select on canvas'">
+                    @if (profileSig()) { <img [src]="profileSig()" alt="" /> } @else { <span class="material-icons">draw</span> }
+                    @if (isPreviewing(s.key)) { <span class="sig-chk material-icons">check</span> }
+                  </button>
+                  <div class="sig-head-meta">
+                    <span class="sig-head-name">{{ s.label }}</span>
+                    <span class="sig-head-sub" [class.live]="isPreviewing(s.key)">{{ sigStatus(s.key) }}</span>
+                  </div>
+                  @if (usedSigs().has(s.key)) {
+                    <button class="sig-x" (click)="removeSig(s.key)" title="Remove from canvas"><span class="material-icons">close</span></button>
+                  }
+                </div>
+
+                <span class="sig-field-lbl">Caption</span>
+                <div class="sig-input-wrap">
+                  <input class="sig-role" [value]="s.role" (input)="setSigRole(i, $any($event.target).value)" placeholder="Role / title (e.g. Director)" />
+                  <button class="sig-var-btn" [class.on]="sigVarsOpen().has(s.key)" (click)="toggleSigVars(s.key)" title="Insert a variable">{{ '{}' }}</button>
+                </div>
+                @if (sigVarsOpen().has(s.key)) {
+                  <div class="sig-vars">
+                    @for (v of captionVars; track v) {
+                      <button class="sig-var" (click)="insertCaptionVar(i, v)" [title]="'Insert ' + v">{{ '{{' }}{{ v }}{{ '}}' }}</button>
+                    }
+                  </div>
+                }
+
+                <div class="sig-acts">
+                  <button class="sig-btn ghost" (click)="addSigPlaceholder(s.key)"><span class="material-icons">draw</span> Signature</button>
+                  <button class="sig-btn ghost" (click)="addSigBlock(s)"><span class="material-icons">history_edu</span> With caption</button>
+                </div>
+              </div>
+            }
+          </div>
+          <button class="sig-add" (click)="addSignatureSlot()"><span class="material-icons">add</span> Add signatory</button>
+
+          <span class="grp-label">Custom variable</span>
+          <div class="row">
+            <input [(ngModel)]="customVar" placeholder="e.g. course" (keyup.enter)="addCustomVar()" />
+            <button class="btn" (click)="addCustomVar()">Add</button>
+          </div>
+        }
+
+        @case ('qr') {
+          <h3 class="flyout-title">{{ 'canvas.title.qr' | transloco }}</h3>
+
+          <div class="qr-stage">
+            <div class="qr-preview-wrap">
+              @if (qrPreview()) {
+                <img class="qr-preview" [src]="qrPreview()" alt="QR preview" />
+              } @else {
+                <div class="qr-preview empty"><span class="material-icons">qr_code_2</span></div>
+              }
+            </div>
+            <span class="qr-stage-meta"><span class="material-icons">bolt</span> Live preview</span>
+          </div>
+
+          <div class="qr-types">
+            @for (t of qrTypes; track t.k) {
+              <button [class.on]="qrType === t.k" (click)="setQrType(t.k)" [title]="t.label">
+                <span class="material-icons">{{ t.icon }}</span>{{ t.label }}
+              </button>
+            }
+          </div>
+
+          @switch (qrType) {
+            @case ('text') {
+              <div class="field"><label>Text</label><textarea rows="2" [(ngModel)]="qrValue" (ngModelChange)="updateQrPreview()" placeholder="Any text…"></textarea></div>
+            }
+            @case ('email') {
+              <div class="field"><label>Email address</label><input [(ngModel)]="qrEmail" (ngModelChange)="updateQrPreview()" placeholder="name@example.com" /></div>
+              <div class="field"><label>Subject</label><input [(ngModel)]="qrEmailSub" (ngModelChange)="updateQrPreview()" /></div>
+              <div class="field"><label>Message</label><textarea rows="2" [(ngModel)]="qrEmailBody" (ngModelChange)="updateQrPreview()"></textarea></div>
+            }
+            @case ('phone') {
+              <div class="field"><label>Phone number</label><input [(ngModel)]="qrPhone" (ngModelChange)="updateQrPreview()" placeholder="+1 555 0142" /></div>
+            }
+            @case ('sms') {
+              <div class="field"><label>Phone number</label><input [(ngModel)]="qrSmsNum" (ngModelChange)="updateQrPreview()" /></div>
+              <div class="field"><label>Message</label><textarea rows="2" [(ngModel)]="qrSmsMsg" (ngModelChange)="updateQrPreview()"></textarea></div>
+            }
+            @case ('wifi') {
+              <div class="field"><label>Network name (SSID)</label><input [(ngModel)]="qrWifiSsid" (ngModelChange)="updateQrPreview()" /></div>
+              <div class="field"><label>Password</label><input [(ngModel)]="qrWifiPass" (ngModelChange)="updateQrPreview()" /></div>
+              <div class="grid-2">
+                <div class="field"><label>Security</label>
+                  <select [(ngModel)]="qrWifiEnc" (ngModelChange)="updateQrPreview()"><option value="WPA">WPA/WPA2</option><option value="WEP">WEP</option><option value="nopass">None</option></select></div>
+                <label class="check"><input type="checkbox" [(ngModel)]="qrWifiHidden" (ngModelChange)="updateQrPreview()" /> Hidden</label>
+              </div>
+            }
+            @case ('vcard') {
+              <div class="field"><label>Full name</label><input [(ngModel)]="qrVcName" (ngModelChange)="updateQrPreview()" /></div>
+              <div class="grid-2">
+                <div class="field"><label>Organization</label><input [(ngModel)]="qrVcOrg" (ngModelChange)="updateQrPreview()" /></div>
+                <div class="field"><label>Title</label><input [(ngModel)]="qrVcTitle" (ngModelChange)="updateQrPreview()" /></div>
+              </div>
+              <div class="grid-2">
+                <div class="field"><label>Phone</label><input [(ngModel)]="qrVcPhone" (ngModelChange)="updateQrPreview()" /></div>
+                <div class="field"><label>Email</label><input [(ngModel)]="qrVcEmail" (ngModelChange)="updateQrPreview()" /></div>
+              </div>
+              <div class="field"><label>Website</label><input [(ngModel)]="qrVcUrl" (ngModelChange)="updateQrPreview()" /></div>
+            }
+            @default {
+              <div class="field"><label>Link URL</label><input [(ngModel)]="qrValue" (ngModelChange)="updateQrPreview()" placeholder="https://…" /></div>
+              <div class="qr-vars">
+                <span class="qr-vars-label"><span class="material-icons">data_object</span> Insert variable</span>
+                <div class="qr-vars-chips">
+                  @for (v of qrVarChips; track v) {
+                    <button class="qr-var-chip" (click)="insertQrVar(v)" [title]="'Insert ' + v">
+                      <span class="qv-b">{{ '{{' }}</span>{{ v }}<span class="qv-b">{{ '}}' }}</span>
+                    </button>
+                  }
+                </div>
+              </div>
+            }
+          }
+
+          <div class="qr-card">
+          <span class="grp-label gl"><span class="material-icons">auto_awesome</span> Style presets</span>
+          <div class="qr-presets">
+            @for (p of qrPresets; track p.label) { <button (click)="applyQrPreset(p)">{{ p.label }}</button> }
+          </div>
+
+          <span class="grp-label gl"><span class="material-icons">grid_view</span> Module shape</span>
+          <div class="qr-seg">
+            <button [class.on]="qrStyle === 'square'" (click)="qrStyle = 'square'; updateQrPreview()">Square</button>
+            <button [class.on]="qrStyle === 'rounded'" (click)="qrStyle = 'rounded'; updateQrPreview()">Rounded</button>
+            <button [class.on]="qrStyle === 'dots'" (click)="qrStyle = 'dots'; updateQrPreview()">Dots</button>
+          </div>
+
+          <span class="grp-label gl"><span class="material-icons">visibility</span> Eye shape</span>
+          <div class="qr-seg">
+            <button [class.on]="qrEyeStyle === 'auto'" (click)="qrEyeStyle = 'auto'; updateQrPreview()">Auto</button>
+            <button [class.on]="qrEyeStyle === 'square'" (click)="qrEyeStyle = 'square'; updateQrPreview()">Square</button>
+            <button [class.on]="qrEyeStyle === 'rounded'" (click)="qrEyeStyle = 'rounded'; updateQrPreview()">Rounded</button>
+            <button [class.on]="qrEyeStyle === 'circle'" (click)="qrEyeStyle = 'circle'; updateQrPreview()">Circle</button>
+          </div>
+
+          <div class="grid-2">
+            <div class="field"><label>Foreground</label><input type="color" [(ngModel)]="qrFg" (ngModelChange)="updateQrPreview()" /></div>
+            <div class="field">
+              <label>{{ qrGradient ? 'Gradient end' : 'Background' }}</label>
+              @if (qrGradient) { <input type="color" [(ngModel)]="qrFg2" (ngModelChange)="updateQrPreview()" /> }
+              @else { <input type="color" [(ngModel)]="qrBg" [disabled]="qrTransparent" (ngModelChange)="updateQrPreview()" /> }
+            </div>
+          </div>
+          <label class="vm-toggle"><span class="vt-label"><span class="material-icons">gradient</span> Gradient fill</span><span class="vt-switch"><input type="checkbox" [(ngModel)]="qrGradient" (ngModelChange)="updateQrPreview()" /><i></i></span></label>
+          <label class="vm-toggle"><span class="vt-label"><span class="material-icons">grid_off</span> Transparent background</span><span class="vt-switch"><input type="checkbox" [(ngModel)]="qrTransparent" (ngModelChange)="updateQrPreview()" /><i></i></span></label>
+          <div class="grid-2">
+            <div class="field"><label>Eye colour</label>
+              <div class="qr-eye">
+                <input type="color" [(ngModel)]="qrEyeColor" (ngModelChange)="updateQrPreview()" />
+                @if (qrEyeColor) { <button class="link-btn" (click)="qrEyeColor = ''; updateQrPreview()">reset</button> }
+              </div>
+            </div>
+            <div class="field"><label>Error correction</label>
+              <select [(ngModel)]="qrEcc" (ngModelChange)="updateQrPreview()"><option value="L">L · 7%</option><option value="M">M · 15%</option><option value="Q">Q · 25%</option><option value="H">H · 30%</option></select></div>
+          </div>
+          </div>
+
+          <span class="grp-label gl"><span class="material-icons">straighten</span> Size &amp; margin</span>
+          <div class="field"><label>Size · {{ qrSize }} px</label>
+            <input type="range" min="120" max="600" step="20" [(ngModel)]="qrSize" (ngModelChange)="updateQrPreview()" /></div>
+          <div class="field"><label>Quiet margin · {{ qrMargin }}</label>
+            <input type="range" min="0" max="10" step="1" [(ngModel)]="qrMargin" (ngModelChange)="updateQrPreview()" /></div>
+
+          <span class="grp-label gl"><span class="material-icons">crop_din</span> Frame &amp; caption</span>
+          <label class="vm-toggle"><span class="vt-label"><span class="material-icons">crop_din</span> Add frame with caption</span><span class="vt-switch"><input type="checkbox" [(ngModel)]="qrFrame" (ngModelChange)="updateQrPreview()" /><i></i></span></label>
+          @if (qrFrame) {
+            <div class="grid-2">
+              <div class="field"><label>Caption</label><input [(ngModel)]="qrFrameText" (ngModelChange)="updateQrPreview()" maxlength="24" /></div>
+              <div class="field"><label>Frame colour</label><input type="color" [(ngModel)]="qrFrameColor" (ngModelChange)="updateQrPreview()" /></div>
+            </div>
+          }
+
+          <span class="grp-label gl"><span class="material-icons">image</span> Center logo</span>
+          @if (qrLogo) {
+            <div class="qr-logo-row">
+              <img [src]="qrLogo" alt="" />
+              <span>Logo added · high error correction</span>
+              <button class="link-btn" (click)="removeQrLogo()">Remove</button>
+            </div>
+          } @else {
+            <label class="img-upload ghost"><span class="material-icons">add_photo_alternate</span> Upload logo
+              <input type="file" accept="image/*" hidden (change)="onQrLogo($event)" /></label>
+          }
+
+          <div class="qr-actions">
+            <button class="btn" (click)="downloadQr()"><span class="material-icons">download</span> Download</button>
+            <button class="btn btn-primary" (click)="generateQr()">Add to canvas</button>
+          </div>
+          <p class="hint">Tip: Link type with a <code>{{ '{{' }}id{{ '}}' }}</code> variable gives each recipient a unique verification code.</p>
+        }
+
+        @case ('drawing') {
+          <h3 class="flyout-title">{{ 'canvas.title.drawing' | transloco }}</h3>
+
+          <button class="draw-toggle" [class.on]="svc.drawing()" (click)="toggleDraw()">
+            <span class="material-icons">{{ svc.drawing() ? 'edit_off' : 'draw' }}</span>
+            {{ svc.drawing() ? 'Drawing on — click to stop' : 'Enable drawing' }}
+          </button>
+
+          <span class="grp-label gl"><span class="material-icons">brush</span> Brushes</span>
+          <div class="brush-presets">
+            @for (p of brushPresets; track p.label) {
+              <button [class.on]="brushType() === p.type && brushSize === p.size && brushGlow === p.glow" (click)="applyBrushPreset(p)" [title]="p.label">
+                <span class="material-icons">{{ p.icon }}</span>{{ p.label }}
+              </button>
+            }
+          </div>
+
+          <span class="grp-label gl"><span class="material-icons">palette</span> Colour</span>
+          <div class="brush-colors">
+            @for (c of brushPalette; track c) {
+              <button class="bc-sw" [class.sel]="brushColor === c" [style.background]="c" (click)="pickBrushColor(c)" [title]="c"></button>
+            }
+            <label class="bc-sw custom" title="Custom colour"><span class="material-icons">colorize</span>
+              <input type="color" [(ngModel)]="brushColor" (input)="pushBrush()" hidden /></label>
+          </div>
+
+          <div class="field"><label>Size · {{ brushSize }} px</label>
+            <input type="range" min="1" max="60" [(ngModel)]="brushSize" (input)="pushBrush()" /></div>
+          <div class="field"><label>Opacity · {{ brushOpacity }}%</label>
+            <input type="range" min="10" max="100" [(ngModel)]="brushOpacity" (input)="pushBrush()" /></div>
+          <div class="field"><label>Smoothing · {{ brushSmooth }}</label>
+            <input type="range" min="0" max="20" [(ngModel)]="brushSmooth" (input)="pushBrush()" /></div>
+          <label class="vm-toggle"><span class="vt-label"><span class="material-icons">auto_awesome</span> Neon glow</span><span class="vt-switch"><input type="checkbox" [(ngModel)]="brushGlow" (change)="pushBrush()" /><i></i></span></label>
+
+          <span class="grp-label gl"><span class="material-icons">settings_input_component</span> Brush engine</span>
+          <div class="qr-seg">
+            <button [class.on]="brushType() === 'pencil'" (click)="setBrushType('pencil')"><span class="material-icons">edit</span> Pencil</button>
+            <button [class.on]="brushType() === 'spray'" (click)="setBrushType('spray')"><span class="material-icons">grain</span> Spray</button>
+            <button [class.on]="brushType() === 'circle'" (click)="setBrushType('circle')"><span class="material-icons">brush</span> Marker</button>
+          </div>
+
+          <div class="draw-actions">
+            <button class="btn" (click)="undoStroke()"><span class="material-icons">undo</span> Undo</button>
+            <button class="btn btn-danger" (click)="clearAll()">Clear</button>
+          </div>
+          <p class="hint">Pick a brush, then draw on the canvas — strokes become editable vector paths.</p>
+        }
+
+        @case ('addons') {
+          <h3 class="flyout-title">{{ 'canvas.title.addons' | transloco }}</h3>
+
+          <span class="grp-label gl"><span class="material-icons">verified_user</span> Verification fingerprint</span>
+          <p class="hint-sm">A unique <b>SHA-256</b> hash generated from the document's content — proves the certificate is authentic and unaltered.</p>
+          <div class="addon-2">
+            <button class="addon-card" (click)="addHash('short')"><span class="material-icons">tag</span><b>Short ID</b><em>16 chars</em></button>
+            <button class="addon-card" (click)="addHash('full')"><span class="material-icons">fingerprint</span><b>Full hash</b><em>64 chars</em></button>
+          </div>
+
+          <span class="grp-label gl"><span class="material-icons">verified</span> Official stamps</span>
+          <div class="stamp-grid">
+            @for (s of stampPresets; track s.text) {
+              <button class="stamp-chip" [style.color]="s.color" [style.border-color]="s.color" (click)="addStamp(s.text, s.color)">
+                <span class="material-icons">verified</span>{{ s.text }}
+              </button>
+            }
+          </div>
+
+          <span class="grp-label gl"><span class="material-icons">draw</span> Signature &amp; watermark</span>
+          <button class="add-tile" (click)="addSignatureLine()"><span class="material-icons">draw</span> Add signature line</button>
+          <div class="row">
+            <input [(ngModel)]="watermarkText" placeholder="ORIGINAL" (keyup.enter)="addWatermark()" />
+            <button class="btn" (click)="addWatermark()">Watermark</button>
+          </div>
+
+          <span class="grp-label gl"><span class="material-icons">approval</span> Custom stamp image</span>
+          <label class="img-upload ghost"><span class="material-icons">approval</span> Upload stamp
+            <input type="file" accept="image/*" hidden (change)="onStampFile($event)" /></label>
+
+          <p class="hint">Fingerprint, stamps, signatures &amp; watermark are placed as movable elements.</p>
+        }
+
+        @case ('brand') {
+          <h3 class="flyout-title">{{ 'canvas.title.brand' | transloco }}</h3>
+          <span class="grp-label">Brand color palette</span>
+          <div class="swatch-row">
+            @for (c of brandPalette; track c) {
+              <button class="swatch" [style.background]="c" [title]="c" (click)="applyBrandColor(c)"></button>
+            }
+          </div>
+          <p class="hint">Click a colour to apply it to the selected element (or the background).</p>
+          <span class="grp-label">Brand logo</span>
+          <label class="add-tile file">🏢 Add logo
+            <input type="file" accept="image/*" hidden (change)="onLogoFile($event)" /></label>
+        }
+
+        @case ('table') {
+          <h3 class="flyout-title">{{ 'canvas.title.table' | transloco }}</h3>
+
+          @if (isTableSelected()) {
+            <div class="tbl-edit">
+              <span class="te-title"><span class="material-icons">edit</span> Edit selected table</span>
+              <div class="te-grid">
+                <button (click)="svc.tableAddRow()"><span class="material-icons">add</span> Row</button>
+                <button (click)="svc.tableRemoveRow()"><span class="material-icons">remove</span> Row</button>
+                <button (click)="svc.tableAddCol()"><span class="material-icons">add</span> Column</button>
+                <button (click)="svc.tableRemoveCol()"><span class="material-icons">remove</span> Column</button>
+              </div>
+
+              @if (tableView(); as tv) {
+                <span class="te-sub"><span class="material-icons">keyboard</span> Cell text <small>— or double-click a cell on the canvas</small></span>
+                <div class="te-cells" [style.gridTemplateColumns]="'repeat(' + tv.cols + ', minmax(0,1fr))'">
+                  @for (row of tv.cells; track $index; let r = $index) {
+                    @for (cell of row; track $index; let c = $index) {
+                      <input class="te-cell" [class.head]="(tv.opts.showHeader && r === 0) || (tv.opts.headerCol && c === 0)"
+                             [value]="cell" (change)="onGridCell(r, c, $event)" [title]="'Row ' + (r + 1) + ' · Col ' + (c + 1)" />
+                    }
+                  }
+                </div>
+
+                <span class="te-sub"><span class="material-icons">playlist_add</span> Fill rows from a list</span>
+                <textarea class="tbl-paste" [(ngModel)]="tableRowsPaste" rows="3" placeholder="One row per line (comma or tab separated)…&#10;Sara, Lead, 98&#10;Omar, Dev, 95"></textarea>
+                <button class="btn btn-block" [disabled]="!tableRowsPaste.trim()" (click)="fillRows()"><span class="material-icons">playlist_add</span> Replace data rows</button>
+
+                <label class="vm-toggle te-dyn"><span class="vt-label"><span class="material-icons">dynamic_feed</span> Dynamic rows (fill from Bulk list)</span><span class="vt-switch"><input type="checkbox" [checked]="!!tv.dynamic" (change)="onDynamicToggle($event)" /><i></i></span></label>
+                @if (tv.dynamic) {
+                  <p class="hint">In <b>Bulk</b>, every item in your list becomes one row. Map each column to a data field:</p>
+                  <div class="te-colkeys">
+                    @for (k of tv.colKeys; track $index; let c = $index) {
+                      <div class="field"><label>{{ (tv.opts.showHeader && (tv.cells[0] || [])[c]) || ('Column ' + (c + 1)) }}</label>
+                        <input [value]="k" (change)="onColKey(c, $event)" placeholder="field key" /></div>
+                    }
+                  </div>
+                }
+              }
+
+              <button class="te-apply" (click)="applyTableStyleToSelection()"><span class="material-icons">palette</span> Apply current style</button>
+            </div>
+          }
+
+          <span class="grp-label gl"><span class="material-icons">style</span> Style</span>
+          <div class="tbl-styles">
+            @for (s of tableStyles; track s.key) {
+              <button class="tbl-style" [class.on]="tableStyleKey === s.key" (click)="applyTableStyle(s.key)" [title]="s.label">
+                <span class="ts-prev"><i [style.background]="s.o.headerFill"></i><i [style.background]="s.o.zebra ? s.o.zebraColor : '#ffffff'"></i><i [style.background]="'#ffffff'"></i></span>
+                <small>{{ s.label }}</small>
+              </button>
+            }
+          </div>
+
+          <span class="grp-label gl"><span class="material-icons">grid_on</span> Insert — hover to size</span>
+          <div class="tbl-picker" (mouseleave)="gridHover(0, 0)">
+            @for (r of tGridRows; track r) {
+              <div class="tp-row">
+                @for (c of tGridCols; track c) {
+                  <span class="tp-cell" [class.on]="r <= gridR && c <= gridC" (mouseenter)="gridHover(r, c)" (click)="pickGrid(r, c)"></span>
+                }
+              </div>
+            }
+          </div>
+          <div class="tp-size">{{ gridR || tableRows }} × {{ gridC || tableCols }}</div>
+
+          <div class="grid-2">
+            <div class="field"><label>Rows</label><input type="number" min="1" max="20" [(ngModel)]="tableRows" /></div>
+            <div class="field"><label>Columns</label><input type="number" min="1" max="12" [(ngModel)]="tableCols" /></div>
+          </div>
+          <div class="field"><label>Column headers (comma separated, optional)</label><input [(ngModel)]="tHeaders" placeholder="Name, Role, Score" /></div>
+
+          <button class="adv-toggle" (click)="tAdvanced = !tAdvanced"><span class="material-icons">{{ tAdvanced ? 'expand_less' : 'tune' }}</span> {{ tAdvanced ? 'Hide options' : 'More options' }}</button>
+          @if (tAdvanced) {
+            <div class="tbl-adv">
+              <label class="vm-toggle"><span class="vt-label"><span class="material-icons">table_rows</span> Header row</span><span class="vt-switch"><input type="checkbox" [(ngModel)]="tShowHeader" /><i></i></span></label>
+              <label class="vm-toggle"><span class="vt-label"><span class="material-icons">view_column</span> Header column</span><span class="vt-switch"><input type="checkbox" [(ngModel)]="tHeaderCol" /><i></i></span></label>
+              <label class="vm-toggle"><span class="vt-label"><span class="material-icons">format_line_spacing</span> Zebra striped rows</span><span class="vt-switch"><input type="checkbox" [(ngModel)]="tZebra" /><i></i></span></label>
+              <div class="grid-2">
+                <div class="field"><label>Header fill</label><input type="color" [(ngModel)]="tHeaderColor" /></div>
+                <div class="field"><label>Header text</label><input type="color" [(ngModel)]="tHeaderText" /></div>
+              </div>
+              <div class="grid-2">
+                <div class="field"><label>Zebra colour</label><input type="color" [(ngModel)]="tZebraColor" /></div>
+                <div class="field"><label>Cell text</label><input type="color" [(ngModel)]="tCellText" /></div>
+              </div>
+              <div class="grid-2">
+                <div class="field"><label>Border colour</label><input type="color" [(ngModel)]="tBorderColor" /></div>
+                <div class="field"><label>Border width</label><input type="number" min="0" max="6" [(ngModel)]="tBorderWidth" /></div>
+              </div>
+              <div class="grid-2">
+                <div class="field"><label>Font size</label><input type="number" min="8" max="48" [(ngModel)]="tFontSize" /></div>
+                <div class="field"><label>Align</label><select [(ngModel)]="tAlign"><option value="left">Left</option><option value="center">Center</option><option value="right">Right</option></select></div>
+              </div>
+            </div>
+          }
+
+          <span class="grp-label gl"><span class="material-icons">visibility</span> Preview</span>
+          <div class="tbl-prev" [style.borderColor]="tBorderColor">
+            @if (tShowHeader) { <div class="tpv-row head" [style.background]="tHeaderColor" [style.color]="tHeaderText" [style.borderColor]="tBorderColor"><span>Name</span><span>Role</span><span>Score</span></div> }
+            <div class="tpv-row" [style.color]="tCellText" [style.borderColor]="tBorderColor"><span>Sara</span><span>Lead</span><span>98</span></div>
+            <div class="tpv-row" [style.background]="tZebra ? tZebraColor : 'transparent'" [style.color]="tCellText" [style.borderColor]="tBorderColor"><span>Omar</span><span>Dev</span><span>95</span></div>
+            <div class="tpv-row" [style.color]="tCellText" [style.borderColor]="tBorderColor"><span>Lina</span><span>QA</span><span>92</span></div>
+          </div>
+
+          <button class="btn btn-primary btn-block mt-1" (click)="insertTable()">＋ Insert table</button>
+
+          <span class="grp-label gl"><span class="material-icons">bolt</span> Quick tables</span>
+          <div class="tbl-blueprints">
+            @for (b of tableBlueprints; track b.key) {
+              <button class="tbl-bp" (click)="insertBlueprint(b)"><span class="material-icons">{{ b.icon }}</span> {{ b.label }}</button>
+            }
+          </div>
+
+          <span class="grp-label gl"><span class="material-icons">content_paste</span> Paste data</span>
+          <textarea class="tbl-paste" [(ngModel)]="tablePaste" rows="3" placeholder="Paste rows from Excel or CSV…&#10;Name, Role, Score&#10;Sara, Lead, 98"></textarea>
+          <button class="btn btn-block" [disabled]="!tablePaste.trim()" (click)="pasteTable()"><span class="material-icons">content_paste</span> Build table from data</button>
+
+          <p class="hint">Double-click any cell on the canvas to edit it, or use the grid above. Turn on <b>Dynamic rows</b> to make the table auto-grow from your Bulk list — one row per item. The table moves as a single group.</p>
+        }
+
+        @case ('layers') {
+          <h3 class="flyout-title">{{ 'canvas.title.layers' | transloco }}</h3>
+          <ng-container [ngTemplateOutlet]="layersBody"></ng-container>
+        }
+      }
+    </aside>
+  }
+
+  <!-- Canvas -->
+  <section class="canvas-area">
+    <div class="canvas-scroll" (wheel)="onWheel($event)" (scroll)="recomputeMini()">
+      <div class="stage" [class.no-ruler]="!showRuler()" [style.zoom]="viewZoom()">
+        <div class="corner"></div>
+        <canvas #rulerTop class="ruler-top"></canvas>
+        <canvas #rulerLeft class="ruler-left"></canvas>
+        <div class="canvas-shadow" (contextmenu)="onCanvasContext($event)">
+          <canvas #canvasEl></canvas>
+          @if (showGrid()) {
+            <div class="grid-overlay" [class.dots]="gridDots()"
+                 [style.width.px]="width" [style.height.px]="height"
+                 [style.backgroundSize]="gridSize + 'px ' + gridSize + 'px'"></div>
+          }
+          @if (showMargins()) {
+            <div class="cv-margins"
+                 [style.top.px]="height * marginPct / 100" [style.bottom.px]="height * marginPct / 100"
+                 [style.left.px]="width * marginPct / 100" [style.right.px]="width * marginPct / 100"></div>
+          }
+          @if (showThirds()) {
+            <div class="cv-thirds" [style.width.px]="width" [style.height.px]="height"></div>
+          }
+          @for (gx of svc.vGuides(); track $index) {
+            <div class="cv-guide v" [style.left.px]="gx" (pointerdown)="onGuidePointerDown('v', $index, $event)" (dblclick)="removeGuide('v', $index)" [title]="'canvas.pg.guide' | transloco"></div>
+          }
+          @for (gy of svc.hGuides(); track $index) {
+            <div class="cv-guide h" [style.top.px]="gy" (pointerdown)="onGuidePointerDown('h', $index, $event)" (dblclick)="removeGuide('h', $index)" [title]="'canvas.pg.guide' | transloco"></div>
+          }
+          @if (cellEditor(); as ce) {
+            <textarea class="cell-edit" [class.header]="ce.header"
+                      [style.left.px]="ce.x" [style.top.px]="ce.y"
+                      [style.width.px]="ce.w" [style.height.px]="ce.h"
+                      [(ngModel)]="cellEditValue"
+                      (keydown)="onCellEditKey($event)" (blur)="commitCellEdit()"
+                      (click)="$event.stopPropagation()" (mousedown)="$event.stopPropagation()"></textarea>
+          }
+        </div>
+      </div>
+    </div>
+
+    <!-- Page filmstrip -->
+    <div class="page-bar">
+      <div class="page-strip">
+        @for (pg of svc.pages(); track pg.id; let i = $index) {
+          <div class="page-card" [class.active]="i === svc.activePage()" (click)="goToPage(i)" [title]="pg.name">
+            <div class="page-thumb">
+              @if (pg.thumb) { <img [src]="pg.thumb" alt="" /> }
+              <span class="page-no">{{ i + 1 }}</span>
+            </div>
+            <input class="page-name" [value]="pg.name" (click)="$event.stopPropagation()" (change)="renamePage(i, $event)" />
+            <div class="page-acts">
+              <button class="pg-ic" [title]="'canvas.pg.moveLeft' | transloco" [disabled]="i === 0" (click)="$event.stopPropagation(); movePage(i, -1)"><span class="material-icons">chevron_left</span></button>
+              <button class="pg-ic" [title]="'canvas.pg.duplicate' | transloco" (click)="$event.stopPropagation(); duplicatePage(i)"><span class="material-icons">content_copy</span></button>
+              <button class="pg-ic" [title]="'canvas.pg.delete' | transloco" [disabled]="svc.pages().length <= 1" (click)="$event.stopPropagation(); deletePage(i)"><span class="material-icons">delete</span></button>
+              <button class="pg-ic" [title]="'canvas.pg.moveRight' | transloco" [disabled]="i === svc.pages().length - 1" (click)="$event.stopPropagation(); movePage(i, 1)"><span class="material-icons">chevron_right</span></button>
+            </div>
+          </div>
+        }
+        <button class="page-add" [title]="'canvas.pg.addTitle' | transloco" (click)="addPage()">
+          <span class="material-icons">add</span>
+          <span class="page-add-lbl">{{ 'canvas.pg.add' | transloco }}</span>
+        </button>
+      </div>
+      <div class="page-handle">
+        <span class="material-icons">layers</span>
+        <span>{{ 'canvas.pg.pages' | transloco }}</span>
+        <span class="page-handle-cur">{{ svc.activePage() + 1 }} / {{ svc.pages().length }}</span>
+        <span class="material-icons page-handle-caret">expand_less</span>
+      </div>
+    </div>
+
+    <!-- Right-side Layers dock -->
+    @if (layersDock()) {
+      <aside class="layers-dock">
+        <div class="ld-head">
+          <span class="ld-title"><span class="material-icons">layers</span> {{ 'canvas.title.layers' | transloco }}</span>
+          <button class="ld-x" (click)="toggleLayersDock()" title="Close layers"><span class="material-icons">close</span></button>
+        </div>
+        <div class="ld-body">
+          <ng-container [ngTemplateOutlet]="layersBody"></ng-container>
+        </div>
+      </aside>
+    } @else {
+      <button class="layers-tab" (click)="toggleLayersDock()" title="Show layers"><span class="material-icons">layers</span></button>
+    }
+  </section>
+
+  <ng-template #layersBody>
+    <div class="panel-search"><span class="material-icons">search</span><input [value]="search()" (input)="search.set($any($event.target).value)" placeholder="Search layers…" /></div>
+    @if (filteredLayers().length === 0) {
+      <p class="hint">No layers{{ search() ? ' match your search' : ' yet — add elements from the rail' }}.</p>
+    } @else {
+      <div class="lyr-head"><span>{{ filteredLayers().length }} layer{{ filteredLayers().length === 1 ? '' : 's' }}</span><span class="lyr-hint">drag to reorder</span></div>
+      <div class="layer-list">
+        @for (o of filteredLayers(); track $index) {
+          <div class="layer-row" [class.on]="svc.isActive(o)" [class.drag-over]="dragOverLayer() === o" [class.dim]="!svc.isVisible(o)"
+               draggable="true" (dragstart)="onLayerDragStart(o, $event)" (dragover)="onLayerDragOver(o, $event)" (drop)="onLayerDrop(o, $event)" (dragend)="onLayerDragEnd()"
+               (click)="svc.selectLayer(o)">
+            <span class="lyr-grip material-icons" title="Drag to reorder">drag_indicator</span>
+            <span class="material-icons lyr-type">{{ layerIcon(o) }}</span>
+            @if (editingLayer() === o) {
+              <input class="lyr-rename" [(ngModel)]="editLayerName" (click)="$event.stopPropagation()" (keyup.enter)="commitRename(o)" (blur)="commitRename(o)" />
+            } @else {
+              <span class="lyr-name" (dblclick)="startRename(o); $event.stopPropagation()" title="Double-click to rename">{{ layerLabel(o) }}</span>
+            }
+            <button class="lyr-ic" (click)="svc.toggleVisible(o); $event.stopPropagation()" [title]="svc.isVisible(o) ? 'Hide' : 'Show'">
+              <span class="material-icons">{{ svc.isVisible(o) ? 'visibility' : 'visibility_off' }}</span></button>
+            <button class="lyr-ic" (click)="svc.toggleObjLock(o); $event.stopPropagation()" [title]="svc.isObjLocked(o) ? 'Unlock' : 'Lock'">
+              <span class="material-icons">{{ svc.isObjLocked(o) ? 'lock' : 'lock_open' }}</span></button>
+            <button class="lyr-ic" [class.on]="expandedLayer() === o" (click)="toggleLayerExpand(o); $event.stopPropagation()" title="More">
+              <span class="material-icons">{{ expandedLayer() === o ? 'expand_less' : 'more_horiz' }}</span></button>
+          </div>
+          @if (expandedLayer() === o) {
+            <div class="lyr-detail">
+              <label class="lyr-op">Opacity
+                <input type="range" min="5" max="100" [value]="svc.objOpacity(o)" (input)="setLayerOpacity(o, $any($event.target).value)" (click)="$event.stopPropagation()" />
+                <span>{{ svc.objOpacity(o) }}%</span>
+              </label>
+              <div class="lyr-acts">
+                <button (click)="svc.objToFront(o); $event.stopPropagation()" title="To front"><span class="material-icons">flip_to_front</span></button>
+                <button (click)="svc.objToBack(o); $event.stopPropagation()" title="To back"><span class="material-icons">flip_to_back</span></button>
+                <button (click)="svc.duplicateObj(o); $event.stopPropagation()" title="Duplicate"><span class="material-icons">content_copy</span></button>
+                <button (click)="startRename(o); $event.stopPropagation()" title="Rename"><span class="material-icons">edit</span></button>
+                <button class="danger" (click)="svc.removeObj(o); $event.stopPropagation()" title="Delete"><span class="material-icons">delete</span></button>
+              </div>
+            </div>
+          }
+        }
+      </div>
+    }
+  </ng-template>
+
+  <!-- Properties panel (right / left dock) -->
+  @if (propPos() !== 'top' && propPos() !== 'bottom') {
+    <aside class="panel" [class.auto-collapsed]="isPropCollapsed()" [@panelToggle]="propPos()">
+      <button class="flyout-pin panel-pin" [class.on]="!propAuto()" (click)="togglePropAuto()" [title]="(propAuto() ? 'canvas.pinOpen' : 'canvas.pinAuto') | transloco"><span class="material-icons">push_pin</span></button>
+      <div class="panel-reveal-handle"><span class="material-icons">tune</span><span class="prh-label">{{ 'canvas.props' | transloco }}</span></div>
+      <app-properties-panel />
+    </aside>
+  }
+</div>
+
+@if (propPos() === 'bottom') {
+  <aside class="panel ptop pbottom" [class.auto-collapsed]="isPropCollapsed()" [@panelToggle]="propPos()">
+    <button class="flyout-pin panel-pin" [class.on]="!propAuto()" (click)="togglePropAuto()" [title]="(propAuto() ? 'canvas.pinOpen' : 'canvas.pinAuto') | transloco"><span class="material-icons">push_pin</span></button>
+    <div class="panel-reveal-handle"><span class="material-icons">tune</span><span class="prh-label">{{ 'canvas.props' | transloco }}</span></div>
+    <app-properties-panel class="dock-top" />
+  </aside>
+}
+
+<!-- hidden input used by the context menu's "Replace image" -->
+<input #replaceInput type="file" accept="image/*" hidden (change)="onReplaceFile($event)" />
+
+<!-- ===================== Floating quick-properties bar ===================== -->
+@if (miniBar(); as mb) {
+  <div class="mini-bar" [class.below]="mb.below" [style.left.px]="mb.x" [style.top.px]="mb.y"
+       (mousedown)="$event.stopPropagation()" (click)="$event.stopPropagation()">
+    <span class="mb-badge" [title]="selBadge().label"><span class="material-icons">{{ selBadge().icon }}</span></span>
+    @if (mVarKey()) { <span class="mb-var" title="Bound variable — fills from your data">{{ '{{' }}{{ mVarKey() }}{{ '}}' }}</span> }
+    <span class="mb-sep"></span>
+
+    @if (selType() === 'text' || selType() === 'table') {
+      <select class="mb-font" [ngModel]="mFont()" (ngModelChange)="mbFont($event)" title="Font">
+        @for (f of barFonts; track f) { <option [value]="f">{{ f }}</option> }
+        @if (mFont() && !barFonts.includes(mFont())) { <option [value]="mFont()">{{ mFont() }}</option> }
+      </select>
+      <div class="mb-size">
+        <button (click)="mbSize(mFontSize() - 1)" title="Smaller">−</button>
+        <input type="number" [ngModel]="mFontSize()" (ngModelChange)="mbSize($event)" />
+        <button (click)="mbSize(mFontSize() + 1)" title="Larger">+</button>
+      </div>
+      <span class="mb-sep"></span>
+      <button class="mb-ic" [class.on]="mBold()" (click)="mbBold()" title="Bold"><span class="material-icons">format_bold</span></button>
+      <button class="mb-ic" [class.on]="mItalic()" (click)="mbItalic()" title="Italic"><span class="material-icons">format_italic</span></button>
+      <button class="mb-ic" [class.on]="mUnderline()" (click)="mbUnderline()" title="Underline"><span class="material-icons">format_underlined</span></button>
+      <button class="mb-ic" (click)="mbAlign()" [title]="'Align: ' + mTextAlign()"><span class="material-icons">format_align_{{ mTextAlign() }}</span></button>
+      <label class="mb-color" title="Text color"><span class="material-icons">format_color_text</span><span class="sw" [style.background]="mTextColor()"></span><input type="color" [value]="mTextColor()" (input)="mbTextColor($any($event.target).value)" /></label>
+    } @else if (selType() === 'image') {
+      @if (!isSig()) { <button class="mb-ic" (click)="mbReplace()" title="Replace image"><span class="material-icons">find_replace</span></button> }
+      <button class="mb-ic" (click)="mbFlip()" title="Flip horizontal"><span class="material-icons">flip</span></button>
+      <button class="mb-ic" (click)="mbMask()" title="Crop to circle"><span class="material-icons">circle</span></button>
+    } @else if (selType() === 'shape') {
+      <label class="mb-color" title="Fill"><span class="material-icons">format_color_fill</span><span class="sw" [style.background]="mFill()"></span><input type="color" [value]="mFill()" (input)="mbFill($any($event.target).value)" /></label>
+      <label class="mb-color" title="Border color"><span class="material-icons">border_color</span><span class="sw" [style.background]="mStroke()"></span><input type="color" [value]="mStroke()" (input)="mbStroke($any($event.target).value)" /></label>
+      <div class="mb-size">
+        <button (click)="mbStrokeW(-0.5)" title="Thinner border">−</button>
+        <span class="mb-w">{{ mStrokeW() }}</span>
+        <button (click)="mbStrokeW(0.5)" title="Thicker border">+</button>
+      </div>
+    } @else if (selType() === 'group' && !isSig()) {
+      <button class="mb-ic" (click)="mbUngroup()" title="Ungroup"><span class="material-icons">call_split</span></button>
+    }
+
+    <span class="mb-sep"></span>
+    <div class="mb-pop-wrap">
+      <button class="mb-ic" [class.on]="opacityOpen()" (click)="opacityOpen.set(!opacityOpen())" title="Adjust — opacity, size, rotation, lock"><span class="material-icons">tune</span></button>
+      @if (opacityOpen()) {
+        <div class="mb-pop adj" [class.below]="mb.below">
+          <div class="ap-row"><span class="mb-pl">Opacity</span><input type="range" min="0" max="100" [ngModel]="mOpacity()" (ngModelChange)="mbOpacity($event)" /><b>{{ mOpacity() }}%</b></div>
+          <div class="ap-row"><span class="mb-pl">Size</span><span class="ap-v">{{ mW() }} × {{ mH() }} px</span></div>
+          <div class="ap-row"><span class="mb-pl">Rotation</span><span class="ap-v">{{ mAngle() }}°</span><button class="ap-btn" [disabled]="!mAngle()" (click)="mbResetAngle()">Reset</button></div>
+          <button class="ap-line" [class.on]="mLocked()" (click)="mbLock()"><span class="material-icons">{{ mLocked() ? 'lock' : 'lock_open' }}</span>{{ mLocked() ? 'Locked — unlock' : 'Lock position' }}</button>
+        </div>
+      }
+    </div>
+    <button class="mb-ic" (click)="mbMore($event)" title="More options"><span class="material-icons">more_horiz</span></button>
+    @if (!selProtected()) { <button class="mb-ic" (click)="mbDup()" title="Duplicate"><span class="material-icons">content_copy</span></button> }
+    <button class="mb-ic danger" (click)="mbDel()" title="Delete"><span class="material-icons">delete</span></button>
+  </div>
+}
+
+<!-- ============================ Context menu ============================ -->
+@if (menu(); as m) {
+  <div class="ctx" [style.left.px]="m.x" [style.top.px]="m.y" (click)="$event.stopPropagation()">
+    @switch (selType()) {
+      @case ('text') {
+        <button (click)="mEditText()"><span class="material-icons">edit</span> Edit text</button>
+        <button (click)="mStyle('fontWeight')"><span style="font-weight:800">B</span> Bold</button>
+        <button (click)="mStyle('fontStyle')"><span style="font-style:italic">I</span> Italic</button>
+        <button (click)="mStyle('underline')"><span style="text-decoration:underline">U</span> Underline</button>
+        <div class="sep"></div>
+      }
+      @case ('image') {
+        @if (!isSig()) { <button (click)="mReplaceImg()"><span class="material-icons">image</span> Replace image</button> }
+        <button (click)="mFlip('x')"><span class="material-icons">swap_horiz</span> Flip horizontal</button>
+        <button (click)="mFlip('y')"><span class="material-icons">swap_vert</span> Flip vertical</button>
+        <div class="sep"></div>
+      }
+      @case ('table') {
+        <button (click)="mSelectTable()"><span class="material-icons">grid_on</span> Select whole table</button>
+        <div class="sep"></div>
+      }
+    }
+    <button (click)="mAct('cut')" [disabled]="!hasSel() || selProtected()"><span>✂</span> Cut <kbd>Ctrl+X</kbd></button>
+    <button (click)="mAct('copy')" [disabled]="!hasSel() || selProtected()"><span>⧉</span> Copy <kbd>Ctrl+C</kbd></button>
+    <button (click)="mAct('paste')" [disabled]="!svc.hasClipboard()"><span>📋</span> Paste <kbd>Ctrl+V</kbd></button>
+    <button (click)="mAct('duplicate')" [disabled]="!hasSel() || selProtected()"><span>⧉</span> Duplicate <kbd>Ctrl+D</kbd></button>
+    <button (click)="mAct('copyStyle')" [disabled]="!hasSel()"><span class="material-icons">colorize</span> Copy style <kbd>Ctrl+Alt+C</kbd></button>
+    <button (click)="mAct('pasteStyle')" [disabled]="!svc.hasStyleClip()"><span class="material-icons">format_paint</span> Paste style</button>
+    <div class="sep"></div>
+    <button (click)="mAct('front')" [disabled]="!hasSel()"><span>⤒</span> Bring to front</button>
+    <button (click)="mAct('forward')" [disabled]="!hasSel()"><span>▲</span> Bring forward</button>
+    <button (click)="mAct('backward')" [disabled]="!hasSel()"><span>▼</span> Send backward</button>
+    <button (click)="mAct('back')" [disabled]="!hasSel()"><span>⤓</span> Send to back</button>
+    <div class="sep"></div>
+    <button (click)="mAct('lock')" [disabled]="!hasSel()"><span>{{ svc.isLocked() ? '🔓' : '🔒' }}</span> {{ svc.isLocked() ? 'Unlock' : 'Lock' }}</button>
+    <div class="ctx-arrange">
+      <button (click)="mAct('alignLeft')" title="Align left" [disabled]="!hasSel()"><span class="material-icons">align_horizontal_left</span></button>
+      <button (click)="mAct('centerH')" title="Align center" [disabled]="!hasSel()"><span class="material-icons">align_horizontal_center</span></button>
+      <button (click)="mAct('alignRight')" title="Align right" [disabled]="!hasSel()"><span class="material-icons">align_horizontal_right</span></button>
+      <button (click)="mAct('alignTop')" title="Align top" [disabled]="!hasSel()"><span class="material-icons">align_vertical_top</span></button>
+      <button (click)="mAct('centerV')" title="Align middle" [disabled]="!hasSel()"><span class="material-icons">align_vertical_center</span></button>
+      <button (click)="mAct('alignBottom')" title="Align bottom" [disabled]="!hasSel()"><span class="material-icons">align_vertical_bottom</span></button>
+      <button (click)="mAct('distH')" title="Distribute horizontally" [disabled]="!hasSel()"><span class="material-icons">horizontal_distribute</span></button>
+      <button (click)="mAct('distV')" title="Distribute vertically" [disabled]="!hasSel()"><span class="material-icons">vertical_distribute</span></button>
+    </div>
+    <button (click)="mAct('group')" [disabled]="!hasSel()"><span class="material-icons">join_full</span> Group <kbd>Ctrl+G</kbd></button>
+    <button (click)="mAct('ungroup')" [disabled]="!hasSel()"><span class="material-icons">join_inner</span> Ungroup</button>
+    <div class="sep"></div>
+    <button (click)="mAct('selectAll')"><span>▦</span> Select all <kbd>Ctrl+A</kbd></button>
+    <button class="danger" (click)="mAct('delete')" [disabled]="!hasSel()"><span>🗑</span> Delete <kbd>Del</kbd></button>
+  </div>
+}

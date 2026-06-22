@@ -1,0 +1,135 @@
+<nav class="flex md:flex-col md:w-18 overflow-auto items-center bg-white text-gray-700 h-full border-r border-gray-200 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-100">
+  <div
+    *ngFor="let item of menuItems"
+    (click)="selectItem(item.key)"
+    class="flex flex-col items-center cursor-pointer p-2 hover:bg-gray-300 dark:hover:bg-gray-800 dark:bg-gray-900 text-gray-900 dark:text-gray-100"
+    [ngClass]="{ 'bg-gray-200 dark:bg-gray-950 md:border-s-4 border-blue-500 dark:border-green-500': selectedKey === item.key }">
+    <ng-container [ngSwitch]="item.key">
+      <div *ngSwitchCase="'template'" >
+        <i
+          class="material-icons"
+          matTooltip="Select Template to start"  
+          matTooltipPosition="right"
+          [ngClass]="{
+            'text-blue-500 dark:text-green-500': selectedKey === 'template',
+            'text-gray-700 dark:text-gray-300': selectedKey !== 'template'
+          }"
+        >design_services</i>
+      </div>
+      <div *ngSwitchCase="'fonts'">
+        <i
+          class="material-icons"
+          matTooltip="click to insert text"
+          matTooltipPosition="right"
+          [ngClass]="{
+            'text-blue-500 dark:text-green-500': selectedKey === 'fonts',
+            'text-gray-700 dark:text-gray-300': selectedKey !== 'fonts'
+          }"
+        >text_format</i>
+      </div>
+      <div *ngSwitchCase="'variables'" >
+        <i
+          class="material-icons"
+          matTooltip="click to insert text"
+          matTooltipPosition="right"
+          [ngClass]="{
+            'text-blue-500 dark:text-green-500': selectedKey === 'variables',
+            'text-gray-700 dark:text-gray-300': selectedKey !== 'variables'
+          }"
+        >text_fields</i>
+      </div>
+      <div *ngSwitchCase="'images'">
+        <i
+          class="material-icons"
+          matTooltip="click on image to add it to canvas"
+          matTooltipPosition="right"
+          [ngClass]="{
+            'text-blue-500 dark:text-green-500': selectedKey === 'images',
+            'text-gray-700 dark:text-gray-300': selectedKey !== 'images'
+          }"
+        >image</i>
+      </div>
+       <div *ngSwitchCase="'backgrounds'" >
+        <i
+          class="material-icons"
+          matTooltip="click on backgrounds to add it to canvas oe select a color"
+          matTooltipPosition="right"
+          [ngClass]="{
+            'text-blue-500 dark:text-green-500': selectedKey === 'backgrounds',
+            'text-gray-700 dark:text-gray-300': selectedKey !== 'backgrounds'
+          }"
+        >wallpaper</i>
+      </div>
+      <div *ngSwitchCase="'elements'">
+        <i
+          class="material-icons"
+          matTooltip="click on image to add it to canvas"
+          matTooltipPosition="right"
+          [ngClass]="{
+            'text-blue-500 dark:text-green-500': selectedKey === 'elements',
+            'text-gray-700 dark:text-gray-300': selectedKey !== 'elements'
+          }"
+        >widgets</i>
+      </div>
+      <div *ngSwitchCase="'qr'">
+        <i
+          class="material-icons"
+          matTooltip="generate new QR for canvas"
+          matTooltipPosition="right"
+          [ngClass]="{
+            'text-blue-500 dark:text-green-500': selectedKey === 'qr',
+            'text-gray-700 dark:text-gray-300': selectedKey !== 'qr'
+          }"
+        >qr_code</i>
+      </div>
+      <div *ngSwitchCase="'addons'">
+        <i
+          class="material-icons"
+          matTooltip="Special addons for This Template"
+          matTooltipPosition="right"
+          [ngClass]="{
+            'text-blue-500 dark:text-green-500': selectedKey === 'addons',
+            'text-gray-700 dark:text-gray-300': selectedKey !== 'addons'
+          }"
+        >extension</i>
+      </div>
+      <div *ngSwitchCase="'drawing'">
+        <i
+          class="material-icons"
+          matTooltip="Free Drawing"
+          matTooltipPosition="right"
+          [ngClass]="{
+            'text-blue-500 dark:text-green-500': selectedKey === 'drawing',
+            'text-gray-700 dark:text-gray-300': selectedKey !== 'drawing'
+          }"
+        >color_lens</i>
+      </div>
+        <div *ngSwitchCase="'brand'">
+        <i
+          class=" material-icons "
+          matTooltip="Your branding assets"
+          matTooltipPosition="right"
+          [ngClass]="{
+            'text-blue-500 dark:text-green-500': selectedKey === 'brand',
+            'text-gray-700 dark:text-gray-300': selectedKey !== 'brand'
+          }"
+        >copyright</i>
+      </div>
+    
+       <div *ngSwitchCase="'table'">
+        <i
+          class=" material-icons "
+          matTooltip="your brandin assets"
+          matTooltipPosition="right"
+          [ngClass]="{
+            'text-blue-500 dark:text-green-500': selectedKey === 'table',
+            'text-gray-700 dark:text-gray-300': selectedKey !== 'table'
+          }"
+        >grid_view</i>
+      </div>
+
+    </ng-container>
+
+    <span class="hidden md:block mt-1 text-xs">{{ item.label }}</span>
+  </div>
+</nav>

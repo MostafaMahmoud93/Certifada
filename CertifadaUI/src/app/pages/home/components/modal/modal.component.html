@@ -1,0 +1,14 @@
+<div [hidden]="!active">
+  
+    <div 
+    (click)="pepito()"
+    class="modal-background">
+    </div>
+  
+    <div  class="modal">
+      <div class="modal-body">
+        <ng-content></ng-content>
+      </div>
+    </div>
+  
+  </div>

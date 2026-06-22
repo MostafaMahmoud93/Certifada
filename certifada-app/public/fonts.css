@@ -1,0 +1,18 @@
+/* Self-hosted custom fonts (mostly Arabic display/calligraphy). Served from /fonts/. */
+@font-face { font-family: 'Diwani Simple Outline'; src: url('/fonts/diwani-simple-outline.ttf') format('truetype'); font-display: swap; }
+@font-face { font-family: 'XP Ziba'; src: url('/fonts/xp-ziba.ttf') format('truetype'); font-display: swap; }
+@font-face { font-family: 'Yassin'; src: url('/fonts/yassin.ttf') format('truetype'); font-display: swap; }
+@font-face { font-family: 'Abdo Free'; src: url('/fonts/abdo-free.ttf') format('truetype'); font-display: swap; }
+@font-face { font-family: 'Abdo Salem'; src: url('/fonts/abdo-salem.ttf') format('truetype'); font-display: swap; }
+@font-face { font-family: 'AE Electron'; src: url('/fonts/ae-electron.ttf') format('truetype'); font-display: swap; }
+@font-face { font-family: 'Afsaneh'; src: url('/fonts/afsaneh.ttf') format('truetype'); font-display: swap; }
+@font-face { font-family: 'Al Ebdaa'; src: url('/fonts/al-ebdaa.ttf') format('truetype'); font-display: swap; }
+@font-face { font-family: 'Aldhabi'; src: url('/fonts/aldhabi.ttf') format('truetype'); font-display: swap; }
+@font-face { font-family: 'Al Gemah Assarim'; src: url('/fonts/al-gemah-assarim.ttf') format('truetype'); font-display: swap; }
+@font-face { font-family: 'Al Gemah King'; src: url('/fonts/al-gemah-king.ttf') format('truetype'); font-display: swap; }
+@font-face { font-family: 'Arabswell'; src: url('/fonts/arabswell.ttf') format('truetype'); font-display: swap; }
+@font-face { font-family: 'Aref Graffiti'; src: url('/fonts/aref-graffiti.ttf') format('truetype'); font-display: swap; }
+@font-face { font-family: 'Arslan Wessam B'; src: url('/fonts/arslan-wessam-b.ttf') format('truetype'); font-display: swap; }
+@font-face { font-family: 'B Titr'; src: url('/fonts/b-titr.ttf') format('truetype'); font-display: swap; }
+@font-face { font-family: 'Dast Nevis'; src: url('/fonts/dast-nevis.ttf') format('truetype'); font-display: swap; }
+@font-face { font-family: 'DecoType Thuluth'; src: url('/fonts/decotype-thuluth.ttf') format('truetype'); font-display: swap; }

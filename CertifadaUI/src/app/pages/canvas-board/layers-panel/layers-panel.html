@@ -1,0 +1,67 @@
+<section class="bg-white h-full overflow-auto flex flex-col dark:bg-gray-900 text-gray-900 dark:text-gray-100">
+  <div *ngIf="objects.length === 0" class="text-gray-500 italic text-sm h-full  flex items-center justify-center">
+      <i class="material-icons">hide_image</i>
+      <p>No objects on canvas.</p> 
+  </div>
+  <div>
+    <ul class="flex-1 overflow-auto ">
+      <li *ngFor="let obj of objects; let idx = index" class="flex border-b before:bg-gray-100 dark:border-gray-700 dark:bg-gray-900 items-center justify-between gap-2 whitespace-nowrap hover:bg-gray-100 p-1 pl-2 group dark:hover:bg-gray-700"  (mouseover)="hoverObject(obj)"  (mouseout)="resetHoverObject(obj)">
+        <span *ngIf="selectedLayerIndex !== idx" class="flex-1 text-sm text-gray-700 truncate dark:text-gray-300" matTooltip="{{ obj.type }}" (click)="startEditing(idx)">
+          {{ idx + 1 }}: {{ obj.type }}
+        </span>
+        <input *ngIf="selectedLayerIndex === idx" [(ngModel)]="obj.type" (blur)="saveText(idx, obj.type)" (keydown.enter)="saveText(idx, obj.type)" class="flex-1 text-sm text-gray-700 p-1 border rounded" matTooltip="{{ obj.type }}" />
+        <div class="flex-shrink-0 flex space-x-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+          <!-- Show/Hide Icon -->
+          <button
+            (click)="toggleVisibility(obj)"
+            class="p-1 rounded text-xs hover:bg-gray-200 dark:hover:bg-gray-600"
+            [ngClass]="{ 'opacity-50': !obj.visible }"
+            matTooltip="{{ obj.visible ? 'Hide' : 'Show' }}"
+          >
+            <i *ngIf="obj.visible" class="material-icons ">visibility</i>
+            <i *ngIf="!obj.visible" class="material-icons">visibility_off</i>
+          </button>
+
+          <!-- Lock/Unlock Icon -->
+          <button
+            (click)="toggleLock(obj)"
+            class="p-1 rounded text-xs hover:bg-gray-200 dark:hover:bg-gray-600"
+            [ngClass]="{ 'opacity-50': !obj.selectable }"
+            matTooltip="{{ obj.selectable ? 'Lock' : 'Unlock' }}"
+          >
+            <i *ngIf="obj.selectable" class="material-icons">lock</i>
+            <i *ngIf="!obj.selectable" class="material-icons">lock_open</i>
+          </button>
+
+          <!-- Bring Forward -->
+          <button
+            (click)="bringForward(obj)"
+            class="p-1 rounded text-xs hover:bg-gray-200 dark:hover:bg-gray-600"
+            matTooltip="Bring Forward"
+          >
+            <i class="material-icons">move_up</i>
+          </button>
+
+          <!-- Send Backward -->
+          <button
+            (click)="sendBackward(obj)"
+            class="p-1 rounded text-xs hover:bg-gray-200 dark:hover:bg-gray-600"
+            matTooltip="Send Backward"
+          >
+            <i class="material-icons">move_down</i>
+          </button>
+
+          <!-- Bring to Front -->
+          <button (click)="bringToFront(obj)" class="p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-600" matTooltip="Bring to Front">
+            <i class="material-icons">flip_to_front</i>
+          </button>
+
+          <!-- Send to Back -->
+          <button (click)="sendToBack(obj)" class="p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-600" matTooltip="Send to Back">
+            <i class="material-icons">flip_to_back</i>
+          </button>
+        </div>
+      </li>
+    </ul>
+  </div>
+</section>

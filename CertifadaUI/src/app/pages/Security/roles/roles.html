@@ -1,0 +1,187 @@
+<div *ngIf="isPanelOpen" class="fixed  bg-black bg-opacity-30 z-40" (click)="closePanel()"></div>
+<div class="relative  h-screen ">
+  <mat-sidenav-container class="dark:bg-gray-800 ">
+    <mat-sidenav #drawer position="end" [mode]="getSidenavMode()" [(opened)]="isPanelOpen" class="w-[300px] max-w-full dark:bg-gray-900 bg-gray-200 shadow-lg">
+      <!-- OPEN ADD USER TO ROLE -->
+      <div *ngIf="!showSlide">
+      <div class="p-4 border-b dark:border-gray-700 flex justify-between items-center dark:bg-gray-900 bg-gray-200">
+        <h2 class="text-xl  text-gray-800 dark:text-gray-300"> Assign User to Role </h2>
+        <button (click)="closePanel()" class="text-2xl text-gray-500 dark:text-gray-300">&times;</button>
+      </div>
+      <!-- Panel Content -->
+      <div class="p-4 space-y-4 overflow-y-auto h-[calc(100%-260px)] bg-gray-100 dark:bg-gray-900">
+        <!-- Name -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Name</label>
+          <input type="text" [(ngModel)]="user.name" placeholder="Enter name" class="w-full border border-gray-300 dark:border-gray-600 rounded px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-200" />
+        </div>
+        <!-- Email -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Email</label>
+          <input type="email" [(ngModel)]="user.email" placeholder="Enter email" class="w-full border border-gray-300 dark:border-gray-600 rounded px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-200" />
+        </div>
+        <!-- Role Dropdown -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Role</label>
+          <select [(ngModel)]="user.role" class="w-full border border-gray-300 dark:border-gray-600 rounded px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-200">
+            <option *ngFor="let r of roles" [value]="r.name">{{ r.name }}</option>
+          </select>
+        </div>
+        <!-- Branch Dropdown -->
+        <div>
+          <!-- 🌿 Multi-Select Branches -->
+          <div class="relative">
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Select Branches</label>
+            <button (click)="toggleBranchDropdown()"
+              class="w-full border rounded px-3 py-2 text-left dark:bg-gray-800 dark:text-white flex justify-between items-center">
+              <span>{{ selectedBranchNames }}</span>
+              <i class="material-icons text-sm">expand_more</i>
+            </button>
+            <div *ngIf="showBranchDropdown" class="absolute z-30 mt-1 w-full bg-white dark:bg-gray-900 border rounded shadow-lg max-h-60 overflow-y-auto">
+              <label *ngFor="let branch of branches" class="flex items-center px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer">
+                <input type="checkbox" [checked]="isBranchSelected(branch)" (change)="toggleBranchSelection(branch)" class="mr-2"/>
+                {{ branch.name }}
+              </label>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- Panel Actions -->
+      <div class="p-4 border-t dark:border-gray-700 flex justify-end gap-2 dark:bg-gray-900 bg-gray-200">
+        <button (click)="closePanel()" class="px-4 py-2 border rounded bg-gray-100 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"> Cancel </button>
+        <button (click)="assignUser()" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 dark:bg-green-500 dark:hover:bg-green-600"> Assign </button>
+      </div>
+      </div>
+      <!-- OPEN ADD NEW ROLE -->
+      <div *ngIf="showSlide">
+        <div class="p-4 border-b dark:border-gray-700 flex justify-between items-center bg-gray-200 dark:bg-gray-900">
+            <h3 class="text-lg dark:text-gray-300 text-gray-700 ">{{ isEditMode ? 'Edit Role' : 'Add Custom Role' }}</h3>
+            <button (click)="closeSlide()" class="text-2xl">&times;</button>
+        </div>
+        <div class="p-4 space-y-4 bg-gray-200 dark:bg-gray-900">
+          <input
+            type="text"
+            [(ngModel)]="newRole.name"
+            placeholder="Role Name"
+            [readonly]="isEditMode"
+            class="w-full border rounded p-2 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-700"
+          />
+          <textarea
+            [(ngModel)]="newRole.description"
+            placeholder="Description"
+            rows="3"
+            class="w-full border rounded p-2 dark:bg-gray-800 dark:text-white dark:border-gray-700"
+          ></textarea>
+
+          <!-- Permissions -->
+          <h4 class="mt-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Permissions</h4>
+          <div class="max-h-[300px] overflow-y-auto space-y-2">
+            <label
+              *ngFor="let action of allActions"
+              class="flex justify-between items-center py-1 border-b border-gray-200 dark:border-gray-700"
+            >
+              <span class="text-sm text-gray-700 dark:text-gray-200">{{ action }}</span>
+              <input
+                type="checkbox"
+                [checked]="editedPermissions.has(action)"
+                (change)="togglePermission(action)"
+              />
+            </label>
+          </div>
+
+          <button (click)="saveRole()" class="mt-4 bg-blue-600 hover:bg-blue-700 dark:bg-green-500 dark:hover:bg-green-600 text-white px-4 py-2 rounded w-full">
+                  {{ isEditMode ? 'Update Role' : 'Save Role' }}
+          </button>
+        </div>
+      </div>
+    </mat-sidenav>
+    <!-- Main Content -->
+    <div class="p-4 dark:bg-gray-800 h-screen">
+       <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+          <div (click)="openAddRolePanel()" class="cursor-pointer bg-white dark:bg-gray-900 border-dashed border-2 border-gray-300 dark:border-gray-700 rounded-lg p-6 flex flex-col justify-center items-center text-gray-500 hover:text-blue-600 hover:border-blue-400 dark:hover:border-gray-500 dark:hover:text-green-600 darkhover:border-green-400 transition group">
+             <i class="material-icons text-4xl mb-2 group-hover:scale-110 transition">add_circle_outline</i>
+             <span class="text-sm">Add Custom Role</span>
+          </div>
+          <div *ngFor="let role of roles" class="bg-white dark:bg-gray-900 rounded-lg shadow-md p-6 relative group transition hover:shadow-lg">
+              <!-- Context Menu Button -->
+              <div class="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition">
+                <button (click)="toggleContextMenu(role.id); $event.stopPropagation()" class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-white">
+                  <i class="material-icons">more_vert</i>
+                </button>
+              </div>
+              <div *ngIf="contextMenuRoleId === role.id" class="absolute right-0 mt-2 w-40 z-50 rounded shadow-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm">
+                <button (click)="ContextMenuOp(role)" class="block w-full px-4 py-2 text-left hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200"> View Users </button>
+                <button (click)="openEditRolePanel(role)" class="block w-full px-4 py-2 text-left hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200"> Edit </button>
+                <button (click)="openRoleComparison()" class="block w-full px-4 py-2 text-left hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200"> Compare </button>
+                <button (click)="ContextMenuOp(role)" class="block w-full px-4 py-2 text-left hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200"> Reset </button>
+              </div>
+              <h3 class="text-xl text-gray-800 dark:text-gray-300">
+                {{ role.name }}
+              </h3>
+              <p class="text-sm text-gray-600 dark:text-gray-400 mt-2">
+                {{ role.description }}
+              </p>
+              <div class="mt-6 flex justify-between items-center">
+                <button (click)="addUserToRole(role)" class="text-blue-600 dark:text-green-500 hover:underline text-sm">
+                  <i class="material-icons text-base mr-1 align-middle">person_add</i> Add {{ role.name }}
+                </button>
+              </div>
+          </div>
+       </div>
+      <!-- Comparison Modal -->
+      <div *ngIf="showComparison" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50" (click)="closeComparison()">
+        <div class="bg-white dark:bg-gray-900 p-6 rounded shadow-lg w-full max-w-6xl max-h-[90vh] overflow-auto" (click)="$event.stopPropagation()">
+          <!-- Header -->
+          <div class="flex justify-between items-center mb-4">
+            <h2 class="text-xl font-bold text-gray-800 dark:text-gray-100">Role Comparison</h2>
+            <button (click)="closeComparison()" class="text-xl">&times;</button>
+          </div>
+          <!-- Table -->
+          <div class="overflow-x-auto">
+            <table class="min-w-full text-sm border-collapse">
+              <thead class="bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-200">
+                <tr>
+                  <th class="p-2 border border-gray-300 dark:border-gray-700 text-left">Page / Action</th>
+                  <th *ngFor="let role of rolesToCompare" class="p-2 border border-gray-300 dark:border-gray-700 text-left">
+                    <div class="flex items-center justify-between gap-2">
+                      <span>{{ role.name }}</span>
+                      <button (click)="openPermissionEditor(role); $event.stopPropagation()" class="text-blue-500 hover:text-blue-700 dark:text-blue-300 dark:hover:text-blue-400">
+                        <i class="material-icons text-sm">edit</i>
+                      </button>
+                    </div>
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let action of allActions">
+                  <td class="p-2 border font-medium text-gray-600 dark:text-gray-300">
+                    {{ action }}
+                  </td>
+                  <td *ngFor="let role of rolesToCompare" class="p-2 text-center border border-gray-300 dark:border-gray-700">
+                    <span *ngIf="hasPermission(role, action)" class="text-green-500 font-bold">✔</span>
+                    <span *ngIf="!hasPermission(role, action)" class="text-red-400 font-bold">✘</span>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+      <!--  Edit Permissions Panel -->
+      <div *ngIf="editingRole" class="fixed top-0 right-0 h-full w-full sm:w-[400px] z-50 bg-white dark:bg-gray-900 shadow-lg overflow-auto">
+        <div class="p-4 border-b-2 flex justify-between items-center dark:border-gray-700">
+          <h3 class="text-lg text-gray-600 dark:text-gray-300">Edit Permissions: [ {{ editingRole.name }} ]</h3>
+          <button (click)="closePermissionEditor()" class="text-2xl text-white dark:text-gray-300">&times;</button>
+        </div>
+        <div class="p-4 space-y-2">
+          <label *ngFor="let action of allActions" class="p-2 flex items-center justify-between border-b border-gray-200 dark:border-gray-700">
+            <span class="text-sm text-gray-700 dark:text-gray-200">{{ action }}</span>
+            <input type="checkbox" [checked]="editedPermissions.has(action)" (change)="togglePermission(action)" />
+          </label>
+          <button class="mt-4 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 dark:bg-green-500 dark:hover:bg-green-600" (click)="savePermissions()"> Save Permissions </button>
+        </div>
+      </div>
+      \
+    </div>
+  </mat-sidenav-container>
+</div>

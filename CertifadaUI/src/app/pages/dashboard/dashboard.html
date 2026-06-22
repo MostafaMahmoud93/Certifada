@@ -1,0 +1,80 @@
+<div class="cf-stack" style="padding-top:4px">
+
+  <!-- Metric tiles -->
+  <div class="cf-metrics">
+    <div class="cf-metric">
+      <div class="cf-metric-ic" style="background:var(--cf-brand-50);color:var(--cf-brand-600)"><i class="material-icons">color_lens</i></div>
+      <div class="cf-metric-val">013</div>
+      <div class="cf-metric-lbl">{{ 'DASHBOARD.TILE1' | transloco }}</div>
+    </div>
+    <div class="cf-metric">
+      <div class="cf-metric-ic" style="background:var(--cf-gold-soft);color:var(--cf-gold-ink)"><i class="material-icons">card_membership</i></div>
+      <div class="cf-metric-val">1209</div>
+      <div class="cf-metric-lbl">{{ 'DASHBOARD.TILE2' | transloco }}</div>
+    </div>
+    <div class="cf-metric">
+      <div class="cf-metric-ic" style="background:var(--cf-success-soft);color:var(--cf-success)"><i class="material-icons">assignment_turned_in</i></div>
+      <div class="cf-metric-val">1047</div>
+      <div class="cf-metric-lbl">{{ 'DASHBOARD.TILE3' | transloco }}</div>
+    </div>
+    <div class="cf-metric">
+      <div class="cf-metric-ic" style="background:var(--cf-warning-soft);color:var(--cf-warning)"><i class="material-icons">running_with_errors</i></div>
+      <div class="cf-metric-val">162</div>
+      <div class="cf-metric-lbl">{{ 'DASHBOARD.TILE4' | transloco }}</div>
+    </div>
+    <div class="cf-metric">
+      <div class="cf-metric-ic" style="background:var(--cf-info-soft);color:var(--cf-info)"><i class="material-icons">group</i></div>
+      <div class="cf-metric-val">08</div>
+      <div class="cf-metric-lbl">{{ 'DASHBOARD.TILE5' | transloco }}</div>
+    </div>
+  </div>
+
+  <!-- Charts -->
+  <div class="cf-grid-2">
+    <div class="cf-card cf-card-pad">
+      <h3 class="cf-section-title">Workload trends</h3>
+      <div echarts [options]="lineChartOptions" class="cf-chart" theme="macarons"></div>
+    </div>
+    <div class="cf-card cf-card-pad">
+      <h3 class="cf-section-title">Certificate status by template</h3>
+      <div echarts [options]="barChartOptions" class="cf-chart" theme="macarons"></div>
+    </div>
+  </div>
+
+  <!-- Recent certificates -->
+  <div class="cf-card cf-card-pad">
+    <h3 class="cf-section-title">Recent certificates</h3>
+    <div style="overflow-x:auto">
+      <table class="cf-table">
+        <thead>
+          <tr>
+            <th>{{ 'DASHBOARD.CODE' | transloco }}</th>
+            <th>Certificate name</th>
+            <th>Created date</th>
+            <th>Owner</th>
+            <th>Status</th>
+            <th>Details</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let row of tableData">
+            <td style="color:var(--cf-ink-900);font-weight:500">{{ row.code }}</td>
+            <td>{{ row.name }}</td>
+            <td>{{ row.date }}</td>
+            <td>{{ row.owner }}</td>
+            <td>
+              <span class="cf-badge" [ngClass]="row.status === 'Approved' ? 'cf-badge-success' : 'cf-badge-warning'">
+                <span class="cf-dot" *ngIf="row.status === 'Approved'"></span>{{ row.status }}
+              </span>
+            </td>
+            <td>
+              <button class="cf-iconbtn" (click)="viewDetails(row)" aria-label="View details">
+                <i class="material-icons">navigate_next</i>
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>

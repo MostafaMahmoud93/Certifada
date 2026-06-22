@@ -1,0 +1,90 @@
+/* Certifada — global design system (tokens + base + cf-* components) */
+
+:root {
+  --cf-brand-50:#EEF2FF; --cf-brand-100:#E0E7FF; --cf-brand-200:#C7D2FE;
+  --cf-brand-500:#6366F1; --cf-brand-600:#4F46E5; --cf-brand-700:#4338CA;
+  --cf-on-brand:#FFFFFF;
+  --cf-gold:#D9A441; --cf-gold-soft:#FBF1DC; --cf-gold-ink:#8A5A0B;
+  --cf-ink-900:#0F172A; --cf-ink-700:#334155; --cf-ink-600:#475569;
+  --cf-ink-500:#64748B; --cf-ink-400:#94A3B8;
+  --cf-line:#E5E9F0; --cf-line-soft:#EEF1F6;
+  --cf-bg:#F5F6FA; --cf-surface:#FFFFFF; --cf-surface-2:#F8FAFC;
+  --cf-success:#0F9D6B; --cf-success-soft:#DCFCE7;
+  --cf-warning:#C77700; --cf-warning-soft:#FEF3C7;
+  --cf-danger:#DC2626;  --cf-danger-soft:#FEE2E2;
+  --cf-info:#0284C7;    --cf-info-soft:#E0F2FE;
+  --cf-radius-sm:8px; --cf-radius-md:12px; --cf-radius-lg:16px; --cf-radius-pill:999px;
+  --cf-shadow-sm:0 1px 2px rgba(15,23,42,.06), 0 1px 3px rgba(15,23,42,.04);
+  --cf-shadow-md:0 8px 24px rgba(15,23,42,.08);
+  --cf-shadow-lg:0 18px 50px rgba(15,23,42,.14);
+  --cf-ring:0 0 0 4px rgba(79,70,229,.18);
+  --cf-font:"Inter","Noto Kufi Arabic",system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+}
+
+:root.dark {
+  --cf-brand-50:#1E1B4B; --cf-brand-100:#272264; --cf-brand-200:#312E81;
+  --cf-brand-500:#818CF8; --cf-brand-600:#6366F1; --cf-brand-700:#A5B4FC;
+  --cf-gold:#E2B45A; --cf-gold-soft:#2A2310; --cf-gold-ink:#E9C97E;
+  --cf-ink-900:#F1F5F9; --cf-ink-700:#CBD5E1; --cf-ink-600:#AEB9C9;
+  --cf-ink-500:#8A97A8; --cf-ink-400:#64748B;
+  --cf-line:#23304A; --cf-line-soft:#1A2436;
+  --cf-bg:#0A0F1C; --cf-surface:#111A2E; --cf-surface-2:#0E1626;
+  --cf-success:#34D399; --cf-success-soft:#0C2B22;
+  --cf-warning:#FBBF24; --cf-warning-soft:#2C2410;
+  --cf-danger:#F87171;  --cf-danger-soft:#2C1616;
+  --cf-info:#38BDF8;    --cf-info-soft:#0B2434;
+  --cf-shadow-sm:0 1px 2px rgba(0,0,0,.4);
+  --cf-shadow-md:0 10px 30px rgba(0,0,0,.45);
+  --cf-shadow-lg:0 22px 60px rgba(0,0,0,.55);
+  --cf-ring:0 0 0 4px rgba(129,140,248,.25);
+}
+
+*,*::before,*::after{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;font-family:var(--cf-font);font-size:14px;line-height:1.6;color:var(--cf-ink-700);background:var(--cf-bg);-webkit-font-smoothing:antialiased}
+h1,h2,h3,h4,h5{margin:0;color:var(--cf-ink-900);font-weight:600;letter-spacing:-.01em;line-height:1.3}
+p{margin:0}
+a{color:var(--cf-brand-600);text-decoration:none}
+a:hover{color:var(--cf-brand-700)}
+.cf-muted{color:var(--cf-ink-500)}
+*{scrollbar-width:thin;scrollbar-color:var(--cf-line) transparent}
+*::-webkit-scrollbar{width:10px;height:10px}
+*::-webkit-scrollbar-thumb{background:var(--cf-line);border-radius:999px;border:2px solid transparent;background-clip:content-box}
+
+.cf-btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;font-family:inherit;font-weight:500;font-size:13.5px;border-radius:var(--cf-radius-sm);padding:11px 16px;border:1px solid transparent;cursor:pointer;transition:.15s}
+.cf-btn-primary{background:var(--cf-brand-600);color:#fff}
+.cf-btn-primary:hover{background:var(--cf-brand-700)}
+.cf-btn-secondary{background:var(--cf-surface);color:var(--cf-ink-900);border-color:var(--cf-line)}
+.cf-btn-secondary:hover{background:var(--cf-surface-2)}
+.cf-btn-block{width:100%}
+
+.cf-card{background:var(--cf-surface);border:1px solid var(--cf-line);border-radius:var(--cf-radius-lg);box-shadow:var(--cf-shadow-sm)}
+.cf-card-pad{padding:20px 22px}
+
+.cf-input,.cf-select,.cf-textarea{width:100%;height:42px;border:1px solid var(--cf-line);background:var(--cf-surface);color:var(--cf-ink-900);border-radius:var(--cf-radius-sm);padding:0 14px;font-family:inherit;font-size:14px;outline:none}
+.cf-input:focus{border-color:var(--cf-brand-500);box-shadow:var(--cf-ring)}
+
+.cf-badge{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:500;padding:4px 10px;border-radius:var(--cf-radius-pill);border:1px solid transparent}
+.cf-badge-success{background:var(--cf-success-soft);color:var(--cf-success)}
+.cf-badge-warning{background:var(--cf-warning-soft);color:var(--cf-warning)}
+.cf-badge-danger{background:var(--cf-danger-soft);color:var(--cf-danger)}
+.cf-badge-gold{background:var(--cf-gold-soft);color:var(--cf-gold-ink)}
+
+.cf-table{width:100%;border-collapse:collapse;font-size:13px}
+.cf-table th{text-align:start;font-weight:500;color:var(--cf-ink-500);font-size:11.5px;text-transform:uppercase;letter-spacing:.04em;padding:0 10px 10px}
+.cf-table td{padding:12px 10px;border-top:1px solid var(--cf-line-soft);color:var(--cf-ink-700)}
+
+.cf-metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+.cf-metric{background:var(--cf-surface);border:1px solid var(--cf-line);border-radius:var(--cf-radius-md);padding:16px 17px;box-shadow:var(--cf-shadow-sm)}
+.cf-metric-val{font-size:26px;font-weight:700;color:var(--cf-ink-900);letter-spacing:-.02em}
+.cf-metric-lbl{font-size:12.5px;color:var(--cf-ink-500)}
+@media(max-width:900px){.cf-metrics{grid-template-columns:repeat(2,1fr)}}
+
+.permission-tooltip{font-size:12px}
+
+/* scaffold placeholder */
+.cf-stub{max-width:560px;margin:8vh auto;text-align:center;color:var(--cf-ink-600)}
+.cf-stub .ic{width:56px;height:56px;border-radius:16px;background:var(--cf-brand-50);color:var(--cf-brand-600);display:grid;place-items:center;margin:0 auto 14px}
+.cf-stub .ic .material-icons{font-size:28px}
+.cf-stub h1{font-size:22px;color:var(--cf-ink-900)}
+.cf-stub p{margin-top:6px}

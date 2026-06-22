@@ -1,0 +1,125 @@
+<div class="page">
+  <div class="spread head">
+    <div>
+      <a class="muted back" routerLink="/land">← Back</a>
+      <h1>Bulk generate</h1>
+      <p class="muted">{{ template()?.name }}</p>
+    </div>
+    @if (template(); as t) {
+      <a class="btn" [routerLink]="['/canvas', t.id]">Edit design</a>
+    }
+  </div>
+
+  @if (error()) { <div class="toast-error">{{ error() }}</div> }
+
+  @if (placeholders().length === 0) {
+    <div class="card pad">
+      <p class="muted">This template has no dynamic fields. Open the design and add a field like
+        <code>{{ '{{' }}name{{ '}}' }}</code> to enable bulk generation.</p>
+    </div>
+  } @else {
+    <!-- Step 1: data -->
+    <div class="card pad">
+      <h3>1 · Data</h3>
+      <div class="row wrap">
+        <label class="btn file-btn">
+          ⬆ Upload CSV / Excel
+          <input type="file" accept=".csv,.xlsx,.xls" hidden (change)="onFile($event)" />
+        </label>
+        <button class="btn" (click)="addRow()">＋ Add row</button>
+        <span class="muted">{{ rowCount() }} row(s) · columns: {{ columns().join(', ') }}</span>
+      </div>
+
+      <div class="table-scroll mt-2">
+        <table>
+          <thead>
+            <tr>
+              <th class="idx">#</th>
+              @for (col of columns(); track col) { <th>{{ col }}</th> }
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (row of rows(); track $index) {
+              <tr>
+                <td class="idx">{{ $index + 1 }}</td>
+                @for (col of columns(); track col) {
+                  <td>
+                    <input [value]="row[col]"
+                      (input)="updateCell($index, col, $any($event.target).value)" />
+                  </td>
+                }
+                <td><button class="btn btn-sm btn-ghost" (click)="removeRow($index)">✕</button></td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Step 2: mapping -->
+    <div class="card pad">
+      <h3>2 · Map fields</h3>
+      <p class="muted">Match each design field to a data column.</p>
+      <div class="map-grid">
+        @for (ph of placeholders(); track ph) {
+          <div class="map-row">
+            <span class="badge">{{ '{{' }}{{ ph }}{{ '}}' }}</span>
+            <span class="arrow">→</span>
+            <select [value]="mapping()[ph]" (change)="setMapping(ph, $any($event.target).value)">
+              @for (col of columns(); track col) { <option [value]="col">{{ col }}</option> }
+            </select>
+          </div>
+        }
+      </div>
+
+      <div class="field mt-2" style="max-width: 280px;">
+        <label>File name field</label>
+        <select [value]="nameField()" (change)="nameField.set($any($event.target).value)">
+          @for (col of columns(); track col) { <option [value]="col">{{ col }}</option> }
+        </select>
+      </div>
+    </div>
+
+    <!-- Step 3: output -->
+    <div class="card pad">
+      <h3>3 · Output</h3>
+      <div class="formats">
+        <label class="opt" [class.on]="format === 'png-zip'">
+          <input type="radio" name="fmt" value="png-zip" [(ngModel)]="format" /> PNG images (.zip)
+        </label>
+        <label class="opt" [class.on]="format === 'pdf-zip'">
+          <input type="radio" name="fmt" value="pdf-zip" [(ngModel)]="format" /> PDF files (.zip)
+        </label>
+        <label class="opt" [class.on]="format === 'pdf-single'">
+          <input type="radio" name="fmt" value="pdf-single" [(ngModel)]="format" /> Single multi-page PDF
+        </label>
+      </div>
+
+      <div class="row wrap mt-2">
+        <label class="check"><input type="checkbox" [(ngModel)]="saveToHistory" /> Save batch to history</label>
+        <label class="check"><input type="checkbox" [(ngModel)]="storeImages" /> Store rendered images in history</label>
+      </div>
+
+      <div class="row wrap mt-2">
+        <button class="btn" (click)="preview()" [disabled]="generating()">👁 Preview first</button>
+        <button class="btn btn-primary" (click)="generate()" [disabled]="generating()">
+          {{ generating() ? 'Generating…' : '⚡ Generate ' + rowCount() + ' certificate(s)' }}
+        </button>
+      </div>
+
+      @if (generating()) {
+        <div class="progress mt-2">
+          <div class="bar" [style.width.%]="progress().total ? (progress().done / progress().total) * 100 : 0"></div>
+          <span class="progress-label">{{ progress().done }} / {{ progress().total }}</span>
+        </div>
+      }
+
+      @if (previewUrl(); as url) {
+        <div class="preview mt-2">
+          <img [src]="url" alt="Preview" />
+        </div>
+      }
+    </div>
+  }
+</div>

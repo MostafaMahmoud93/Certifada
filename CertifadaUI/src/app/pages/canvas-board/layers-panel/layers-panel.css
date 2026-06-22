@@ -1,0 +1,15 @@
+.material-icons{
+font-size: 16px;
+}
+
+
+/* Optionally add a smooth transition effect to the visibility of buttons */
+.group:hover .flex-shrink-0 {
+  opacity: 1;  /* Fully visible on hover */
+  transition: opacity 0.3s ease-in-out;
+}
+
+/* Initially hide the buttons */
+.flex-shrink-0 {
+  opacity: 0;  /* Buttons are hidden by default */
+}

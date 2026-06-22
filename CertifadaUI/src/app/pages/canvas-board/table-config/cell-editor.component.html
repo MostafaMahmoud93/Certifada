@@ -1,0 +1,37 @@
+<h2 class="text-lg font-bold mb-4">Edit Cell</h2>
+<div class="space-y-4">
+  <div>
+    <label class="text-sm">Content</label>
+    <input type="text" [(ngModel)]="cell.text" class="form-input w-full" />
+  </div>
+  <div>
+    <label class="text-sm">Font Size</label>
+    <input type="number" [(ngModel)]="cell.fontSize" class="form-input w-full" />
+  </div>
+  <div>
+    <label class="text-sm">Text Color</label>
+    <input type="color" [(ngModel)]="cell.textColor" class="form-input w-full" />
+  </div>
+  <div>
+    <label class="text-sm">Background Color</label>
+    <input type="color" [(ngModel)]="cell.backgroundColor" class="form-input w-full" />
+  </div>
+  <div>
+    <label class="text-sm">Alignment</label>
+    <select [(ngModel)]="cell.alignment" class="form-select w-full">
+      <option value="left">Left</option>
+      <option value="center">Center</option>
+      <option value="right">Right</option>
+    </select>
+  </div>
+  <div>
+    <label class="inline-flex items-center">
+      <input type="checkbox" [(ngModel)]="cell.bold" class="form-checkbox mr-2" /> Bold
+    </label>
+  </div>
+
+  <div class="text-right pt-2">
+    <button class="bg-gray-300 hover:bg-gray-400 px-4 py-1 rounded mr-2" (click)="close()">Cancel</button>
+    <button class="bg-blue-600 text-white hover:bg-blue-700 px-4 py-1 rounded" (click)="save()">Save</button>
+  </div>
+</div>

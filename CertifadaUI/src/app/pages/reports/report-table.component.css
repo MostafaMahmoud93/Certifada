@@ -1,0 +1,4 @@
+.drag-over-highlight {
+  background-color: #e0f2fe; /* Tailwind blue-100 */
+  outline: 2px dashed #3b82f6; /* Tailwind blue-500 */
+}

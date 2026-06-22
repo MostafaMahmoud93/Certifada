@@ -1,0 +1,108 @@
+<section class="mx-auto max-w-6xl px-4 py-14">
+    <!-- Controls -->
+    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-10">
+      <div>
+        <h2 class="text-3xl md:text-4xl font-bold tracking-tight">Choose your plan</h2>
+        <p class="text-gray-500 mt-1">Simple subscriptions. Cancel anytime.</p>
+      </div>
+
+      <div class="flex items-center gap-4">
+        <!-- Region selector -->
+        <label class="flex items-center gap-2">
+          <span class="text-sm text-gray-500">Region</span>
+          <select
+  class="rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 px-3 py-2 text-sm"
+  [value]="region()"
+  (change)="onRegionChange($event)">
+  <option *ngFor="let r of regions" [value]="r.code">{{ r.label }}</option>
+</select>
+        </label>
+
+        <!-- Interval toggle -->
+        <div class="inline-flex p-1 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900">
+          <button
+            class="px-3 py-1.5 text-sm rounded-lg"
+            [class.bg-indigo-600]="interval() === 'month'"
+            [class.text-white]="interval() === 'month'"
+            (click)="setInterval('month')">
+            Monthly
+          </button>
+          <button
+            class="px-3 py-1.5 text-sm rounded-lg"
+            [class.bg-indigo-600]="interval() === 'year'"
+            [class.text-white]="interval() === 'year'"
+            (click)="setInterval('year')">
+            Yearly
+            <span *ngIf="bestDiscount() > 0" class="ml-1 text-[10px] font-semibold opacity-90">
+              (save {{ bestDiscount() }}%)
+            </span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Plans grid -->
+    <div class="grid gap-6 md:grid-cols-3">
+      <div *ngFor="let plan of plans" class="group relative rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-sm hover:shadow-lg transition-shadow">
+        <div class="absolute inset-x-0 -top-0.5 h-1 rounded-t-2xl"
+             [class.bg-indigo-500]="plan.highlight" [class.bg-slate-200]="!plan.highlight"></div>
+
+        <div *ngIf="plan.badge" class="absolute right-3 -top-3 bg-indigo-600 text-white text-xs font-semibold px-2 py-1 rounded-md shadow">
+          {{ plan.badge }}
+        </div>
+
+        <div class="p-6">
+          <h3 class="text-lg font-semibold flex items-center gap-2">
+            <span>{{ plan.title }}</span>
+            <span *ngIf="plan.highlight" class="inline-flex items-center text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded bg-indigo-100 text-indigo-700">
+              Featured
+            </span>
+          </h3>
+          <p class="text-gray-500 mt-1">{{ plan.blurb }}</p>
+
+          <!-- Price -->
+          <ng-container *ngIf="tier(plan) as t; else notAvailable">
+            <div class="mt-6 flex items-end gap-2">
+              <div class="text-4xl font-extrabold leading-none">
+                {{ t.amount | currency: t.currency:'symbol':'1.0-0' }}
+              </div>
+              <div class="text-gray-500 mb-1">/ {{ interval() }}</div>
+            </div>
+            <div *ngIf="interval() === 'year'" class="text-xs text-gray-500 mt-1">
+              ~ {{ (t.amount/12) | currency: t.currency:'symbol':'1.0-0' }} per month, billed yearly
+              <span *ngIf="discount(plan) > 0">• save {{ discount(plan) }}%</span>
+            </div>
+
+            <button
+              class="w-full mt-6 inline-flex items-center justify-center rounded-xl border border-slate-300 dark:border-slate-600 px-4 py-2.5 font-medium transition-transform group-hover:translate-y-[-1px]"
+              [class.bg-indigo-600]="plan.highlight"
+              [class.text-white]="plan.highlight"
+              [class.hover:bg-indigo-500]="plan.highlight"
+              [class.bg-white]="!plan.highlight"
+              [class.text-slate-900]="!plan.highlight"
+              (click)="selectPlan(plan)">
+              Select • {{ interval() | titlecase }}
+            </button>
+            <div class="mt-2 text-[11px] text-gray-500">
+              priceId: <code class="text-gray-600">{{ t.priceId }}</code>
+            </div>
+          </ng-container>
+
+          <ng-template #notAvailable>
+            <div class="mt-6 text-red-600 text-sm">Not available in selected region.</div>
+            <button class="w-full mt-4 rounded-xl bg-slate-100 dark:bg-slate-800 px-4 py-2.5 text-slate-500 cursor-not-allowed">Unavailable</button>
+          </ng-template>
+
+          <!-- Features -->
+          <ul class="mt-6 space-y-2">
+            <li *ngFor="let f of plan.features" class="flex items-start gap-3">
+              <svg class="mt-0.5 h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M9 16.2 4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4z"/>
+              </svg>
+              <span class="text-sm text-gray-700 dark:text-gray-200">{{ f }}</span>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>

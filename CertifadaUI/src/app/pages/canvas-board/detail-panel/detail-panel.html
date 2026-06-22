@@ -1,0 +1,635 @@
+<section class=" bg-white h-full overflow-auto flex flex-col dark:bg-gray-800 ">
+  <div>
+    <div class="property-panel-header bg-slate-100 p-0 h-11 dark:bg-gray-800 hidden md:block">
+      <h2 class="p-2">{{ selectedItem }}</h2>
+    </div>
+    <ng-container [ngSwitch]="selectedTab">
+        <mat-tab-group *ngIf="selectedItem === 'elements'" id="elements" mat-align-tabs="center" disablePagination="true" (selectedTabChange)="onTabChange($event)" matTooltip="click on shape/badge/icon to add it to canvas">
+          <mat-tab label="shapes">
+            <div *ngSwitchCase="'elements'" class="flex md:flex-col flex-row p-2">
+              <div class="flex-1 overflow-auto justify-center">
+                <div *ngIf="activeTab === 'shapes'" class="flex md:flex-wrap flex-row gap-2 justify-center ">
+                  <div *ngFor="let shape of shapes" (click)="onShapeClick(shape.type)">
+                    <div class="p-2 border rounded cursor-pointer hover:bg-gray-100 dark:border-gray-600 flex items-center justify-center h-18">
+                      <svg *ngIf="shape.type === 'rect'" width="32" height="32" class="shape-icon">
+                        <rect x="3" y="8" width="26" height="16"  />
+                      </svg>
+                      <svg *ngIf="shape.type === 'circle'" width="32" height="32" class="shape-icon">
+                        <circle cx="16" cy="16" r="12"  />
+                      </svg>
+                      <svg *ngIf="shape.type === 'triangle'" width="32" height="32" class="shape-icon">
+                        <polygon points="16,4 28,28 4,28"  />
+                      </svg>
+                      <svg *ngIf="shape.type === 'ellipse'" width="32" height="32" class="shape-icon">
+                        <ellipse cx="16" cy="16" rx="14" ry="8"  />
+                      </svg>
+                      <svg *ngIf="shape.type === 'diagonal'" width="32" height="32" class="shape-icon">
+                        <line x1="4" y1="28" x2="28" y2="4" stroke-width="2"/>
+                      </svg>
+                      <svg *ngIf="shape.type === 'horizontal'" width="32" height="32" class="shape-icon">
+                        <line x1="4" y1="16" x2="28" y2="16" stroke-width="2"/>
+                      </svg>
+                      <svg *ngIf="shape.type === 'vertical'" width="32" height="32" class="shape-icon">
+                        <line x1="16" y1="4" x2="16" y2="28" stroke-width="2"/>
+                      </svg>
+                      <svg *ngIf="shape.type === 'pentagon'" width="32" height="32" class="shape-icon">
+                        <polygon points="16,3 28,12 23,28 9,28 4,12"  />
+                      </svg>
+                      <svg *ngIf="shape.type === 'hexagon'" width="32" height="32" class="shape-icon">
+                        <polygon points="16,2 28,9 28,23 16,30 4,23 4,9"  />
+                      </svg>
+                      <svg *ngIf="shape.type === 'star'" width="32" height="32" class="shape-icon">
+                        <polygon points="16,3 19,12 28,12 21,18 24,27 16,21 8,27 11,18 4,12 13,12"  />
+                      </svg>
+                      <svg *ngIf="shape.type === 'roundedRect'" width="32" height="32" class="shape-icon">
+                        <rect x="3" y="8" width="26" height="16" rx="4" ry="4"  />
+                      </svg>
+                      <svg *ngIf="shape.type === 'arrow'" width="32" height="32" class="shape-icon">
+                        <polygon points="4,16 22,16 22,10 30,18 22,26 22,20 4,20"  />
+                      </svg>
+                      <svg *ngIf="shape.type === 'cross'" width="32" height="32" class="shape-icon">
+                        <path d="M12 4 H20 V12 H28 V20 H20 V28 H12 V20 H4 V12 H12 Z"  />
+                      </svg>
+                      <svg *ngIf="shape.type === 'heart'" width="32" height="32" class="shape-icon">
+                        <path d="M16 29s-13-8.35-13-17A7 7 0 0 1 16 6a7 7 0 0 1 13 6c0 8.65-13 17-13 17z"  />
+                      </svg>
+                      <svg *ngIf="shape.type === 'parallelogram'" width="32" height="32" class="shape-icon">
+                        <polygon points="8,4 28,4 24,28 4,28"  />
+                      </svg>
+                      <svg *ngIf="shape.type === 'trapezoid'" width="32" height="32" class="shape-icon">
+                        <polygon points="10,4 22,4 28,28 4,28"  />
+                      </svg>
+                      <svg *ngIf="shape.type === 'moon'" width="32" height="32" class="shape-icon">
+                        <path d="M20 16a12 12 0 1 1-8-11.31A9 9 0 1 0 20 16z"  />
+                      </svg>
+                      <svg *ngIf="shape.type === 'diamond'" width="32" height="32" class="shape-icon">
+                        <polygon points="16,2 30,16 16,30 2,16"  />
+                      </svg>
+                      <svg *ngIf="shape.type === 'cloud'" width="32" height="32" class="shape-icon">
+                        <path d="M10 24h13a6 6 0 0 0 1-11.9 8 8 0 0 0-15-1.1A5 5 0 0 0 10 24z"  />
+                      </svg>
+                      <svg *ngIf="shape.type === 'capsule'" width="32" height="32" class="shape-icon">
+                        <rect x="4" y="12" width="24" height="8" rx="4" ry="4"  />
+                      </svg>
+                      <svg *ngIf="shape.type === 'ring'" width="32" height="32" class="shape-icon">
+                        <circle cx="16" cy="16" r="12"  />
+                        <circle cx="16" cy="16" r="6" fill="white" />
+                      </svg>
+                      <svg *ngIf="shape.type === 'chevron'" width="32" height="32" class="shape-icon">
+                        <polygon points="10,4 22,16 10,28"  />
+                      </svg>
+                      <svg *ngIf="shape.type === 'arrowDown'" width="32" height="32" class="shape-icon">
+                        <polygon points="4,12 16,24 28,12"  />
+                      </svg>
+                      <svg *ngIf="shape.type === 'arrowUp'" width="32" height="32" class="shape-icon">
+                        <polygon points="4,20 16,8 28,20"  />
+                      </svg>
+                      <svg *ngIf="shape.type === 'rightTriangle'" width="32" height="32" class="shape-icon">
+                        <polygon points="4,4 28,4 4,28"  />
+                      </svg>
+                      <svg *ngIf="shape.type === 'frame'" width="32" height="32" class="shape-icon">
+                        <rect x="2" y="2" width="28" height="28"  />
+                        <rect x="6" y="6" width="20" height="20" fill="white" />
+                      </svg>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </mat-tab>
+          <mat-tab label="icons">
+            <div *ngSwitchCase="'elements'" class="flex flex-col p-2">
+              <div class="flex-1 overflow-auto justify-center">
+                <div *ngIf="activeTab === 'icons'" class="flex md:flex-col flex-row gap-2">
+                  <div *ngFor="let icon of icons" (click)="onIconClick(icon.src)" class="p-2 border rounded cursor-pointer dark:border-gray-600 hover:bg-gray-100 flex items-center justify-center h-20">
+                    <img [src]="icon.src" [alt]="icon.name" class="h-12 w-12 object-contain" />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </mat-tab>
+          <mat-tab label="badges">
+            <div *ngSwitchCase="'elements'" class="flex flex-col p-2">
+              <div class="flex-1 overflow-auto justify-center">
+                <div *ngIf="activeTab === 'badges'" class="flex md:flex-col flex-row gap-2">
+                  <div *ngFor="let badge of badges" (click)="onBadgeClick(badge.src)" class="p-2 border rounded cursor-pointer  dark:border-gray-600 hover:bg-gray-100 flex items-center justify-center h-20">
+                    <img [src]="badge.src" [alt]="badge.name" class="h-12 w-12 object-contain" />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </mat-tab>
+        </mat-tab-group>
+       
+        <mat-tab-group *ngIf="selectedItem === 'images'" id="images" mat-align-tabs="center" disablePagination="true" (selectedTabChange)="onTabChange($event)" #ImagesTAB>    
+           <mat-tab label="image">
+             
+               <div class="flex md:flex-col flex-row gap-2 dark:border-gray-800 space-y-2 p-2">
+                 <label class="bg-slate-200 border dark:border-gray-700 m-2  dark:bg-slate-700 rounded cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-100 flex items-center justify-center text-gray-400">
+                <i class="material-icons">add_photo_alternate</i>
+                <input type="file" accept="image/*" (change)="onFileSelected($event)" class="hidden" />
+              </label>
+                  <div *ngFor="let img of Images" (click)="onImageClick(img.src)" class="p-2 border rounded cursor-pointer dark:border-gray-600 hover:bg-gray-100 flex items-center justify-center h-14">
+                    <img [src]="img.src" [alt]="img.name" class="h-full object-contain" />
+                  </div>
+                </div>
+           </mat-tab>
+           <mat-tab label="Filters">
+               <div class="flex md:flex-col flex-row gap-2 dark:border-gray-800 space-y-2 p-2">
+                  <div *ngFor="let filter of filters"
+                  class="border rounded shadow hover:shadow-lg dark:hover:shadow-gray-600 dark:hover:shadow-lg transition cursor-pointer items-center justify-center  dark:border-gray-900"
+                  (click)="applyFilter(filter.instance)">
+                  <img [src]="getPreviewImageSrc(filter.name)" [alt]="filter.name" class="w-full h-auto object-contain rounded-t"/>
+                  <div class="hidden md:block text-center border dark:border-gray-900 p-2 text-xs bg-gray-100 dark:bg-gray-900 darl:text-gray-300 rounded-b">
+                    {{ filter.name }}
+                  </div>
+                </div>
+              </div>
+           </mat-tab>
+        </mat-tab-group>
+
+        <!-- Image Filter Panel -->
+        <div *ngIf="showFilterPanel" #panelRef class="fixed left-4 top-4 z-50 bg-white dark:bg-gray-800 rounded shadow-lg p-4 max-w-sm w-[200px]"
+          [ngStyle]="{ top: panelPosition.top + 'px', left: panelPosition.left + 'px' }"
+          (mousedown)="startDrag($event)"
+        >
+          <div
+            class="flex justify-between items-center mb-2 cursor-move select-none"
+            (mousedown)="startDrag($event, true)"
+          >
+            <span class="font-semibold text-gray-700 dark:text-gray-200 text-sm">Image Filters</span>
+            <button
+              (click)="showFilterPanel = false"
+              class="text-gray-500 hover:text-red-500 focus:outline-none text-lg font-bold"
+            >
+              &times;
+            </button>
+          </div>
+
+          <!-- filter content -->
+          <div class="grid grid-cols-2 gap-2 pb-2">
+            <div
+              *ngFor="let filter of filters"
+              class="border rounded shadow hover:shadow-lg dark:hover:shadow-gray-600 dark:hover:shadow-lg transition cursor-pointer items-center justify-center dark:border-gray-900"
+              (click)="applyFilter(filter.instance)"
+            >
+              <img
+                [src]="getPreviewImageSrc(filter.name)"
+                [alt]="filter.name"
+                class="w-full h-auto object-contain rounded-t"
+              />
+              <div class="text-center border dark:border-gray-900 p-2 text-xs bg-gray-100 dark:bg-gray-900 dark:text-gray-300 rounded-b">
+                {{ filter.name }}
+              </div>
+            </div>
+          </div>
+
+          <!-- Resizer -->
+          <div
+            class="absolute bottom-0 right-0 w-4 h-4 cursor-se-resize"
+            (mousedown)="startResize($event)"
+          ></div>
+        </div>
+         
+        <mat-tab-group  *ngIf="selectedItem === 'backgrounds'" id="backgrounds" mat-align-tabs="center" disablePagination="true" (selectedTabChange)="onTabChange($event)" matTooltip="click on shape/badge/icon to add it to canvas">
+            <mat-tab label="image">
+            <div *ngSwitchCase="'backgrounds'" class="flex flex-col p-2">
+                <div class="grid md:grid-cols-3 grid-flow-col gap-2">
+                <label class="bg-slate-200 p-2 border dark:border-gray-700 rounded cursor-pointer hover:bg-gray-100 flex items-center justify-center h-20 text-gray-400">
+                  <i class="material-icons">add_photo_alternate</i>
+                  <input type="file" accept="image/*" (change)="onFileSelected($event)" class="hidden" />
+                </label>
+                <div *ngFor="let img of Backgrounds" (click)="onBackgroundClick(img.src)" class="p-2 border rounded cursor-pointer hover:bg-gray-100 flex items-center justify-center h-20 dark:border-gray-700">
+                  <img [src]="img.src" [alt]="img.name" class="h-full object-contain" />
+                </div>
+              </div>
+            </div>
+            </mat-tab>
+            <mat-tab label="colors" >
+                <div *ngSwitchCase="'backgrounds'" class="flex flex-col p-2 ">
+                  <div class="p-2 rounded-md border dark:border-gray-700 space-y-3 overflow-auto">
+                  <div class="p-4 block md:hidden" >Not Available on Mobile, Please use on Desktop</div>       
+                    <div *ngFor="let color of colors" class="mb-3 dark:bg-text-300 hidden md:block">
+                      <div class=" mb-1">{{ color.name }}</div>
+                      <div class="flex space-x-2">
+                        <div *ngFor="let shade of color.shades"
+                            (click)="setBackgroundColor(shade)"
+                            [style.background]="shade"
+                            class="w-6 h-6 rounded cursor-pointer border border-gray-300 dark:border-gray-700"
+                            title="{{ shade }}">
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+            </mat-tab>
+            <mat-tab label="gradient">
+            <div *ngSwitchCase="'backgrounds'" class="flex flex-col p-2 dark:text-gray-300 ">
+              <div class="p-4 block md:hidden" >Not Available on Mobile, Please use on Desktop</div>       
+                <div class="p-2 rounded-md border space-y-3 overflow-auto pb-12 dark:border-gray-700 hidden md:block ">
+                    <label>Gradient Type:
+                      <select [(ngModel)]="gradientType" (change)="onChange()" class="dark:bg-gray-700">
+                        <option value="linear">Linear</option>
+                        <option value="radial">Radial</option>
+                      </select>
+                    </label>
+
+                    <div *ngIf="gradientType === 'linear'">
+                      <label>Angle:
+                        <input type="range" min="0" max="360" [(ngModel)]="angle" (input)="onChange()" />
+                        {{ angle }}°
+                      </label>
+                    </div>
+
+                    <div *ngFor="let stop of colorStops; let i = index" class="flex items-center space-x-2">
+                        <input type="color" [(ngModel)]="stop.color" (input)="onChange()" class="w-8 h-8 mt-2 dark:bg-gray-800 rounded"/>
+                        <input type="range" min="0" max="1" step="0.01" [(ngModel)]="stop.offset" (input)="onChange()" class="w-24 mt-2" />
+                        <span>{{ (stop.offset * 100) | number:'1.0-0' }}%</span>
+                        <button (click)="removeColorStop(i)" *ngIf="colorStops.length > 2"><i class="material-icons text-gray-400 text-xl">delete</i></button>
+                    </div>
+
+                    <button (click)="addColorStop()">➕ Add Stop</button>
+
+                    <div class="w-52 h-48 rounded border mt-2 " [style.background]="cssGradient" matTooltip="Live Preview"></div>
+                    <button (click)="applyGradient()" class="mt-2 bg-gray-200 text-gray-800 px-4 py-2 rounded hover:bg-gray-300 dark:bg-gray-900 dark:text-gray-200 dark:hover:bg-gray-700">Apply</button>
+                  </div>
+            </div>
+            </mat-tab>
+        </mat-tab-group>
+
+        <mat-tab-group *ngIf="selectedItem === 'fonts'" id="fonts" mat-align-tabs="center" disablePagination="true" (selectedTabChange)="onTabChange($event)" #fontsTAB>
+            <mat-tab label="fonts"> 
+               <div class="flex md:flex-col flex-row md:space-y-2 space-x-2 p-2">
+                <button *ngFor="let font of fonts" 
+                        (click)="onAddTextClick(font.family)"
+                        [style.font-family]="font.family"
+                        class="p-4 border text-gray-600 rounded text-sm dark:border-gray-700 dark:text-gray-300 dark:hover:text-gray-600 hover:bg-gray-100 flex flex-col items-center justify-center space-y-2">
+                  <i class="material-icons hidden md:block" style="font-size: 16px;">font_download</i>
+                  <span>{{ font.text }}</span>
+                </button>
+              </div>
+            </mat-tab>
+            <mat-tab label="effects">
+              <div class="flex flex-col space-y-2 p-2 md:pb-16">
+              <div class="hidden md:block bg-white p-4 rounded-lg shadow-md space-y-4 border border-gray-200 dark:bg-gray-900 dark:border-gray-700">
+                    <button (click)="addTextEffect('gradient')" class="w-full py-2 px-3 rounded-md text-white bg-gradient-to-r from-pink-500 to-yellow-500 hover:opacity-90">
+                      Gradient Text
+                    </button>
+                    <button (click)="addTextEffect('blur')" class="w-full py-2 px-3 rounded-md bg-gray-800 text-white shadow-md hover:shadow-lg">
+                      Blurred Text
+                    </button>
+                    <button (click)="addCurvedText()" class="w-full py-2 px-3 rounded-md bg-blue-600 text-white hover:bg-blue-700">
+                      Curved Text
+                    </button>
+                    <div class="space-y-2">
+                      <label for="textInput" class="block text-sm font-medium text-gray-400 ">Enter Text</label>
+                      <input [(ngModel)]="customText" type="text" id="textInput" class="dark:text-gray-300 dark:bg-gray-600 dark:border-gray-700 block w-full px-3 py-2 border border-gray-300 rounded-md text-sm text-gray-900 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500" placeholder="Type your text here">
+                    </div>
+                    <div class="space-y-2">
+                      <label for="radiusInput" class="block text-sm font-medium text-gray-400">Radius</label>
+                      <input [(ngModel)]="radius" type="number" id="radiusInput" class="dark:text-gray-300 dark:bg-gray-600 dark:border-gray-700 block w-full px-3 py-2 border border-gray-300 rounded-md text-sm text-gray-900 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500" placeholder="Enter curve radius" min="50">
+                    </div>
+                </div>
+                <div class="md:grid md:grid-cols-1 md:space-y-2 flex overflow-x-auto">
+                  <div class="cursor-pointer card pr-1 pb-2" (click)="addTextEffect('shadow')">
+                    <div class="p-4 border text-gray-600 rounded text-sm dark:border-gray-700 dark:text-gray-300 dark:hover:text-gray-600 hover:bg-gray-100 flex flex-col items-center justify-center space-y-2">
+                      <p class="hidden lg:block text-center text-sm font-semibold text-gray-800">Shadow</p>
+                      <div class="text-center text-xl font-bold text-white shadow-lg" 
+                          style="text-shadow: 5px 5px 10px rgba(0,0,0,0.7);">
+                        Sample
+                      </div>
+                    </div>
+                  </div>
+                  <div class="cursor-pointer card pr-1" (click)="addTextEffect('lift')">
+                    <div class="p-4 border text-gray-600 rounded text-sm dark:border-gray-700 dark:text-gray-300 dark:hover:text-gray-600 hover:bg-gray-100 flex flex-col items-center justify-center space-y-2">
+                      <p class="hidden lg:block text-center text-sm font-semibold text-gray-800">Lift</p>
+                      <div class="text-center text-xl font-bold text-white shadow-lg" 
+                          style="text-shadow: 3px 3px 15px rgba(0,0,0,0.5);">
+                        Sample
+                      </div>
+                    </div>
+                  </div>
+                  <div class="cursor-pointer card pr-1" (click)="addTextEffect('hollow')">
+                    <div class="p-4 border text-gray-600 rounded text-sm dark:border-gray-700 dark:text-gray-300 dark:hover:text-gray-600 hover:bg-gray-100 flex flex-col items-center justify-center space-y-2">
+                      <p class="hidden lg:block text-center text-sm font-semibold text-gray-800">Hollow</p>
+                      <div class="text-center text-xl font-bold text-transparent" 
+                          style="text-stroke: 5px #000; -webkit-text-stroke: 5px #000;">
+                        Sample
+                      </div>
+                    </div>
+                  </div>
+                  <div class="cursor-pointer card pr-1" (click)="addTextEffect('splice')">
+                    <div class="p-4 border text-gray-600 rounded text-sm dark:border-gray-700 dark:text-gray-300 dark:hover:text-gray-600 hover:bg-gray-100 flex flex-col items-center justify-center space-y-2">
+                      <p class="hidden lg:block text-center text-sm font-semibold text-gray-800">Splice</p>
+                      <div class="text-center text-xl font-bold text-transparent"
+                          style="text-decoration: line-through; text-stroke: 5px #000;">
+                        Sample
+                      </div>
+                    </div>
+                  </div>
+                  <div class="cursor-pointer card pr-1" (click)="addTextEffect('outline')">
+                    <div class="p-4 border text-gray-600 rounded text-sm dark:border-gray-700 dark:text-gray-300 dark:hover:text-gray-600 hover:bg-gray-100 flex flex-col items-center justify-center space-y-2">
+                      <p class="hidden lg:block text-center text-sm font-semibold text-gray-800">Outline</p>
+                      <div class="text-center text-xl font-bold text-transparent"
+                          style="text-stroke: 5px #000; -webkit-text-stroke: 5px #000;">
+                        Sample
+                      </div>
+                    </div>
+                  </div>
+                  <div class="cursor-pointer card pr-1" (click)="addTextEffect('echo')">
+                    <div class="p-4 border text-gray-600 rounded text-sm dark:border-gray-700 dark:text-gray-300 dark:hover:text-gray-600 hover:bg-gray-100 flex flex-col items-center justify-center space-y-2">
+                      <p class="hidden lg:block text-center text-sm font-semibold text-gray-800">Echo</p>
+                      <div class="text-center text-xl font-bold text-white shadow-lg" 
+                          style="text-shadow: 5px 5px 5px rgba(0,0,0,0.3);">
+                        Sample
+                      </div>
+                    </div>
+                  </div>
+                  <div class="cursor-pointer card pr-1" (click)="addTextEffect('glitch')">
+                    <div class="p-4 border text-gray-600 rounded text-sm dark:border-gray-700 dark:text-gray-300 dark:hover:text-gray-600 hover:bg-gray-100 flex flex-col items-center justify-center space-y-2">
+                      <p class=" hidden lg:block text-center text-sm font-semibold text-gray-800">Glitch</p>
+                      <div class="text-center text-xl font-bold text-white"
+                          style="color: #ff00ff; text-shadow: 5px 5px 5px rgba(0,0,0,0.2);">
+                        Sample
+                      </div>
+                    </div>
+                  </div>
+                  <div class="cursor-pointer card pr-1" (click)="addTextEffect('neon')">
+                    <div class="p-4 border text-gray-600 rounded text-sm dark:border-gray-700 dark:text-gray-300 dark:hover:text-gray-600 hover:bg-gray-100 flex flex-col items-center justify-center space-y-2">
+                      <p class="hidden lg:block text-center text-sm font-semibold text-gray-800">Neon</p>
+                      <div class="text-center text-xl font-bold text-white"
+                          style="color: #0f0; text-shadow: 0 0 20px rgba(0,255,0,0.8);">
+                        Sample
+                      </div>
+                    </div>
+                  </div>
+                  <div class="cursor-pointer card pr-1" (click)="addTextEffect('background')">
+                    <div class="p-4 border text-gray-600 rounded text-sm dark:border-gray-700 dark:text-gray-300 dark:hover:text-gray-600 hover:bg-gray-100 flex flex-col items-center justify-center space-y-2">
+                      <p class="hidden lg:block text-center text-sm font-semibold text-gray-800">Background</p>
+                      <div class="text-center text-xl font-bold text-white"
+                          style="background-color: rgba(255, 0, 0, 0.5);">
+                        Sample
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                </div>
+            </mat-tab>
+        </mat-tab-group>  
+
+        <div *ngSwitchCase="'variables'" class="flex md:flex-col flex-row space-y-2 p-2">
+           <div class="flex md:flex-col flex-row md:p-4 border text-gray-600 rounded text-sm dark:border-gray-700 dark:text-gray-300 ">
+            <h2 class="hidden md:block text-lg mb-2">Dynamic Variables</h2>
+            <div *ngFor="let item of FVariableEntry" class="flex flex-row justify-between items-center md:mb-2 border dark:border-gray-700 rounded h-24 md:h-auto">
+              <span class="truncate">{{ item.text }}</span>
+              <button (click)="toggleText(item)" class="text-xs px-2 py-1 rounded border transition duration-150"
+                [ngClass]="{'bg-green-200 text-green-700 border-green-400 dark:bg-blue-200 dark:text-blue-700 dark:border-blue-400': item.status === 'in use',
+                            'bg-gray-100 text-gray-700 border-gray-400 dark:bg-gray-700 dark:text-gray-200 dark:border-gray-700': item.status === 'use'}">
+                {{ item.status === 'in use' ? 'In Use' : 'Use' }}
+              </button>
+            </div>
+          </div>
+
+           <div class="flex md:flex-col flex-row md:p-4 border text-gray-600 rounded text-sm dark:border-gray-700 dark:text-gray-300 ">
+            <h2 class="hidden md:block text-lg mb-2">Dynamic Signatures</h2>
+            <div *ngFor="let item of signatures" class="flex flex-row justify-between items-center md:mb-2 border dark:border-gray-700 rounded h-24 md:h-auto">
+              <span class="truncate">{{ item.text }}</span>
+              <button (click)="toggleSignature(item)" class="text-xs px-2 py-1 rounded border transition duration-150"
+                [ngClass]="{'bg-green-200 text-green-700 border-green-400 dark:bg-blue-200 dark:text-blue-700 dark:border-blue-400': item.status === 'in use',
+                            'bg-gray-100 text-gray-700 border-gray-400 dark:bg-gray-700 dark:text-gray-200 dark:border-gray-700': item.status === 'use'}">
+                {{ item.status === 'in use' ? 'In Use' : 'Use' }}
+              </button>
+            </div>
+          </div>
+
+          <div class="hidden md:block border-t border-gray-200 dark:border-gray-700"></div>
+           <button (click)="AskForVariableName()" class="p-1 border bg-gray-200 dark:bg-gray-900 text-gray-600 rounded text-sm dark:border-gray-700 dark:text-gray-300 dark:hover:text-gray-600 hover:bg-gray-100 flex items-center justify-center space-y-2">
+              <i class="material-icons" style="font-size: 16px;">add</i>
+              <span>Add New Variable</span>
+           </button>
+           <div class="flex md:flex-col flex-row md:p-4 border text-gray-600 rounded text-sm dark:border-gray-700 dark:text-gray-300 ">
+            <h2 class="hidden md:block text-lg mb-2">Custom Dynamic Variables</h2>
+            <div *ngFor="let item of Variables" class="flex flex-row justify-between items-center md:mb-2 border dark:border-gray-700 rounded h-24 md:h-auto">
+              <span class="truncate">{{ item.text }}</span>
+              <button (click)="toggleText(item)" class="text-xs px-2 py-1 rounded border transition duration-150                    "
+                [ngClass]="{'bg-green-200 text-green-700 border-green-400 dark:bg-blue-200 dark:text-blue-700 dark:border-blue-400': item.status === 'in use',
+                            'bg-gray-100 text-gray-700 border-gray-400 dark:bg-gray-700 dark:text-gray-200 dark:border-gray-700': item.status === 'use'}">
+                {{ item.status === 'in use' ? 'In Use' : 'Use' }}
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div *ngSwitchCase="'template'" class="p-2 gap-2">
+          <div class=" flex flex-col gap-4 mt-6">
+            <div *ngFor="let template of templates" class="relative group cursor-pointer">
+              <img [src]="template.image" (click)="onTemplateClick(template)"
+              alt="Template Preview" class="object-cover rounded-md transition-transform transform group-hover:scale-105 cusror-pointer" />
+              <div class="absolute bottom-0 left-0 right-0 bg-black bg-opacity-50 text-white text-sm p-2 text-center rounded-b-md pointer-events-none">
+                <p>{{ template.name }}</p>
+              </div>
+               <div class="absolute inset-0 flex items-center justify-center text-gray-600 text-4xl font-semibold opacity-30 group-hover:opacity-100 transition-opacity pointer-events-none">
+                <p>{{ template.status }}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div *ngSwitchCase="'qr'" class="flex flex-col space-y-2 p-2">
+          <div class="flex items-center p-4 border-b border-gray-200 dark:border-gray-700">
+              <i class="material-icons text-xl">qr_code</i>
+              <h2 class="ml-2 text-sm font-medium text-gray-600 dark:text-gray-300">Select QR response</h2>
+            </div>
+            <div class="p-2 space-y-2">
+              <!-- Auth Page Card -->
+              <div class="border rounded-lg p-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700"
+                [ngClass]="{
+                  'border-blue-500 bg-gray-100 dark:bg-gray-700': URLOption === 'auth',
+                  'border-gray-200 dark:border-gray-700': URLOption !== 'auth'
+                }" (click)="URLOption = 'auth'; qrText = 'https://certifada.com'">
+                <div  class="flex items-center" [ngClass]="URLOption === 'auth' ? 'text-green-600' : 'text-blue-600'">
+                  <i class="material-icons">{{ URLOption === 'auth' ? 'check' : 'add' }}</i>
+                  <span class="ml-2">Auth Page</span>
+                </div>
+                <p class="mt-2 text-sm text-gray-400 leading-relaxed">
+                  Users will redirected to a special portal for the certificate with alot of options
+                </p>
+              </div>
+              <!-- Custom URL Card -->
+              <div 
+                class="border rounded-lg p-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700"
+                [ngClass]="{
+                  'border-blue-500 bg-gray-100 dark:bg-gray-700': URLOption === 'custom',
+                  'border-gray-200 dark:border-gray-700': URLOption !== 'custom'
+                }" (click)="URLOption = 'custom'; qrText = 'https://custom.com'">
+                <div class="flex items-center" [ngClass]="URLOption === 'custom' ? 'text-green-600' : 'text-blue-600'">
+                  <i class="material-icons">{{ URLOption === 'custom' ? 'check' : 'add' }}</i>
+                  <span class="ml-2">Custom URL</span>
+                </div>
+                <p class="mt-2 text-sm text-gray-400 leading-relaxed">
+                  Insert your own URL, like your home website
+                </p>
+              </div>
+            </div> 
+
+            <div class="border-t border-gray-200 dark:border-gray-700 "></div>
+            <div class="space-y-3 border-t pt-4 mt-4 dark:text-gray-300">
+              <div class="flex flex-col gap-2">
+                <input type="text" [(ngModel)]="qrText" placeholder="Enter URL or text"
+                  class="border px-2 py-1 rounded dark:bg-gray-900 dark:border-gray-700 dark:text-gray-300" />
+
+                <div class="flex gap-2">
+                  <label class="text-sm">Foreground</label>
+                  <input type="color" [(ngModel)]="qrForeground" class="dark:bg-gray-800 bg-white" />
+                  <label class="text-sm">Background</label>
+                  <input type="color" [(ngModel)]="qrBackground" class="dark:bg-gray-800 bg-white" />
+                </div>
+
+                <label class="text-sm">Margin</label>
+                <input type="range" min="0" max="20" [(ngModel)]="qrMargin" />
+                <span class="text-xs text-right">{{ qrMargin }} px</span>
+
+                <label class="text-sm">Size</label>
+                <input type="range" min="100" max="500" step="10" [(ngModel)]="qrSize" />
+                <span class="text-xs text-right">{{ qrSize }} px</span>
+
+                <button (click)="addQRCode()" 
+                  class="px-3 py-2 bg-gray-400 text-white border rounded hover:bg-gray-700 w-full dark:border-gray-700 dark:bg-gray-800 dark:hover:bg-gray-900">
+                  <i class="material-icons">qr_code</i> Add
+                </button>
+              </div>
+            </div>
+
+        </div>  
+
+        <div *ngSwitchCase="'addons'" class=" gap-2">
+            <div class="max-w-xs bg-white dark:bg-gray-800 overflow-hidden">
+            
+
+            <div class="p-4 border-b border-gray-200 dark:border-gray-700">
+              <div class="flex items-center">
+                  <i class="material-icons text-2xl">approval</i>
+                <span class="ml-2 text-gray-500 dark:text-gray-300">Stamps</span>
+              </div>
+              <button class="mt-3 text-sm w-full flex items-center justify-center border border-gray-200 dark:border-gray-700 rounded-lg py-2 text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700">
+                <i class="material-icons">upload</i>
+                Upload stamp
+              </button>
+            </div>
+
+            <!-- Fingerprint Section -->
+            <div class="p-4">
+              <div class="flex items-center">
+                <i class="material-icons text-2xl">fingerprint</i>
+                <span class="ml-2 text-gray-500 dark:text-gray-300">Fingerprint</span>
+              </div>
+              <button class="mt-3 text-sm w-full flex items-center justify-center border border-gray-200 dark:border-gray-700 rounded-lg py-2 text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700">
+                <i class="material-icons">add</i>
+                Add Fingerprint
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div *ngSwitchCase="'drawing'" class="p-2 gap-2">
+          <div class="flex ">
+          <div class="w-64 p-4 bg-gray-100 border rounded border-gray-300 space-y-4 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-300">
+            <h2 class="text-lg mb-2"><i class="material-icons">brush</i> Drawing Tools</h2>
+            <button (click)="toggleDrawingMode()" 
+              class="px-3 py-2 dark:text-gray-300 bg-blue-500 text-white rounded w-full  border hover:bg-gray-700 dark:border-gray-700 dark:bg-gray-900 dark:hover:bg-gray-800">
+              {{ isDrawingMode ? 'Disable Drawing' : 'Enable Drawing' }}
+            </button>
+            <label class="block">
+              <span class="text-sm font-medium dark:text-gray-300">Brush Type</span>
+              <select [(ngModel)]="brushType" (change)="changeBrush(brushType)"
+                class="mt-1 w-full px-2 py-1 border rounded text-sm dark:bg-gray-900 dark:border-gray-700">
+                <option value="PencilBrush">Pencil</option>
+                <option value="CircleBrush">Circle</option>
+                <option value="SprayBrush">Spray</option>
+                <option value="PatternBrush">Pattern</option>
+              </select>
+            </label>
+            <label class="block">
+              <span class="text-sm font-medium dark:text-gray-300">Brush Color</span>
+              <input type="color" [(ngModel)]="brushColor" (change)="updateColor(brushColor)"
+                class="mt-1 w-full h-10 p-1 border rounded dark:bg-gray-900 dark:border-gray-700" />
+            </label>
+            <label class="block">
+              <span class="text-sm font-medium dark:text-gray-300">Brush Size</span>
+              <input type="range" min="1" max="100" [(ngModel)]="brushWidth" 
+                (input)="updateWidth(brushWidth)" class="w-full mt-1" />
+              <div class="text-xs text-right">{{ brushWidth }} px</div>
+            </label>
+            <button (click)="clearCanvas()" 
+              class="px-3 py-2 bg-blue-500 dark:text-gray-300 text-white rounded w-full  border hover:bg-gray-700 dark:border-gray-700 dark:bg-gray-900 dark:hover:bg-gray-800">
+              Clear Canvas
+            </button>
+          </div>
+        </div>
+        </div>
+
+        <div *ngSwitchCase="'brand'" class=" p-2 gap-2">
+          <div *ngIf="branches.length === 0" class="flex ">
+            <div class=" p-8 max-w-sm text-center animate__animated animate__fadeIn animate__delay-1s">
+              <i class="material-icons w-20 h-20 mx-auto mb-6 opacity-80 text-8xl text-gray-300 dark:text-gray-700">battery_alert</i>
+              <h3 class="text-2xl font-semibold text-gray-700 mb-4">No Data Stored</h3>
+              <p class="text-gray-600 mb-6">Please add some branches to get started.</p>
+              <!-- Optional: Add a button if needed -->
+              <button [routerLink]="['/land']" class="bg-blue-500 dark:bg-green-500 text-white py-2 px-4 rounded-md hover:bg-blue-700 hover:dark:bg-green-700 transition">Add Branch</button>
+              <i (click)="loadBrandingFromLocalStorage()" class="material-icons  text-gray-400 py-2 px-4 rounded-md  transition p-2 cursor-pointer hover:text-gray-700 dark:hover:text-white">refresh</i>
+            </div>
+          </div>
+          <div *ngFor="let branch of branches" class="flex flex-col m-2 rounded-lg bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 shadow-md p-6 transition hover:shadow-lg space-y-6">
+            <div class="flex justify-between items-center border-b dark:border-gray-700 pb-3">
+              <p class="text-sm text-gray-800 dark:text-gray-300 flex items-center gap-2">
+                <i class="material-icons">add_business</i> {{ branch.name }}
+              </p>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-1 lg:grid-cols-1 gap-6 ">
+              <!-- Font  -->
+              <div class="space-y-3">
+                <div class="grid grid-cols-1 sm:grid-cols-1 gap-4 ">
+                  <div *ngFor="let font of branch.fonts; let i = index"
+                      class="relative group p-4 border dark:border-gray-700 rounded text-center bg-gray-50 dark:bg-gray-800 hover:border-gray-400"
+                      [ngStyle]="{ fontFamily: font.name }">
+                      <p class="text-sm dark:text-gray-300">This is a preview of {{ font.name }}</p>
+                   </div>
+                </div>
+              </div>
+              <!-- Logo  -->
+              <div class="space-y-3">
+                <div *ngIf="branch.logoPreview" class="relative group bg-white dark:bg-gray-800 border p-2 rounded text-center dark:border-gray-700">
+                  <img [src]="branch.logoPreview" class="h-24 mx-auto object-contain" />
+                </div>
+              </div>
+              <!-- 🎨 Colors -->
+              <div class="space-y-3 bg-gray-100 dark:bg-gray-800 border rounded border-gray-200 dark:border-gray-700">
+                  <h4 class="text-sm text-gray-700 dark:text-gray-300 mb-2 p-4">Color Palette</h4>
+                  <div class="flex flex-wrap gap-6 justify-center items-center px-4 pb-4">
+                    <div *ngFor="let color of branch.colorPalette; let i = index" class="relative flex flex-col items-center space-y-1 group">
+                      <div class="w-8 h-8 rounded-full border-2 border-gray-300 dark:border-gray-600 shadow-md cursor-pointer flex items-center justify-center">
+                        <div class="w-7 h-7 rounded-full" [style.background]="color"></div>
+                      </div>
+                      <span class="text-xs text-gray-600 dark:text-gray-400">{{ color }}</span>
+                    </div>
+                  </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div *ngSwitchCase="'table'" class=" gap-2">
+            <div class="max-w-xs bg-white dark:bg-gray-800 overflow-hidden">
+            <div class="p-4 border-b border-gray-200 dark:border-gray-700">
+            <button
+              class="bg-blue-600 hover:bg-blue-700 text-white text-sm px-4 py-2 rounded mb-2"
+              (click)="openTableDialog()">
+              ➕ Add Table
+            </button>
+            </div>
+          </div>
+        </div>
+
+    </ng-container>
+  </div>
+</section>
