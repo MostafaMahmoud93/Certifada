@@ -14,21 +14,22 @@ import { DecimalPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { NgTemplateOutlet } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
-import { TranslocoModule } from '@ngneat/transloco';
+import { TranslocoModule, TranslocoService } from '@ngneat/transloco';
 import { trigger, transition, style, animate } from '@angular/animations';
 import { saveAs } from 'file-saver';
 import * as QRCode from 'qrcode';
-import { FabricCanvasService, BrushType, TemplateItem, patternTileSvg, frameSvg, FRAME_KINDS, TableCellHit, TableSpec } from './fabric-canvas.service';
+import { FabricCanvasService, BrushType, TemplateItem, patternTileSvg, frameSvg, FRAME_KINDS, TableCellHit, TableSpec, expandDynamicTablesInJson } from './fabric-canvas.service';
 import { PropertiesPanelComponent } from './properties-panel.component';
 import { AiService, DesignSpec } from './ai.service';
 import { TemplateService } from '../../core/services/template.service';
 import { CertificateService } from '../../core/services/certificate.service';
+import { AssetService, UserAsset, AssetEntry } from '../../core/services/asset.service';
 import { SaveTemplateRequest } from '../../core/models/models';
-import { exportPdf, exportPng, exportSvg } from '../../core/utils/render.util';
+import { exportPdf, exportPng, exportSvg, renderJsonToPng, mergeDataIntoJson, applySignature } from '../../core/utils/render.util';
 
 interface SizePreset { label: string; w: number; h: number; }
 interface RailItem { id: PanelId; label: string; icon: string; }
-type PanelId = 'design' | 'templates' | 'ai' | 'text' | 'elements' | 'images' | 'backgrounds' | 'variables' | 'qr' | 'drawing' | 'addons' | 'brand' | 'table' | 'layers';
+type PanelId = 'design' | 'templates' | 'ai' | 'text' | 'elements' | 'images' | 'backgrounds' | 'variables' | 'qr' | 'drawing' | 'addons' | 'assets' | 'table' | 'layers';
 interface CanvasVersion { id: number; name: string; at: number; json: string; thumb: string; meta: string; }
 interface SizePresetItem { label: string; w: number; h: number; }
 interface SizeGroup { label: string; items: SizePresetItem[]; }
@@ -69,6 +70,8 @@ export class DesignerComponent implements AfterViewInit, OnDestroy {
   @ViewChild('replaceInput') replaceInput?: ElementRef<HTMLInputElement>;
 
   svc = inject(FabricCanvasService);
+  assets = inject(AssetService);
+  private i18n = inject(TranslocoService);
   private ai = inject(AiService);
   private templates = inject(TemplateService);
   private certificates = inject(CertificateService);
@@ -100,7 +103,7 @@ export class DesignerComponent implements AfterViewInit, OnDestroy {
     { id: 'qr', label: 'QR Code', icon: 'qr_code_2' },
     { id: 'drawing', label: 'Drawing', icon: 'brush' },
     { id: 'addons', label: 'Addons', icon: 'extension' },
-    { id: 'brand', label: 'My Brand', icon: 'palette' },
+    { id: 'assets', label: 'Assets', icon: 'photo_library' },
     { id: 'table', label: 'Table', icon: 'grid_on' },
   ];
   activePanel = signal<PanelId | null>('design');
@@ -927,8 +930,25 @@ export class DesignerComponent implements AfterViewInit, OnDestroy {
     return 'shape';
   });
 
+  // -------------------- smart bottom dock + view toggles --------------------
+  showPages = signal(false);
+  togglePages(): void { this.showPages.update((v) => !v); }
+  dockMenu = signal(false);
+  toggleDockMenu(): void { this.dockMenu.update((v) => !v); }
+  dockOn = signal(localStorage.getItem('cf-dock') !== '0');
+  toggleDock(): void { const v = !this.dockOn(); this.dockOn.set(v); localStorage.setItem('cf-dock', v ? '1' : '0'); }
+  layersOn = signal(localStorage.getItem('cf-layers-on') !== '0');
+  toggleLayersUI(): void { const v = !this.layersOn(); this.layersOn.set(v); localStorage.setItem('cf-layers-on', v ? '1' : '0'); if (!v) this.layersDock.set(false); }
+  readonly multiSelected = computed(() => { this.svc.revision(); return (this.svc.selected() as any)?.type === 'activeselection'; });
+  readonly isRealGroup = computed(() => { this.svc.revision(); const o: any = this.svc.selected(); return o?.type === 'group'; });
+  zoomPct(): number { return Math.round(this.viewZoom() * 100); }
+  quickTable(): void { this.svc.addTable(3, 3, {}); }
+
   // -------------------- floating mini-toolbar (quick properties) --------------------
   miniBar = signal<{ x: number; y: number; below: boolean } | null>(null);
+  /** Whether the floating quick-properties bar appears above a selection (toggle in View options). */
+  miniBarOn = signal(localStorage.getItem('cf-minibar') !== '0');
+  toggleMiniBar(): void { const v = !this.miniBarOn(); this.miniBarOn.set(v); localStorage.setItem('cf-minibar', v ? '1' : '0'); if (v) this.recomputeMini(); else this.miniBar.set(null); }
   barFonts = ['Inter', 'Playfair Display', 'Montserrat', 'Lora', 'Poppins', 'Roboto', 'Great Vibes', 'Pacifico', 'Amiri', 'Cairo'];
 
   readonly mFont = computed(() => { this.svc.revision(); const f = (this.svc.selected() as any)?.fontFamily ?? ''; return String(f).split(',')[0].replace(/['"]/g, '').trim(); });
@@ -947,7 +967,7 @@ export class DesignerComponent implements AfterViewInit, OnDestroy {
 
   recomputeMini(): void {
     const o: any = this.svc.selected();
-    if (!o || this.menu() || o.isEditing || this.selType() === 'none') { this.miniBar.set(null); this.opacityOpen.set(false); return; }
+    if (!o || !this.miniBarOn() || this.menu() || o.isEditing || this.selType() === 'none') { this.miniBar.set(null); this.opacityOpen.set(false); return; }
     const shadow = this.host.nativeElement.querySelector('.canvas-shadow') as HTMLElement | null;
     if (!shadow || !o.getBoundingRect) { this.miniBar.set(null); return; }
     const r = shadow.getBoundingClientRect();
@@ -1695,9 +1715,11 @@ export class DesignerComponent implements AfterViewInit, OnDestroy {
   }
   gridHover(r: number, c: number): void { this.gridR = r; this.gridC = c; }
   pickGrid(r: number, c: number): void { this.tableRows = r; this.tableCols = c; this.gridR = 0; this.gridC = 0; this.insertTable(); }
+  /** New-table cell content: 'variables' = {{cell}} placeholders for bulk fill, 'empty' = blank cells to type into. */
+  tableCellMode: 'variables' | 'empty' = 'variables';
   insertTable(): void {
     const headers = this.tHeaders.split(',').map((h) => h.trim()).filter(Boolean);
-    this.svc.addTable(+this.tableRows, +this.tableCols, { ...this.tableOpts(), headers: headers.length ? headers : undefined });
+    this.svc.addTable(+this.tableRows, +this.tableCols, { ...this.tableOpts(), headers: headers.length ? headers : undefined, emptyCells: this.tableCellMode === 'empty' });
   }
   insertBlueprint(b: { rows: number; cols: number; headers: string[] }): void {
     this.svc.addTable(b.rows, b.cols, { ...this.tableOpts(), headers: b.headers, showHeader: true });
@@ -1876,7 +1898,7 @@ export class DesignerComponent implements AfterViewInit, OnDestroy {
   closeMenu(): void { if (this.menu()) this.menu.set(null); if (this.panelMenu()) this.panelMenu.set(false); if (this.viewMenu()) this.viewMenu.set(false); if (this.opacityOpen()) this.opacityOpen.set(false); if (this.historyOpen()) this.historyOpen.set(false); if (this.sizeMenu()) this.sizeMenu.set(false); }
 
   @HostListener('document:keydown.escape')
-  onEscape(): void { this.menu.set(null); this.panelMenu.set(false); this.viewMenu.set(false); this.opacityOpen.set(false); this.historyOpen.set(false); this.sizeMenu.set(false); }
+  onEscape(): void { this.menu.set(null); this.panelMenu.set(false); this.viewMenu.set(false); this.opacityOpen.set(false); this.historyOpen.set(false); this.sizeMenu.set(false); this.dockMenu.set(false); this.previewOpen.set(false); this.assetFolderOpen.set(false); this.assetConfirm.set(null); }
 
   @HostListener('document:fullscreenchange')
   onFsChange(): void { this.fs.set(!!document.fullscreenElement); }
@@ -2149,5 +2171,365 @@ export class DesignerComponent implements AfterViewInit, OnDestroy {
   private flash(text: string, ok: boolean): void {
     this.message.set({ text, ok });
     setTimeout(() => this.message.set(null), 3000);
+  }
+  // -------------------- preview (watermarked, with fill-variables + dynamic table) --------------------
+  previewOpen = signal(false);
+  previewStage = signal<'form' | 'image'>('image');
+  previewVars = signal<string[]>([]);
+  previewValues: Record<string, string> = {};
+  previewUrl = signal<string | null>(null);
+  previewBusy = signal(false);
+  previewSaving = signal(false);
+  previewHasSig = signal(false);
+  previewSigMine = signal(false);
+  previewDyn = signal<{ cols: number; colKeys: string[]; headers: string[] } | null>(null);
+  previewRowsText = '';
+  readonly pvTiles = Array.from({ length: 60 }, (_, i) => i);
+
+  openPreview(): void {
+    const json = this.svc.toJSON();
+    const dyn = this.detectDynTable(json);
+    this.previewDyn.set(dyn);
+    const vars = this.svc.getPlaceholders().filter((k) => !/^cell_\d+_\d+$/.test(k));
+    this.previewVars.set(vars);
+    for (const k of vars) if (!(k in this.previewValues)) this.previewValues[k] = '';
+    this.previewOpen.set(true);
+    this.previewUrl.set(null);
+    if (vars.length || dyn) { this.previewStage.set('form'); }
+    else { this.previewStage.set('image'); this.runPreview(); }
+  }
+  private detectDynTable(json: string): { cols: number; colKeys: string[]; headers: string[] } | null {
+    try {
+      const root = JSON.parse(json);
+      const walk = (arr: any[]): any => {
+        for (const o of arr ?? []) {
+          if (o?.objType === 'table' && o.tableSpec?.dynamic) return o.tableSpec;
+          if (Array.isArray(o?.objects)) { const f = walk(o.objects); if (f) return f; }
+        }
+        return null;
+      };
+      const spec = walk(root.objects ?? []);
+      if (!spec) return null;
+      const colKeys: string[] = spec.colKeys ?? [];
+      const cols: number = spec.cols ?? colKeys.length;
+      const baseHeaders: string[] = (spec.opts?.headers && spec.opts.headers.length) ? spec.opts.headers : colKeys;
+      const headers = baseHeaders.slice(0, cols || baseHeaders.length);
+      return { cols: cols || headers.length, colKeys, headers };
+    } catch { return null; }
+  }
+
+  previewFilledCount(): number {
+    return this.previewVars().filter((k) => (this.previewValues[k] || '').trim().length > 0).length;
+  }
+
+  dynPlaceholder(): string {
+    const d = this.previewDyn();
+    if (!d) return '';
+    const cols = d.headers.length ? d.headers : Array.from({ length: d.cols }, (_, i) => `col ${i + 1}`);
+    return [cols.join(', '), cols.map((h) => `${h} 2`).join(', ')].join('\n');
+  }
+
+  private parsePreviewRows(): string[][] {
+    return this.previewRowsText
+      .split('\n')
+      .map((l) => l.trim())
+      .filter((l) => l.length > 0)
+      .map((l) => l.split(',').map((c) => c.trim()));
+  }
+
+  editPreviewValues(): void { this.previewStage.set('form'); }
+
+  clearPreviewValues(): void {
+    for (const k of Object.keys(this.previewValues)) this.previewValues[k] = '';
+    this.previewRowsText = '';
+  }
+
+  fillSampleData(): void {
+    const samples: Record<string, () => string> = {
+      name: () => 'Alex Johnson', fullname: () => 'Alexandra M. Johnson', recipient: () => 'Alex Johnson',
+      course: () => 'Advanced Web Development', program: () => 'Professional Certification',
+      date: () => new Date().toLocaleDateString(), score: () => '96%', grade: () => 'A+',
+      id: () => 'CF-2026-0481', code: () => 'CF-2026-0481', title: () => 'Certificate of Achievement',
+      email: () => 'alex@example.com', organization: () => 'Certifada Academy', company: () => 'Certifada Inc.',
+      instructor: () => 'Dr. Sarah Lee', hours: () => '40', city: () => 'Dubai', role: () => 'Participant',
+    };
+    for (const k of this.previewVars()) {
+      const low = k.toLowerCase();
+      const hit = Object.keys(samples).find((s) => low.includes(s));
+      this.previewValues[k] = hit ? samples[hit]() : `Sample ${k}`;
+    }
+    const d = this.previewDyn();
+    if (d && !this.previewRowsText.trim()) {
+      const cols = d.headers.length ? d.headers : Array.from({ length: d.cols }, (_, i) => `Col ${i + 1}`);
+      this.previewRowsText = [1, 2, 3].map((n) => cols.map((h) => `${h} ${n}`).join(', ')).join('\n');
+    }
+  }
+
+  private profileSignature(): string | null {
+    try { return localStorage.getItem('cf-signature'); } catch { return null; }
+  }
+
+  private sampleSignature(): string {
+    const svg =
+      '<svg xmlns="http://www.w3.org/2000/svg" width="300" height="90" viewBox="0 0 300 90">' +
+      '<path d="M12 64 C40 20 56 80 78 46 C92 24 108 70 128 48 C150 24 168 72 196 46 C214 26 236 70 262 40" fill="none" stroke="#1f2937" stroke-width="3.4" stroke-linecap="round"/>' +
+      '<path d="M150 72 C190 68 230 68 286 66" fill="none" stroke="#1f2937" stroke-width="1.8" stroke-linecap="round"/></svg>';
+    return 'data:image/svg+xml;utf8,' + encodeURIComponent(svg);
+  }
+
+  async runPreview(): Promise<void> {
+    this.previewStage.set('image');
+    this.previewBusy.set(true);
+    this.previewUrl.set(null);
+    try {
+      let json = this.svc.toJSON();
+      const dyn = this.previewDyn();
+      if (dyn) {
+        const rows = this.parsePreviewRows();
+        if (rows.length) json = await expandDynamicTablesInJson(json, rows);
+      }
+      json = mergeDataIntoJson(json, this.previewValues);
+      const mine = this.profileSignature();
+      const usesSig =
+        this.svc.getPlaceholders().some((k) => /^signature\d*$/i.test(k)) ||
+        /"objType"\s*:\s*"signature"/.test(json);
+      let sig = mine;
+      if (!sig && usesSig) sig = this.sampleSignature();
+      this.previewHasSig.set(!!sig && usesSig);
+      this.previewSigMine.set(!!mine && usesSig);
+      json = applySignature(json, sig);
+      this.previewUrl.set(await renderJsonToPng(json, this.width, this.height, 1.6));
+    } catch {
+      this.flash('Could not build preview.', false);
+    } finally {
+      this.previewBusy.set(false);
+    }
+  }
+
+  async downloadPreview(): Promise<void> {
+    const url = this.previewUrl();
+    if (!url) return;
+    this.previewSaving.set(true);
+    try {
+      const baked = await this.paintWatermark(url);
+      const blob = await (await fetch(baked)).blob();
+      saveAs(blob, `certifada-preview-${Date.now()}.png`);
+    } catch {
+      this.flash('Could not download preview.', false);
+    } finally {
+      this.previewSaving.set(false);
+    }
+  }
+
+  /** Bake a tiled "Preview only" watermark into the PNG so downloads stay marked. */
+  private paintWatermark(dataUrl: string): Promise<string> {
+    const label = this.i18n.translate('canvas.pv.watermark') || 'Preview only';
+    return new Promise<string>((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        try {
+          const cv = document.createElement('canvas');
+          cv.width = img.naturalWidth || img.width;
+          cv.height = img.naturalHeight || img.height;
+          const ctx = cv.getContext('2d');
+          if (!ctx) { resolve(dataUrl); return; }
+          ctx.drawImage(img, 0, 0, cv.width, cv.height);
+          const step = Math.max(170, Math.round(cv.width / 6));
+          ctx.save();
+          ctx.globalAlpha = 0.15;
+          ctx.fillStyle = '#0f172a';
+          ctx.font = `bold ${Math.round(step / 7)}px sans-serif`;
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          let r = 0;
+          for (let y = -step; y < cv.height + step; y += step) {
+            const offset = r % 2 ? step / 2 : 0; r++;
+            for (let x = -step; x < cv.width + step; x += step) {
+              ctx.save();
+              ctx.translate(x + offset, y);
+              ctx.rotate(-Math.PI / 7);
+              ctx.fillText(label, 0, 0);
+              ctx.restore();
+            }
+          }
+          ctx.restore();
+          resolve(cv.toDataURL('image/png'));
+        } catch { resolve(dataUrl); }
+      };
+      img.onerror = () => resolve(dataUrl);
+      img.src = dataUrl;
+    });
+  }
+
+  closePreview(): void {
+    this.previewOpen.set(false);
+    this.previewUrl.set(null);
+    this.previewBusy.set(false);
+    this.previewSaving.set(false);
+  }
+
+  // -------------------- assets (persistent IndexedDB image library) --------------------
+  assetSearch = signal('');
+  assetBusy = signal(false);
+  assetDrag = signal(false);
+  assetModalDrag = signal(false);
+  assetFolderOpen = signal(false);
+  assetConfirm = signal<{ kind: 'asset' | 'folder'; name: string; count?: number; id?: string; folder?: string } | null>(null);
+  private openFolders = signal<Set<string>>(new Set<string>());
+
+  private filteredAssets(): UserAsset[] {
+    const q = this.assetSearch().trim().toLowerCase();
+    const all = this.assets.assets();
+    if (!q) return all;
+    return all.filter((a) => a.name.toLowerCase().includes(q) || (a.folder || '').toLowerCase().includes(q));
+  }
+
+  assetGroups = computed(() => {
+    this.assets.assets(); this.assetSearch();
+    const map = new Map<string, UserAsset[]>();
+    for (const a of this.filteredAssets()) {
+      if (!a.folder) continue;
+      let arr = map.get(a.folder);
+      if (!arr) { arr = []; map.set(a.folder, arr); }
+      arr.push(a);
+    }
+    return Array.from(map.entries())
+      .map(([name, items]) => ({ name, items }))
+      .sort((x, y) => x.name.localeCompare(y.name));
+  });
+
+  individualAssets = computed(() => {
+    this.assets.assets(); this.assetSearch();
+    return this.filteredAssets().filter((a) => !a.folder);
+  });
+
+  isFolderOpen(name: string): boolean { return this.openFolders().has(name); }
+
+  toggleFolder(name: string): void {
+    const next = new Set(this.openFolders());
+    if (next.has(name)) next.delete(name); else next.add(name);
+    this.openFolders.set(next);
+  }
+
+  openFolderModal(): void { this.assetFolderOpen.set(true); this.assetModalDrag.set(false); }
+  closeFolderModal(): void { this.assetFolderOpen.set(false); this.assetModalDrag.set(false); }
+
+  async onAssetFiles(e: Event): Promise<void> {
+    const input = e.target as HTMLInputElement;
+    if (input.files?.length) await this.ingestAssets(Array.from(input.files).map((file) => ({ file } as AssetEntry)));
+    input.value = '';
+  }
+
+  async onAssetFolder(e: Event): Promise<void> {
+    const input = e.target as HTMLInputElement;
+    const files = input.files ? Array.from(input.files) : [];
+    const entries: AssetEntry[] = files.map((file) => {
+      const rel = (file as any).webkitRelativePath as string | undefined;
+      const folder = rel && rel.includes('/') ? rel.split('/')[0] : undefined;
+      return { file, folder };
+    });
+    if (entries.length) await this.ingestAssets(entries);
+    input.value = '';
+    this.closeFolderModal();
+  }
+
+  onAssetDragOver(e: DragEvent): void { e.preventDefault(); this.assetDrag.set(true); }
+  onAssetDragLeave(e: DragEvent): void { e.preventDefault(); this.assetDrag.set(false); }
+  async onAssetDrop(e: DragEvent): Promise<void> {
+    e.preventDefault(); this.assetDrag.set(false);
+    const entries = await this.entriesFromDrop(e);
+    if (entries.length) await this.ingestAssets(entries);
+  }
+
+  onModalDragOver(e: DragEvent): void { e.preventDefault(); this.assetModalDrag.set(true); }
+  onModalDragLeave(e: DragEvent): void { e.preventDefault(); this.assetModalDrag.set(false); }
+  async onModalDrop(e: DragEvent): Promise<void> {
+    e.preventDefault(); this.assetModalDrag.set(false);
+    const entries = await this.entriesFromDrop(e);
+    if (entries.length) { await this.ingestAssets(entries); this.closeFolderModal(); }
+  }
+
+  private async entriesFromDrop(e: DragEvent): Promise<AssetEntry[]> {
+    const items = e.dataTransfer?.items;
+    const out: AssetEntry[] = [];
+    if (items && items.length && (items[0] as any).webkitGetAsEntry) {
+      const roots: any[] = [];
+      for (let i = 0; i < items.length; i++) {
+        const en = (items[i] as any).webkitGetAsEntry?.();
+        if (en) roots.push(en);
+      }
+      for (const root of roots) await this.walkEntry(root, undefined, out);
+      if (out.length) return out;
+    }
+    const files = e.dataTransfer?.files ? Array.from(e.dataTransfer.files) : [];
+    return files.map((file) => ({ file } as AssetEntry));
+  }
+
+  private walkEntry(entry: any, folder: string | undefined, out: AssetEntry[]): Promise<void> {
+    return new Promise<void>((resolve) => {
+      if (!entry) { resolve(); return; }
+      if (entry.isFile) {
+        entry.file((file: File) => { out.push({ file, folder }); resolve(); }, () => resolve());
+      } else if (entry.isDirectory) {
+        const reader = entry.createReader();
+        const all: any[] = [];
+        const read = () => reader.readEntries(async (batch: any[]) => {
+          if (!batch.length) {
+            for (const child of all) await this.walkEntry(child, entry.name, out);
+            resolve();
+          } else { all.push(...batch); read(); }
+        }, () => resolve());
+        read();
+      } else { resolve(); }
+    });
+  }
+
+  private async ingestAssets(entries: AssetEntry[]): Promise<void> {
+    const imgs = entries.filter((en) => /^image\//.test(en.file.type) || /\.(png|jpe?g|gif|webp|svg)$/i.test(en.file.name));
+    if (!imgs.length) { this.flash('No images found to import.', false); return; }
+    this.assetBusy.set(true);
+    try {
+      const res = await this.assets.addEntries(imgs);
+      const folders = new Set(imgs.map((en) => en.folder).filter((f): f is string => !!f));
+      if (folders.size) {
+        const next = new Set(this.openFolders());
+        folders.forEach((f) => next.add(f));
+        this.openFolders.set(next);
+      }
+      if (res.added) this.flash(`Added ${res.added} image${res.added > 1 ? 's' : ''} to your library.`, true);
+      if (res.tooBig) this.flash(`${res.tooBig} image${res.tooBig > 1 ? 's were' : ' was'} over 500 KB and skipped.`, false);
+      else if (!res.added) this.flash(res.errors[0] || 'Nothing was added.', false);
+    } catch {
+      this.flash('Could not import images.', false);
+    } finally {
+      this.assetBusy.set(false);
+    }
+  }
+
+  useAsset(a: UserAsset): void {
+    this.svc.addImageFromUrl(a.dataUrl).catch(() => this.flash('Could not add image.', false));
+  }
+
+  removeAsset(a: UserAsset, e?: Event): void {
+    e?.stopPropagation();
+    this.assetConfirm.set({ kind: 'asset', name: a.name, id: a.id });
+  }
+
+  removeFolder(name: string, e?: Event): void {
+    e?.stopPropagation();
+    const count = this.assets.assets().filter((a) => a.folder === name).length;
+    this.assetConfirm.set({ kind: 'folder', name, count, folder: name });
+  }
+
+  cancelDelete(): void { this.assetConfirm.set(null); }
+
+  async confirmDelete(): Promise<void> {
+    const c = this.assetConfirm();
+    if (!c) return;
+    try {
+      if (c.kind === 'folder' && c.folder) await this.assets.removeFolder(c.folder);
+      else if (c.id) await this.assets.remove(c.id);
+    } catch { /* ignore */ }
+    this.assetConfirm.set(null);
   }
 }

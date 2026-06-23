@@ -132,6 +132,9 @@
   "canvas": {
     "namePh": "Certificate name",
     "save": "Save", "saving": "Saving…", "history": "History", "historyTip": "Undo steps & saved versions", "bulk": "Bulk", "bulkTip": "Generate certificates in bulk from data",
+    "preview": "Preview", "previewTip": "Preview with a watermark · fill variables",
+    "pv": { "title": "Preview", "sub": "Watermarked · not exported", "close": "Close preview", "fillLead": "Enter values to preview the certificate with real data.", "clear": "Clear", "preview": "Preview", "building": "Building preview…", "watermark": "Preview only", "badge": "Preview", "note": "Preview only — not for export.", "edit": "Edit values", "done": "Done", "sigMine": "Your signature", "sigSample": "Sample signature — add yours in your profile", "sample": "Fill sample data", "download": "Download PNG", "dynRows": "Table rows", "dynTip": "One row per line, columns separated by commas. The dynamic table grows one row per line." },
+    "as": { "search": "Search assets…", "folder": "Folder", "individual": "Individual assets", "removeFolder": "Remove folder", "noMatch": "No assets match your search.", "browse": "Images", "imgs": "images", "folderTitle": "Add a folder of images", "folderDrop": "Drag a folder here", "folderDropSub": "Images import grouped under the folder — with no browser prompt", "or": "or", "folderPick": "Choose a folder instead", "folderNote": "Choosing a folder shows your browser's own confirmation; dragging one in doesn't.", "importing": "Importing…", "remove": "Remove", "emptyTitle": "No assets yet", "emptyBody": "Upload images (max 500 KB each) to build a personal library you can reuse across all your certificates.", "delTitle": "Remove from your library?", "delBody": "This removes it from every template — it can't be undone.", "cancel": "Cancel", "delete": "Remove" },
     "export": "Export", "exportTip": "Download as PNG, PDF, SVG or template", "saveTip": "Save this certificate", "png": "PNG image", "pdf": "PDF document", "svg": "SVG vector", "jsonTpl": "JSON template",
     "undo": "Undo (Ctrl+Z)", "redo": "Redo (Ctrl+Y)",
     "ruler": "Ruler", "grid": "Grid", "snap": "Snap", "guides": "Guides",
@@ -145,11 +148,12 @@
       "overlays": "Overlays", "thirds": "Rule of thirds", "margins": "Safe-area margins", "distances": "Distance indicators", "inset": "Inset",
       "rulerGuides": "Ruler guides", "center": "+ Center", "marginsBtn": "+ Margins", "clear": "Clear",
       "posPx": "Position in px", "addV": "Add vertical guide", "addH": "Add horizontal guide",
-      "tip": "Drag a guide to move it · double-click to delete.", "viewOptions": "View options"
+      "tip": "Drag a guide to move it · double-click to delete.", "viewOptions": "View options",
+      "editing": "Editing", "quickProps": "Quick properties bar", "taskbar": "Bottom toolbar", "layers": "Layers panel"
     },
     "pm": { "options": "Properties panel options", "position": "Properties position", "right": "Right", "left": "Left", "top": "Top", "bottom": "Bottom", "autoHide": "Auto-hide (reveal on hover)" },
-    "rail": { "design": "Design", "templates": "Templates", "ai": "AI", "text": "Text", "elements": "Elements", "images": "Images", "backgrounds": "Background", "variables": "Variables", "qr": "QR Code", "drawing": "Drawing", "addons": "Addons", "brand": "My Brand", "table": "Table", "layers": "Layers" },
-    "title": { "design": "Design size", "templates": "Templates", "ai": "AI Designer", "text": "Text", "elements": "Elements", "images": "Images", "backgrounds": "Background", "variables": "Variables", "qr": "QR Code", "drawing": "Drawing", "addons": "Addons", "brand": "My Brand", "table": "Table", "layers": "Layers" },
+    "rail": { "design": "Design", "templates": "Templates", "ai": "AI", "text": "Text", "elements": "Elements", "images": "Images", "backgrounds": "Background", "variables": "Variables", "qr": "QR Code", "drawing": "Drawing", "addons": "Addons", "assets": "Assets", "table": "Table", "layers": "Layers" },
+    "title": { "design": "Design size", "templates": "Templates", "ai": "AI Designer", "text": "Text", "elements": "Elements", "images": "Images", "backgrounds": "Background", "variables": "Variables", "qr": "QR Code", "drawing": "Drawing", "addons": "Addons", "assets": "My Assets", "table": "Table", "layers": "Layers" },
     "pinAuto": "Auto-hide (reveal on hover)", "pinOpen": "Pin open", "props": "Properties",
     "pg": { "add": "Add page", "addTitle": "Add a new page", "pages": "Pages", "moveLeft": "Move left", "moveRight": "Move right", "duplicate": "Duplicate page", "delete": "Delete page", "guide": "Drag to move · double-click to delete" },
     "ds": { "searchPh": "Search sizes…", "landscape": "Landscape", "portrait": "Portrait", "customSize": "Custom size (px)", "apply": "Apply" },

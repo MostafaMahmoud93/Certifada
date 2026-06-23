@@ -1133,6 +1133,7 @@ export class FabricCanvasService {
     headerFill?: string; headerText?: string; zebra?: boolean; zebraColor?: string;
     borderColor?: string; borderWidth?: number; cellText?: string; fontSize?: number;
     align?: 'left' | 'center' | 'right'; showHeader?: boolean; headerCol?: boolean; headers?: string[];
+    emptyCells?: boolean;
   } = {}): void {
     const o = this.resolveTableOpts(opts);
     const headers = opts.headers ?? [];
@@ -1144,7 +1145,7 @@ export class FabricCanvasService {
       const row: string[] = [];
       for (let col = 0; col < cols; col++) {
         const isHeader = o.showHeader && r === 0;
-        row.push(isHeader && headers[col] ? headers[col] : `{{cell_${r}_${col}}}`);
+        row.push(isHeader && headers[col] ? headers[col] : (opts.emptyCells ? '' : `{{cell_${r}_${col}}}`));
       }
       cells.push(row);
     }

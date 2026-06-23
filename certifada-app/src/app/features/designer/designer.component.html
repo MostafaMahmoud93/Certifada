@@ -55,6 +55,10 @@
         <label class="vm-toggle"><span class="vt-label"><span class="material-icons">crop_free</span> {{ 'canvas.vm.margins' | transloco }}</span><span class="vt-switch"><input type="checkbox" [checked]="showMargins()" (change)="showMargins.set(!showMargins())" /><i></i></span></label>
         <label class="vm-toggle"><span class="vt-label"><span class="material-icons">straighten</span> {{ 'canvas.vm.distances' | transloco }}</span><span class="vt-switch"><input type="checkbox" [checked]="showDist()" (change)="toggleDist()" /><i></i></span></label>
         <label class="vm-row"><span>{{ 'canvas.vm.inset' | transloco }}</span><input type="range" min="2" max="20" [(ngModel)]="marginPct" /><span class="vm-val">{{ marginPct }}%</span></label>
+        <div class="pm-label"><span class="material-icons">vertical_split</span> {{ 'canvas.vm.editing' | transloco }}</div>
+        <label class="vm-toggle"><span class="vt-label"><span class="material-icons">vertical_split</span> {{ 'canvas.vm.quickProps' | transloco }}</span><span class="vt-switch"><input type="checkbox" [checked]="miniBarOn()" (change)="toggleMiniBar()" /><i></i></span></label>
+        <label class="vm-toggle"><span class="vt-label"><span class="material-icons">space_bar</span> {{ 'canvas.vm.taskbar' | transloco }}</span><span class="vt-switch"><input type="checkbox" [checked]="dockOn()" (change)="toggleDock()" /><i></i></span></label>
+        <label class="vm-toggle"><span class="vt-label"><span class="material-icons">layers</span> {{ 'canvas.vm.layers' | transloco }}</span><span class="vt-switch"><input type="checkbox" [checked]="layersOn()" (change)="toggleLayersUI()" /><i></i></span></label>
         <div class="pm-label"><span class="material-icons">straighten</span> {{ 'canvas.vm.rulerGuides' | transloco }}</div>
         <div class="vm-acts">
           <button (click)="addCenterGuides()">{{ 'canvas.vm.center' | transloco }}</button>
@@ -170,6 +174,8 @@
   </div>
   <div class="tb-sep"></div>
 
+  <button class="btn act-btn" (click)="openPreview()" [attr.data-tip]="'canvas.previewTip' | transloco"><span class="material-icons">visibility</span> {{ 'canvas.preview' | transloco }}</button>
+
   <button class="btn act-btn" (click)="goBulk()" [attr.data-tip]="'canvas.bulkTip' | transloco"><span class="material-icons">dynamic_feed</span> {{ 'canvas.bulk' | transloco }}</button>
 
   <div class="export-wrap">
@@ -192,6 +198,118 @@
 
 @if (message(); as m) {
   <div class="floating-msg" [class.ok]="m.ok" [class.err]="!m.ok">{{ m.text }}</div>
+}
+
+<!-- ============================ Preview (watermarked) ============================ -->
+@if (previewOpen()) {
+  <div class="pv-overlay" (click)="closePreview()">
+    <div class="pv-modal" (click)="$event.stopPropagation()">
+      <div class="pv-head">
+        <span class="pv-titlewrap">
+          <span class="pv-ico"><span class="material-icons">visibility</span></span>
+          <span class="pv-tt"><b>{{ 'canvas.pv.title' | transloco }}</b><small>{{ 'canvas.pv.sub' | transloco }}</small></span>
+        </span>
+        <button class="pv-x" (click)="closePreview()" [attr.aria-label]="'canvas.pv.close' | transloco"><span class="material-icons">close</span></button>
+      </div>
+      @if (previewStage() === 'form') {
+        <div class="pv-form">
+          <div class="pv-lead"><span class="material-icons">edit_note</span><span class="pv-lead-t">{{ 'canvas.pv.fillLead' | transloco }}</span>
+            @if (previewVars().length) { <span class="pv-count" [class.done]="previewFilledCount() === previewVars().length">{{ previewFilledCount() }}/{{ previewVars().length }}</span> }
+          </div>
+          @if (previewVars().length) {
+            <div class="pv-fields">
+              @for (k of previewVars(); track k) {
+                <label class="pv-field" [class.filled]="(previewValues[k] || '').trim().length">
+                  <span class="pv-key">{{ '{{' }}{{ k }}{{ '}}' }}</span>
+                  <input [(ngModel)]="previewValues[k]" [placeholder]="k" (keydown.enter)="runPreview()" />
+                </label>
+              }
+            </div>
+          }
+          @if (previewDyn(); as dyn) {
+            <div class="pv-dyn">
+              <div class="pv-dyn-h"><span class="material-icons">table_rows</span> {{ 'canvas.pv.dynRows' | transloco }} <small>{{ dyn.headers.join(' · ') }}</small></div>
+              <textarea class="pv-rows" [(ngModel)]="previewRowsText" rows="4" [placeholder]="dynPlaceholder()"></textarea>
+              <p class="pv-dyn-tip">{{ 'canvas.pv.dynTip' | transloco }}</p>
+            </div>
+          }
+          <div class="pv-actions split">
+            <button class="btn ghost" (click)="fillSampleData()"><span class="material-icons">auto_fix_high</span> {{ 'canvas.pv.sample' | transloco }}</button>
+            <button class="btn ghost" (click)="clearPreviewValues()"><span class="material-icons">backspace</span> {{ 'canvas.pv.clear' | transloco }}</button>
+            <span class="pv-spring"></span>
+            <button class="btn btn-primary" (click)="runPreview()"><span class="material-icons">visibility</span> {{ 'canvas.pv.preview' | transloco }}</button>
+          </div>
+        </div>
+      } @else {
+        <div class="pv-body">
+          @if (previewBusy()) {
+            <div class="pv-loading"><span class="material-icons spin">progress_activity</span> {{ 'canvas.pv.building' | transloco }}</div>
+          } @else if (previewUrl()) {
+            <div class="pv-stage">
+              <img class="pv-img" [src]="previewUrl()" alt="Preview" />
+              <div class="pv-wm" aria-hidden="true">@for (t of pvTiles; track t) { <span>{{ 'canvas.pv.watermark' | transloco }}</span> }</div>
+              <span class="pv-ribbon">{{ 'canvas.pv.badge' | transloco }}</span>
+            </div>
+            @if (previewHasSig()) {
+              <div class="pv-sigchip" [class.sample]="!previewSigMine()"><span class="material-icons">{{ previewSigMine() ? 'verified' : 'gesture' }}</span> {{ (previewSigMine() ? 'canvas.pv.sigMine' : 'canvas.pv.sigSample') | transloco }}</div>
+            }
+          }
+        </div>
+        <div class="pv-foot">
+          <span class="pv-note"><span class="material-icons">info</span> {{ 'canvas.pv.note' | transloco }}</span>
+          <div class="pv-actions">
+            @if (previewVars().length || previewDyn()) { <button class="btn ghost" (click)="editPreviewValues()"><span class="material-icons">tune</span> {{ 'canvas.pv.edit' | transloco }}</button> }
+            <button class="btn" (click)="downloadPreview()" [disabled]="previewSaving() || !previewUrl()"><span class="material-icons">{{ previewSaving() ? 'hourglass_top' : 'download' }}</span> {{ 'canvas.pv.download' | transloco }}</button>
+            <button class="btn btn-primary" (click)="closePreview()"><span class="material-icons">check</span> {{ 'canvas.pv.done' | transloco }}</button>
+          </div>
+        </div>
+      }
+    </div>
+  </div>
+}
+
+<!-- ============================ Add-folder modal ============================ -->
+@if (assetFolderOpen()) {
+  <div class="pv-overlay" (click)="closeFolderModal()">
+    <div class="asm" (click)="$event.stopPropagation()">
+      <div class="asm-head">
+        <span class="asm-title"><span class="material-icons">create_new_folder</span> {{ 'canvas.as.folderTitle' | transloco }}</span>
+        <button class="pv-x" (click)="closeFolderModal()" [attr.aria-label]="'canvas.pv.close' | transloco"><span class="material-icons">close</span></button>
+      </div>
+      <label class="asm-zone" [class.drag]="assetModalDrag()"
+             (dragover)="onModalDragOver($event)" (dragenter)="onModalDragOver($event)" (dragleave)="onModalDragLeave($event)" (drop)="onModalDrop($event)">
+        <span class="asm-ic"><span class="material-icons">{{ assetModalDrag() ? 'file_download' : 'drive_folder_upload' }}</span></span>
+        <b>{{ 'canvas.as.folderDrop' | transloco }}</b>
+        <em>{{ 'canvas.as.folderDropSub' | transloco }}</em>
+      </label>
+      <div class="asm-or"><span>{{ 'canvas.as.or' | transloco }}</span></div>
+      <label class="asm-pick">
+        <input type="file" accept="image/*" multiple hidden webkitdirectory (change)="onAssetFolder($event)" />
+        <span class="material-icons">folder_open</span> {{ 'canvas.as.folderPick' | transloco }}
+      </label>
+      <p class="asm-note"><span class="material-icons">info</span> {{ 'canvas.as.folderNote' | transloco }}</p>
+    </div>
+  </div>
+}
+
+<!-- ============================ Delete-asset confirm ============================ -->
+@if (assetConfirm(); as c) {
+  <div class="pv-overlay" (click)="cancelDelete()">
+    <div class="cfm" (click)="$event.stopPropagation()">
+      <span class="cfm-ic"><span class="material-icons">{{ c.kind === 'folder' ? 'folder_delete' : 'delete' }}</span></span>
+      <b class="cfm-q">{{ 'canvas.as.delTitle' | transloco }}</b>
+      @if (c.kind === 'folder') {
+        <p class="cfm-target"><span class="material-icons">folder</span> {{ c.name }} <em>· {{ c.count }} {{ 'canvas.as.imgs' | transloco }}</em></p>
+      } @else {
+        <p class="cfm-target"><span class="material-icons">image</span> {{ c.name }}</p>
+      }
+      <p class="cfm-sub">{{ 'canvas.as.delBody' | transloco }}</p>
+      <div class="cfm-acts">
+        <button class="cfm-btn" (click)="cancelDelete()">{{ 'canvas.as.cancel' | transloco }}</button>
+        <button class="cfm-btn danger" (click)="confirmDelete()"><span class="material-icons">delete</span> {{ 'canvas.as.delete' | transloco }}</button>
+      </div>
+    </div>
+  </div>
 }
 
 <!-- ============================ Workspace ============================ -->
@@ -1087,18 +1205,71 @@
           <p class="hint">Fingerprint, stamps, signatures &amp; watermark are placed as movable elements.</p>
         }
 
-        @case ('brand') {
-          <h3 class="flyout-title">{{ 'canvas.title.brand' | transloco }}</h3>
-          <span class="grp-label">Brand color palette</span>
-          <div class="swatch-row">
-            @for (c of brandPalette; track c) {
-              <button class="swatch" [style.background]="c" [title]="c" (click)="applyBrandColor(c)"></button>
+        @case ('assets') {
+          <h3 class="flyout-title">{{ 'canvas.title.assets' | transloco }}</h3>
+          <div class="as2" [class.drag]="assetDrag()"
+               (dragover)="onAssetDragOver($event)" (dragenter)="onAssetDragOver($event)"
+               (dragleave)="onAssetDragLeave($event)" (drop)="onAssetDrop($event)">
+            <div class="as2-search">
+              <span class="material-icons">search</span>
+              <input [ngModel]="assetSearch()" (ngModelChange)="assetSearch.set($event)" [placeholder]="'canvas.as.search' | transloco" />
+              @if (assetSearch()) { <button class="as2-clear" (click)="assetSearch.set('')"><span class="material-icons">close</span></button> }
+            </div>
+            <div class="as2-add">
+              <label class="as2-btn primary">
+                <input type="file" accept="image/*" multiple hidden (change)="onAssetFiles($event)" />
+                <span class="material-icons">add_photo_alternate</span> {{ 'canvas.as.browse' | transloco }}
+              </label>
+              <button class="as2-btn" (click)="openFolderModal()">
+                <span class="material-icons">create_new_folder</span> {{ 'canvas.as.folder' | transloco }}
+              </button>
+            </div>
+            @if (assetBusy()) {
+              <div class="as2-busy"><span class="material-icons spin">progress_activity</span> {{ 'canvas.as.importing' | transloco }}</div>
+            }
+            @for (g of assetGroups(); track g.name) {
+              <div class="as2-folder" [class.open]="isFolderOpen(g.name)">
+                <button class="as2-fhead" (click)="toggleFolder(g.name)">
+                  <span class="as2-fthumb">@for (t of g.items.slice(0, 4); track t.id) { <img [src]="t.dataUrl" alt="" loading="lazy" /> }</span>
+                  <span class="as2-fmeta"><b [title]="g.name">{{ g.name }}</b><em>{{ g.items.length }} {{ 'canvas.as.imgs' | transloco }}</em></span>
+                  <span class="as2-frm" (click)="removeFolder(g.name, $event)" [title]="'canvas.as.removeFolder' | transloco"><span class="material-icons">delete_outline</span></span>
+                  <span class="material-icons as2-fcaret">expand_more</span>
+                </button>
+                @if (isFolderOpen(g.name)) {
+                  <div class="as2-grid">
+                    @for (a of g.items; track a.id) {
+                      <button class="as2-tile" (click)="useAsset(a)" [title]="a.name + ' · ' + assets.kb(a.size)">
+                        <img [src]="a.dataUrl" [alt]="a.name" loading="lazy" />
+                        <span class="as2-tadd"><span class="material-icons">add</span></span>
+                        <span class="as2-tx" (click)="removeAsset(a, $event)" [title]="'canvas.as.remove' | transloco"><span class="material-icons">close</span></span>
+                      </button>
+                    }
+                  </div>
+                }
+              </div>
+            }
+            @if (individualAssets().length) {
+              <div class="as2-section"><span class="material-icons">image</span> {{ 'canvas.as.individual' | transloco }} <span class="as2-secn">{{ individualAssets().length }}</span></div>
+              <div class="as2-grid">
+                @for (a of individualAssets(); track a.id) {
+                  <button class="as2-tile" (click)="useAsset(a)" [title]="a.name + ' · ' + assets.kb(a.size)">
+                    <img [src]="a.dataUrl" [alt]="a.name" loading="lazy" />
+                    <span class="as2-tadd"><span class="material-icons">add</span></span>
+                    <span class="as2-tx" (click)="removeAsset(a, $event)" [title]="'canvas.as.remove' | transloco"><span class="material-icons">close</span></span>
+                  </button>
+                }
+              </div>
+            }
+            @if (!assets.assets().length && !assetBusy()) {
+              <div class="as2-empty" [class.drop]="assetDrag()">
+                <span class="as2-emoji"><span class="material-icons">{{ assetDrag() ? 'file_download' : 'photo_library' }}</span></span>
+                <b>{{ 'canvas.as.emptyTitle' | transloco }}</b>
+                <p>{{ 'canvas.as.emptyBody' | transloco }}</p>
+              </div>
+            } @else if (!assetGroups().length && !individualAssets().length && !assetBusy()) {
+              <p class="as2-nomatch"><span class="material-icons">search_off</span> {{ 'canvas.as.noMatch' | transloco }}</p>
             }
           </div>
-          <p class="hint">Click a colour to apply it to the selected element (or the background).</p>
-          <span class="grp-label">Brand logo</span>
-          <label class="add-tile file">🏢 Add logo
-            <input type="file" accept="image/*" hidden (change)="onLogoFile($event)" /></label>
         }
 
         @case ('table') {
@@ -1172,6 +1343,17 @@
             <div class="field"><label>Columns</label><input type="number" min="1" max="12" [(ngModel)]="tableCols" /></div>
           </div>
           <div class="field"><label>Column headers (comma separated, optional)</label><input [(ngModel)]="tHeaders" placeholder="Name, Role, Score" /></div>
+
+          <span class="grp-label gl"><span class="material-icons">edit_note</span> Cells</span>
+          <div class="qr-seg cell-mode">
+            <button [class.on]="tableCellMode === 'variables'" (click)="tableCellMode = 'variables'"><span class="material-icons">data_object</span> Variables</button>
+            <button [class.on]="tableCellMode === 'empty'" (click)="tableCellMode = 'empty'"><span class="material-icons">check_box_outline_blank</span> Empty</button>
+          </div>
+          @if (tableCellMode === 'variables') {
+            <p class="hint-sm">Cells are variable placeholders — fill them per-recipient in Bulk, or edit them in the cell grid.</p>
+          } @else {
+            <p class="hint-sm">Blank cells — type into them directly on the canvas or in the cell grid.</p>
+          }
 
           <button class="adv-toggle" (click)="tAdvanced = !tAdvanced"><span class="material-icons">{{ tAdvanced ? 'expand_less' : 'tune' }}</span> {{ tAdvanced ? 'Hide options' : 'More options' }}</button>
           @if (tAdvanced) {
@@ -1270,7 +1452,63 @@
       </div>
     </div>
 
+    <!-- Align & arrange dock (compact taskbar, pinned bottom-centre) -->
+    @if (dockOn()) {
+    <div class="dock" [class.no-sel]="selType() === 'none'" [class.lifted]="showPages()">
+      <div class="dk-group" role="group" aria-label="Align">
+        <span class="dk-tag"><span class="material-icons">format_align_center</span></span>
+        <button class="dk-btn" [disabled]="selType() === 'none'" (click)="svc.alignObjects('left')" data-tip="Align left"><span class="material-icons">align_horizontal_left</span></button>
+        <button class="dk-btn" [disabled]="selType() === 'none'" (click)="svc.alignObjects('center-h')" data-tip="Center horizontally"><span class="material-icons">align_horizontal_center</span></button>
+        <button class="dk-btn" [disabled]="selType() === 'none'" (click)="svc.alignObjects('right')" data-tip="Align right"><span class="material-icons">align_horizontal_right</span></button>
+        <span class="dk-div"></span>
+        <button class="dk-btn" [disabled]="selType() === 'none'" (click)="svc.alignObjects('top')" data-tip="Align top"><span class="material-icons">align_vertical_top</span></button>
+        <button class="dk-btn" [disabled]="selType() === 'none'" (click)="svc.alignObjects('center-v')" data-tip="Center vertically"><span class="material-icons">align_vertical_center</span></button>
+        <button class="dk-btn" [disabled]="selType() === 'none'" (click)="svc.alignObjects('bottom')" data-tip="Align bottom"><span class="material-icons">align_vertical_bottom</span></button>
+        <span class="dk-div"></span>
+        <button class="dk-btn" [disabled]="!multiSelected()" (click)="svc.distributeObjects('h')" data-tip="Distribute horizontally"><span class="material-icons">horizontal_distribute</span></button>
+        <button class="dk-btn" [disabled]="!multiSelected()" (click)="svc.distributeObjects('v')" data-tip="Distribute vertically"><span class="material-icons">vertical_distribute</span></button>
+      </div>
+      <span class="dk-div tall"></span>
+      <div class="dk-group" role="group" aria-label="Arrange">
+        <span class="dk-tag"><span class="material-icons">layers</span></span>
+        <button class="dk-btn" [disabled]="selType() === 'none'" (click)="svc.bringToFront()" data-tip="Bring to front"><span class="material-icons">flip_to_front</span></button>
+        <button class="dk-btn" [disabled]="selType() === 'none'" (click)="svc.sendToBack()" data-tip="Send to back"><span class="material-icons">flip_to_back</span></button>
+        <span class="dk-div"></span>
+        <button class="dk-btn accent" [disabled]="!multiSelected()" (click)="svc.groupActive()" data-tip="Group"><span class="material-icons">join_full</span></button>
+        <button class="dk-btn accent" [disabled]="!isRealGroup()" (click)="svc.ungroupActive()" data-tip="Ungroup"><span class="material-icons">join_inner</span></button>
+        <span class="dk-div"></span>
+        <button class="dk-btn" [disabled]="selType() === 'none'" (click)="svc.cloneSelected()" data-tip="Duplicate"><span class="material-icons">content_copy</span></button>
+        <button class="dk-btn" [disabled]="selType() === 'none'" (click)="svc.toggleLock()" data-tip="Lock / unlock"><span class="material-icons">{{ mLocked() ? 'lock' : 'lock_open' }}</span></button>
+        <button class="dk-btn danger" [disabled]="selType() === 'none'" (click)="svc.deleteSelected()" data-tip="Delete"><span class="material-icons">delete</span></button>
+      </div>
+      <span class="dk-spring"></span>
+      <div class="dk-group zoom" role="group" aria-label="Zoom">
+        <button class="dk-btn" (click)="zoomOut()" data-tip="Zoom out"><span class="material-icons">remove</span></button>
+        <button class="dk-pct" (click)="zoomToFit()" data-tip="Fit to screen">{{ zoomPct() }}%</button>
+        <button class="dk-btn" (click)="zoomIn()" data-tip="Zoom in"><span class="material-icons">add</span></button>
+        <span class="dk-div"></span>
+        <button class="dk-btn" (click)="zoomToFit()" data-tip="Fit to screen"><span class="material-icons">fit_screen</span></button>
+        <span class="dk-opts">
+          <button class="dk-btn" [class.on]="dockMenu()" (click)="$event.stopPropagation(); toggleDockMenu()" data-tip="View options"><span class="material-icons">tune</span></button>
+          @if (dockMenu()) {
+            <div class="dk-pop" (click)="$event.stopPropagation()">
+              <span class="dk-pop-h"><span class="material-icons">tune</span> Canvas options</span>
+              <label class="vm-toggle"><span class="vt-label"><span class="material-icons">vertical_split</span> Quick properties bar</span><span class="vt-switch"><input type="checkbox" [checked]="miniBarOn()" (change)="toggleMiniBar()" /><i></i></span></label>
+              <div class="dk-pop-sep"></div>
+              <label class="vm-toggle"><span class="vt-label"><span class="material-icons">straighten</span> Ruler</span><span class="vt-switch"><input type="checkbox" [checked]="showRuler()" (change)="toggleRuler()" /><i></i></span></label>
+              <label class="vm-toggle"><span class="vt-label"><span class="material-icons">grid_4x4</span> Grid</span><span class="vt-switch"><input type="checkbox" [checked]="showGrid()" (change)="toggleGrid()" /><i></i></span></label>
+              <label class="vm-toggle"><span class="vt-label"><span class="material-icons">grid_goldenratio</span> Snap to grid</span><span class="vt-switch"><input type="checkbox" [checked]="snap()" (change)="toggleSnap()" /><i></i></span></label>
+              <label class="vm-toggle"><span class="vt-label"><span class="material-icons">align_horizontal_center</span> Smart guides</span><span class="vt-switch"><input type="checkbox" [checked]="guidesOn()" (change)="toggleGuides()" /><i></i></span></label>
+              <label class="vm-toggle"><span class="vt-label"><span class="material-icons">space_dashboard</span> Distance hints</span><span class="vt-switch"><input type="checkbox" [checked]="showDist()" (change)="toggleDist()" /><i></i></span></label>
+            </div>
+          }
+        </span>
+      </div>
+    </div>
+    }
+
     <!-- Page filmstrip -->
+    @if (showPages()) {
     <div class="page-bar">
       <div class="page-strip">
         @for (pg of svc.pages(); track pg.id; let i = $index) {
@@ -1300,8 +1538,10 @@
         <span class="material-icons page-handle-caret">expand_less</span>
       </div>
     </div>
+    }
 
     <!-- Right-side Layers dock -->
+    @if (layersOn()) {
     @if (layersDock()) {
       <aside class="layers-dock">
         <div class="ld-head">
@@ -1313,7 +1553,12 @@
         </div>
       </aside>
     } @else {
-      <button class="layers-tab" (click)="toggleLayersDock()" title="Show layers"><span class="material-icons">layers</span></button>
+      <button class="layers-tab" (click)="toggleLayersDock()" [title]="'Layers (' + layers().length + ')'">
+        <span class="material-icons">layers</span>
+        @if (layers().length) { <span class="lt-count">{{ layers().length }}</span> }
+        <span class="lt-label">{{ 'canvas.title.layers' | transloco }}</span>
+      </button>
+    }
     }
   </section>
 
