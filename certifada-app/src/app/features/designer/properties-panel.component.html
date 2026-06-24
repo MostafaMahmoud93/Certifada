@@ -1,225 +1,272 @@
 @if (obj) {
-  <div class="section">
-    <h4>{{ isTextLike() ? 'Text' : (obj.type | titlecase) }}</h4>
+  <!-- element header -->
+  <div class="pp-head" [class.locked]="isLocked()">
+    <span class="pp-thumb">
+      @if (thumb()) { <img [src]="thumb()" alt="" /> }
+      @else { <span class="material-icons">{{ meta().icon }}</span> }
+      @if (isLocked()) { <span class="pp-lockdot material-icons">lock</span> }
+    </span>
+    <span class="pp-id">
+      <b>{{ meta().label }}</b>
+      <small>{{ meta().sub }}</small>
+    </span>
+    <span class="pp-quick">
+      <button class="ppq" [class.on]="isLocked()" (click)="lock()" [title]="isLocked() ? 'Unlock' : 'Lock position'"><span class="material-icons">{{ isLocked() ? 'lock' : 'lock_open' }}</span></button>
+      <button class="ppq" (click)="dupe()" title="Duplicate"><span class="material-icons">content_copy</span></button>
+      <button class="ppq danger" (click)="del()" title="Delete"><span class="material-icons">delete</span></button>
+    </span>
+  </div>
 
-    <!-- Text / field / cell controls -->
-    @if (isTextLike()) {
-      @if (val('objType') === 'field') {
-        <div class="field">
-          <label>Variable</label>
-          <div class="var-chip">{{ val('text') }}</div>
-          <small class="muted">Locked — only styling changes. The value is filled per-recipient in Bulk.</small>
+  <!-- TEXT -->
+  @if (isTextLike()) {
+    <section class="section" [class.collapsed]="isCollapsed('text')">
+      <h4 (click)="toggleSec('text')"><span class="material-icons sec-ic">title</span> Text <span class="material-icons caret">expand_more</span></h4>
+      <div class="sec-body">
+        @if (val('objType') === 'field') {
+          <div class="field">
+            <label>Bound variable</label>
+            <div class="var-chip"><span class="material-icons">data_object</span>{{ val('text') }}</div>
+            <small class="muted">Locked content — only styling changes. The value fills per-recipient in Bulk.</small>
+          </div>
+        } @else {
+          <div class="field">
+            <label>Content</label>
+            <textarea rows="2" [value]="val('text')" (input)="set('text', $any($event.target).value)" (change)="commit()"></textarea>
+          </div>
+        }
+
+        <span class="grp-label">Quick styles</span>
+        <div class="pp-presets">
+          <button class="chip" (click)="applyPreset('title')">Title</button>
+          <button class="chip" (click)="applyPreset('subtitle')">Subtitle</button>
+          <button class="chip" (click)="applyPreset('body')">Body</button>
+          <button class="chip" (click)="applyPreset('caption')">Caption</button>
         </div>
-      } @else {
-        <div class="field">
-          <label>Content</label>
-          <textarea rows="2" [value]="val('text')"
-            (input)="set('text', $any($event.target).value)" (change)="commit()"></textarea>
-        </div>
-      }
 
-      <div class="field">
-        <label>Font</label>
-        <select [value]="val('fontFamily')" (change)="setFont($any($event.target).value)">
-          @for (f of fonts; track f) { <option [value]="f" [style.fontFamily]="f">{{ f }}</option> }
-          @if (svc.userFonts().length) {
-            <optgroup label="Your fonts">
-              @for (f of svc.userFonts(); track f) { <option [value]="f" [style.fontFamily]="f">{{ f }}</option> }
-            </optgroup>
-          }
-        </select>
-      </div>
-
-      <div class="grid-2">
         <div class="field">
-          <label>Size</label>
-          <input class="rng" type="number" min="6" max="300" [value]="num('fontSize', 24)"
-            (input)="set('fontSize', +$any($event.target).value)" (change)="commit()" />
-          <select class="sel" [value]="num('fontSize', 24)" (change)="set('fontSize', +$any($event.target).value); commit()">
-            @for (o of sizeOpts; track o) { <option [value]="o">{{ o }}</option> }
+          <label>Font</label>
+          <select class="font-sel" [value]="val('fontFamily')" [style.fontFamily]="val('fontFamily')" (change)="setFont($any($event.target).value)">
+            @for (f of fonts; track f) { <option [value]="f" [style.fontFamily]="f">{{ f }}</option> }
+            @if (svc.userFonts().length) {
+              <optgroup label="Your fonts">
+                @for (f of svc.userFonts(); track f) { <option [value]="f" [style.fontFamily]="f">{{ f }}</option> }
+              </optgroup>
+            }
           </select>
         </div>
-        <div class="field">
-          <label>Line height</label>
-          <input class="rng" type="number" min="0.5" max="3" step="0.1" [value]="num('lineHeight', 1.16)"
-            (input)="set('lineHeight', +$any($event.target).value)" (change)="commit()" />
-          <select class="sel" [value]="num('lineHeight', 1.16)" (change)="set('lineHeight', +$any($event.target).value); commit()">
-            @for (o of lineOpts; track o) { <option [value]="o">{{ o }}</option> }
-          </select>
-        </div>
-      </div>
 
-      <div class="field">
-        <label>Letter spacing</label>
-        <input class="rng" type="range" min="-100" max="800" [value]="num('charSpacing', 0)"
-          (input)="set('charSpacing', +$any($event.target).value)" (change)="commit()" />
-        <select class="sel" [value]="num('charSpacing', 0)" (change)="set('charSpacing', +$any($event.target).value); commit()">
-          @for (o of spacingOpts; track o) { <option [value]="o">{{ o }}</option> }
-        </select>
-      </div>
-
-      <div class="btn-group">
-        <button class="btn btn-sm" [class.on]="val('fontWeight') === 'bold' || val('fontWeight') === '700'"
-          (click)="toggleFontWeight()" title="Bold"><b>B</b></button>
-        <button class="btn btn-sm" [class.on]="val('fontStyle') === 'italic'"
-          (click)="toggleFontStyle()" title="Italic"><i>I</i></button>
-        <button class="btn btn-sm" [class.on]="val('underline')"
-          (click)="toggle('underline')" title="Underline"><u>U</u></button>
-        <button class="btn btn-sm" [class.on]="val('linethrough')"
-          (click)="toggle('linethrough')" title="Strikethrough"><s>S</s></button>
-      </div>
-
-      <div class="btn-group mt-1">
-        <button class="btn btn-sm" [class.on]="val('textAlign') === 'left'" (click)="setAndCommit('textAlign', 'left')" title="Align left">⬅</button>
-        <button class="btn btn-sm" [class.on]="val('textAlign') === 'center'" (click)="setAndCommit('textAlign', 'center')" title="Align center">⬌</button>
-        <button class="btn btn-sm" [class.on]="val('textAlign') === 'right'" (click)="setAndCommit('textAlign', 'right')" title="Align right">➡</button>
-        <button class="btn btn-sm" [class.on]="val('textAlign') === 'justify'" (click)="setAndCommit('textAlign', 'justify')" title="Justify">☰</button>
-      </div>
-
-      <div class="field mt-1">
-        <label>Text color</label>
-        <input type="color" [value]="val('fill') || '#000000'"
-          (input)="set('fill', $any($event.target).value)" (change)="commit()" />
-      </div>
-    }
-
-    <!-- Shape fill / stroke -->
-    @if (is('rect') || is('circle') || is('triangle')) {
-      <div class="field">
-        <label>Fill</label>
-        <input type="color" [value]="val('fill') || '#000000'"
-          (input)="set('fill', $any($event.target).value)" (change)="commit()" />
-      </div>
-      @if (is('rect')) {
         <div class="grid-2">
           <div class="field">
-            <label>Corner X</label>
-            <input type="number" min="0" max="100" [value]="num('rx')"
-              (input)="set('rx', +$any($event.target).value)" (change)="commit()" />
+            <label>Size</label>
+            <input class="rng" type="number" min="6" max="300" [value]="num('fontSize', 24)" (input)="set('fontSize', +$any($event.target).value)" (change)="commit()" />
+            <select class="sel" [value]="num('fontSize', 24)" (change)="set('fontSize', +$any($event.target).value); commit()">
+              @for (o of sizeOpts; track o) { <option [value]="o">{{ o }}</option> }
+            </select>
           </div>
           <div class="field">
-            <label>Corner Y</label>
-            <input type="number" min="0" max="100" [value]="num('ry')"
-              (input)="set('ry', +$any($event.target).value)" (change)="commit()" />
+            <label>Line height</label>
+            <input class="rng" type="number" min="0.5" max="3" step="0.1" [value]="num('lineHeight', 1.16)" (input)="set('lineHeight', +$any($event.target).value)" (change)="commit()" />
+            <select class="sel" [value]="num('lineHeight', 1.16)" (change)="set('lineHeight', +$any($event.target).value); commit()">
+              @for (o of lineOpts; track o) { <option [value]="o">{{ o }}</option> }
+            </select>
           </div>
         </div>
-      }
-    }
 
-    @if (is('rect') || is('circle') || is('triangle') || is('line')) {
-      <div class="grid-2">
-        <div class="field">
-          <label>Stroke</label>
-          <input type="color" [value]="val('stroke') || '#000000'"
-            (input)="set('stroke', $any($event.target).value)" (change)="commit()" />
+        <div class="ctl">
+          <div class="ctl-top"><label>Letter spacing</label><span class="ctl-val">{{ num('charSpacing', 0) }}</span></div>
+          <input class="rng" type="range" min="-100" max="800" [value]="num('charSpacing', 0)" (input)="set('charSpacing', +$any($event.target).value)" (change)="commit()" />
+          <select class="sel" [value]="num('charSpacing', 0)" (change)="set('charSpacing', +$any($event.target).value); commit()">
+            @for (o of spacingOpts; track o) { <option [value]="o">{{ o }}</option> }
+          </select>
         </div>
-        <div class="field">
-          <label>Width</label>
-          <input type="number" min="0" max="40" [value]="num('strokeWidth', 1)"
-            (input)="set('strokeWidth', +$any($event.target).value)" (change)="commit()" />
+
+        <div class="seg-row">
+          <div class="btn-group">
+            <button class="btn btn-sm" [class.on]="val('fontWeight') === 'bold' || val('fontWeight') === '700'" (click)="toggleFontWeight()" title="Bold"><b>B</b></button>
+            <button class="btn btn-sm" [class.on]="val('fontStyle') === 'italic'" (click)="toggleFontStyle()" title="Italic"><i>I</i></button>
+            <button class="btn btn-sm" [class.on]="val('underline')" (click)="toggle('underline')" title="Underline"><u>U</u></button>
+            <button class="btn btn-sm" [class.on]="val('linethrough')" (click)="toggle('linethrough')" title="Strikethrough"><s>S</s></button>
+          </div>
+          @if (isEditableText()) {
+            <div class="btn-group">
+              <button class="btn btn-sm" (click)="setCase('upper')" title="UPPERCASE">AA</button>
+              <button class="btn btn-sm" (click)="setCase('title')" title="Title Case">Aa</button>
+              <button class="btn btn-sm" (click)="setCase('lower')" title="lowercase">aa</button>
+            </div>
+          }
         </div>
+
+        <div class="btn-group mt-1">
+          <button class="btn btn-sm" [class.on]="val('textAlign') === 'left'" (click)="setAndCommit('textAlign', 'left')" title="Align left"><span class="material-icons">format_align_left</span></button>
+          <button class="btn btn-sm" [class.on]="val('textAlign') === 'center'" (click)="setAndCommit('textAlign', 'center')" title="Align center"><span class="material-icons">format_align_center</span></button>
+          <button class="btn btn-sm" [class.on]="val('textAlign') === 'right'" (click)="setAndCommit('textAlign', 'right')" title="Align right"><span class="material-icons">format_align_right</span></button>
+          <button class="btn btn-sm" [class.on]="val('textAlign') === 'justify'" (click)="setAndCommit('textAlign', 'justify')" title="Justify"><span class="material-icons">format_align_justify</span></button>
+        </div>
+
+        <span class="grp-label">Text color</span>
+        <ng-container [ngTemplateOutlet]="colorRow" [ngTemplateOutletContext]="{ label: 'Text', prop: 'fill' }"></ng-container>
       </div>
-    }
+    </section>
+  }
 
-    <!-- Image filters -->
-    @if (is('image')) {
-      <div class="field">
-        <label>Flip</label>
+  <!-- FILL & STROKE -->
+  @if (hasFill() || hasStroke()) {
+    <section class="section" [class.collapsed]="isCollapsed('shape')">
+      <h4 (click)="toggleSec('shape')"><span class="material-icons sec-ic">palette</span> Fill &amp; stroke <span class="material-icons caret">expand_more</span></h4>
+      <div class="sec-body">
+        @if (hasFill()) {
+          <span class="grp-label">Fill</span>
+          <ng-container [ngTemplateOutlet]="colorRow" [ngTemplateOutletContext]="{ label: 'Fill', prop: 'fill' }"></ng-container>
+        }
+        @if (is('rect')) {
+          <div class="grid-2">
+            <div class="field"><label>Corner X</label><input type="number" min="0" max="100" [value]="num('rx')" (input)="set('rx', +$any($event.target).value)" (change)="commit()" /></div>
+            <div class="field"><label>Corner Y</label><input type="number" min="0" max="100" [value]="num('ry')" (input)="set('ry', +$any($event.target).value)" (change)="commit()" /></div>
+          </div>
+        }
+        @if (hasStroke()) {
+          <span class="grp-label">Stroke</span>
+          <ng-container [ngTemplateOutlet]="colorRow" [ngTemplateOutletContext]="{ label: 'Stroke', prop: 'stroke' }"></ng-container>
+          <div class="ctl">
+            <div class="ctl-top"><label>Stroke width</label><span class="ctl-val">{{ num('strokeWidth', 1) }} px</span></div>
+            <input class="rng" type="range" min="0" max="40" [value]="num('strokeWidth', 1)" (input)="set('strokeWidth', +$any($event.target).value)" (change)="commit()" />
+            <input class="sel" type="number" min="0" max="40" [value]="num('strokeWidth', 1)" (change)="set('strokeWidth', +$any($event.target).value); commit()" />
+          </div>
+        }
+      </div>
+    </section>
+  }
+
+  <!-- IMAGE FILTERS -->
+  @if (is('image')) {
+    <section class="section" [class.collapsed]="isCollapsed('image')">
+      <h4 (click)="toggleSec('image')"><span class="material-icons sec-ic">tune</span> Adjust image <span class="material-icons caret">expand_more</span></h4>
+      <div class="sec-body">
+        <div class="field">
+          <label>Flip</label>
+          <div class="btn-group">
+            <button class="btn btn-sm" (click)="flip('x')" title="Flip horizontal"><span class="material-icons">swap_horiz</span><span class="lbl">Horizontal</span></button>
+            <button class="btn btn-sm" (click)="flip('y')" title="Flip vertical"><span class="material-icons">swap_vert</span><span class="lbl">Vertical</span></button>
+          </div>
+        </div>
+        <div class="ctl"><div class="ctl-top"><label>Brightness</label><span class="ctl-val">{{ fx('brightness') || 0 }}</span></div>
+          <input class="rng" type="range" min="-1" max="1" step="0.05" [value]="fx('brightness')" (input)="setFx('brightness', +$any($event.target).value)" (change)="commit()" />
+          <select class="sel" [value]="fx('brightness')" (change)="setFx('brightness', +$any($event.target).value); commit()">@for (o of signedOpts; track o) { <option [value]="o">{{ o }}</option> }</select></div>
+        <div class="ctl"><div class="ctl-top"><label>Contrast</label><span class="ctl-val">{{ fx('contrast') || 0 }}</span></div>
+          <input class="rng" type="range" min="-1" max="1" step="0.05" [value]="fx('contrast')" (input)="setFx('contrast', +$any($event.target).value)" (change)="commit()" />
+          <select class="sel" [value]="fx('contrast')" (change)="setFx('contrast', +$any($event.target).value); commit()">@for (o of signedOpts; track o) { <option [value]="o">{{ o }}</option> }</select></div>
+        <div class="ctl"><div class="ctl-top"><label>Saturation</label><span class="ctl-val">{{ fx('saturation') || 0 }}</span></div>
+          <input class="rng" type="range" min="-1" max="1" step="0.05" [value]="fx('saturation')" (input)="setFx('saturation', +$any($event.target).value)" (change)="commit()" />
+          <select class="sel" [value]="fx('saturation')" (change)="setFx('saturation', +$any($event.target).value); commit()">@for (o of signedOpts; track o) { <option [value]="o">{{ o }}</option> }</select></div>
+        <div class="ctl"><div class="ctl-top"><label>Blur</label><span class="ctl-val">{{ fx('blur') || 0 }}</span></div>
+          <input class="rng" type="range" min="0" max="1" step="0.02" [value]="fx('blur')" (input)="setFx('blur', +$any($event.target).value)" (change)="commit()" />
+          <select class="sel" [value]="fx('blur')" (change)="setFx('blur', +$any($event.target).value); commit()">@for (o of blurOpts; track o) { <option [value]="o">{{ o }}</option> }</select></div>
+        <div class="ctl"><div class="ctl-top"><label>Pixelate</label><span class="ctl-val">{{ fx('pixelate') || 0 }}</span></div>
+          <input class="rng" type="range" min="0" max="20" step="1" [value]="fx('pixelate')" (input)="setFx('pixelate', +$any($event.target).value)" (change)="commit()" />
+          <select class="sel" [value]="fx('pixelate')" (change)="setFx('pixelate', +$any($event.target).value); commit()">@for (o of pixOpts; track o) { <option [value]="o">{{ o }}</option> }</select></div>
         <div class="btn-group">
-          <button class="btn btn-sm" (click)="flip('x')" title="Flip horizontal"><span class="material-icons">swap_horiz</span><span class="lbl">Horizontal</span></button>
-          <button class="btn btn-sm" (click)="flip('y')" title="Flip vertical"><span class="material-icons">swap_vert</span><span class="lbl">Vertical</span></button>
+          <button class="btn btn-sm" [class.on]="fx('grayscale')" (click)="toggleFx('grayscale')">Gray</button>
+          <button class="btn btn-sm" [class.on]="fx('sepia')" (click)="toggleFx('sepia')">Sepia</button>
+          <button class="btn btn-sm" [class.on]="fx('invert')" (click)="toggleFx('invert')">Invert</button>
+        </div>
+        <button class="btn btn-sm mt-1" (click)="resetFx()" title="Reset filters"><span class="material-icons">filter_alt_off</span><span class="lbl">Reset filters</span></button>
+      </div>
+    </section>
+  }
+
+  <!-- TRANSFORM -->
+  @if (!isMulti()) {
+    <section class="section" [class.collapsed]="isCollapsed('transform')">
+      <h4 (click)="toggleSec('transform')"><span class="material-icons sec-ic">open_with</span> Transform <span class="material-icons caret">expand_more</span></h4>
+      <div class="sec-body">
+        <div class="tbox">
+          <label class="tf"><span>X</span><input type="number" [value]="posX()" (change)="setPos('left', +$any($event.target).value)" /></label>
+          <label class="tf"><span>Y</span><input type="number" [value]="posY()" (change)="setPos('top', +$any($event.target).value)" /></label>
+          <label class="tf"><span>W</span><input type="number" min="1" [value]="sizeW()" (change)="setSize('w', +$any($event.target).value)" /></label>
+          <label class="tf"><span>H</span><input type="number" min="1" [value]="sizeH()" (change)="setSize('h', +$any($event.target).value)" /></label>
+          <button class="tf-lock" [class.on]="aspect()" (click)="toggleAspect()" [title]="aspect() ? 'Aspect ratio locked' : 'Aspect ratio free'"><span class="material-icons">{{ aspect() ? 'link' : 'link_off' }}</span></button>
+        </div>
+        <div class="ctl">
+          <div class="ctl-top"><label>Rotation</label><span class="ctl-val">{{ num('angle') }}°</span></div>
+          <input class="rng" type="range" min="0" max="360" [value]="num('angle')" (input)="set('angle', +$any($event.target).value)" (change)="commit()" />
+          <select class="sel" [value]="num('angle')" (change)="set('angle', +$any($event.target).value); commit()">@for (o of rotOpts; track o) { <option [value]="o">{{ o }}</option> }</select>
+          <div class="rot-chips">@for (r of rotChips; track r) { <button class="chip xs" [class.on]="num('angle') === r" (click)="setAndCommit('angle', r)">{{ r }}°</button> }</div>
         </div>
       </div>
-      <div class="field"><label>Brightness</label>
-        <input class="rng" type="range" min="-1" max="1" step="0.05" [value]="fx('brightness')"
-          (input)="setFx('brightness', +$any($event.target).value)" (change)="commit()" />
-        <select class="sel" [value]="fx('brightness')" (change)="setFx('brightness', +$any($event.target).value); commit()">
-          @for (o of signedOpts; track o) { <option [value]="o">{{ o }}</option> }
-        </select></div>
-      <div class="field"><label>Contrast</label>
-        <input class="rng" type="range" min="-1" max="1" step="0.05" [value]="fx('contrast')"
-          (input)="setFx('contrast', +$any($event.target).value)" (change)="commit()" />
-        <select class="sel" [value]="fx('contrast')" (change)="setFx('contrast', +$any($event.target).value); commit()">
-          @for (o of signedOpts; track o) { <option [value]="o">{{ o }}</option> }
-        </select></div>
-      <div class="field"><label>Saturation</label>
-        <input class="rng" type="range" min="-1" max="1" step="0.05" [value]="fx('saturation')"
-          (input)="setFx('saturation', +$any($event.target).value)" (change)="commit()" />
-        <select class="sel" [value]="fx('saturation')" (change)="setFx('saturation', +$any($event.target).value); commit()">
-          @for (o of signedOpts; track o) { <option [value]="o">{{ o }}</option> }
-        </select></div>
-      <div class="field"><label>Blur</label>
-        <input class="rng" type="range" min="0" max="1" step="0.02" [value]="fx('blur')"
-          (input)="setFx('blur', +$any($event.target).value)" (change)="commit()" />
-        <select class="sel" [value]="fx('blur')" (change)="setFx('blur', +$any($event.target).value); commit()">
-          @for (o of blurOpts; track o) { <option [value]="o">{{ o }}</option> }
-        </select></div>
-      <div class="field"><label>Pixelate</label>
-        <input class="rng" type="range" min="0" max="20" step="1" [value]="fx('pixelate')"
-          (input)="setFx('pixelate', +$any($event.target).value)" (change)="commit()" />
-        <select class="sel" [value]="fx('pixelate')" (change)="setFx('pixelate', +$any($event.target).value); commit()">
-          @for (o of pixOpts; track o) { <option [value]="o">{{ o }}</option> }
-        </select></div>
-      <div class="btn-group">
-        <button class="btn btn-sm" [class.on]="fx('grayscale')" (click)="toggleFx('grayscale')">Gray</button>
-        <button class="btn btn-sm" [class.on]="fx('sepia')" (click)="toggleFx('sepia')">Sepia</button>
-        <button class="btn btn-sm" [class.on]="fx('invert')" (click)="toggleFx('invert')">Invert</button>
+    </section>
+  }
+
+  <!-- APPEARANCE -->
+  <section class="section" [class.collapsed]="isCollapsed('appearance')">
+    <h4 (click)="toggleSec('appearance')"><span class="material-icons sec-ic">opacity</span> Appearance <span class="material-icons caret">expand_more</span></h4>
+    <div class="sec-body">
+      <div class="ctl">
+        <div class="ctl-top"><label>Opacity</label><span class="ctl-val">{{ pct(num('opacity', 1)) }}%</span></div>
+        <input class="rng" type="range" min="0" max="1" step="0.05" [value]="num('opacity', 1)" (input)="set('opacity', +$any($event.target).value)" (change)="commit()" />
+        <select class="sel" [value]="num('opacity', 1)" (change)="set('opacity', +$any($event.target).value); commit()">
+          @for (o of opacityOpts; track o) { <option [value]="o">{{ o }}</option> }
+        </select>
       </div>
-      <button class="btn btn-sm mt-1" (click)="resetFx()" title="Reset filters"><span class="material-icons">filter_alt_off</span><span class="lbl">Reset filters</span></button>
-    }
+    </div>
+  </section>
 
-    <!-- Common -->
-    <div class="field">
-      <label>Opacity</label>
-      <input class="rng" type="range" min="0" max="1" step="0.05" [value]="num('opacity', 1)"
-        (input)="set('opacity', +$any($event.target).value)" (change)="commit()" />
-      <select class="sel" [value]="num('opacity', 1)" (change)="set('opacity', +$any($event.target).value); commit()">
-        @for (o of opacityOpts; track o) { <option [value]="o">{{ o }}</option> }
-      </select>
+  <!-- ARRANGE -->
+  <section class="section" [class.collapsed]="isCollapsed('arrange')">
+    <h4 (click)="toggleSec('arrange')"><span class="material-icons sec-ic">dashboard</span> Arrange <span class="material-icons caret">expand_more</span></h4>
+    <div class="sec-body">
+      <span class="grp-label">Align{{ isMulti() ? ' selection' : ' to canvas' }}</span>
+      <div class="btn-group">
+        <button class="btn btn-sm" (click)="svc.align('left')" title="Align left"><span class="material-icons">align_horizontal_left</span></button>
+        <button class="btn btn-sm" (click)="svc.align('center-h')" title="Center horizontally"><span class="material-icons">align_horizontal_center</span></button>
+        <button class="btn btn-sm" (click)="svc.align('right')" title="Align right"><span class="material-icons">align_horizontal_right</span></button>
+        <button class="btn btn-sm" (click)="svc.align('top')" title="Align top"><span class="material-icons">align_vertical_top</span></button>
+        <button class="btn btn-sm" (click)="svc.align('center-v')" title="Center vertically"><span class="material-icons">align_vertical_center</span></button>
+        <button class="btn btn-sm" (click)="svc.align('bottom')" title="Align bottom"><span class="material-icons">align_vertical_bottom</span></button>
+      </div>
+      <span class="grp-label">Layer order</span>
+      <div class="btn-group">
+        <button class="btn btn-sm" (click)="svc.bringToFront()" title="Bring to front"><span class="material-icons">flip_to_front</span></button>
+        <button class="btn btn-sm" (click)="svc.bringForward()" title="Bring forward"><span class="material-icons">arrow_upward</span></button>
+        <button class="btn btn-sm" (click)="svc.sendBackwards()" title="Send backward"><span class="material-icons">arrow_downward</span></button>
+        <button class="btn btn-sm" (click)="svc.sendToBack()" title="Send to back"><span class="material-icons">flip_to_back</span></button>
+      </div>
+      <div class="btn-group two mt-1">
+        <button class="btn btn-sm" (click)="dupe()" title="Duplicate"><span class="material-icons">content_copy</span><span class="lbl">Duplicate</span></button>
+        <button class="btn btn-sm btn-danger" (click)="del()" title="Delete"><span class="material-icons">delete</span><span class="lbl">Delete</span></button>
+      </div>
     </div>
-    <div class="field">
-      <label>Rotation</label>
-      <input class="rng" type="range" min="0" max="360" [value]="num('angle')"
-        (input)="set('angle', +$any($event.target).value)" (change)="commit()" />
-      <select class="sel" [value]="num('angle')" (change)="set('angle', +$any($event.target).value); commit()">
-        @for (o of rotOpts; track o) { <option [value]="o">{{ o }}</option> }
-      </select>
-    </div>
-  </div>
-
-  <!-- Arrange -->
-  <div class="section">
-    <h4>Arrange</h4>
-    <div class="btn-group">
-      <button class="btn btn-sm" (click)="svc.align('left')" title="Align left">⇤</button>
-      <button class="btn btn-sm" (click)="svc.align('center-h')" title="Center H">⇆</button>
-      <button class="btn btn-sm" (click)="svc.align('right')" title="Align right">⇥</button>
-      <button class="btn btn-sm" (click)="svc.align('top')" title="Align top">⤒</button>
-      <button class="btn btn-sm" (click)="svc.align('center-v')" title="Center V">⇅</button>
-      <button class="btn btn-sm" (click)="svc.align('bottom')" title="Align bottom">⤓</button>
-    </div>
-    <div class="btn-group mt-1">
-      <button class="btn btn-sm" (click)="svc.bringToFront()" title="Bring to front"><span class="material-icons">flip_to_front</span></button>
-      <button class="btn btn-sm" (click)="svc.bringForward()" title="Bring forward"><span class="material-icons">arrow_upward</span></button>
-      <button class="btn btn-sm" (click)="svc.sendBackwards()" title="Send backward"><span class="material-icons">arrow_downward</span></button>
-      <button class="btn btn-sm" (click)="svc.sendToBack()" title="Send to back"><span class="material-icons">flip_to_back</span></button>
-    </div>
-    <div class="btn-group mt-1">
-      <button class="btn btn-sm" (click)="svc.cloneSelected()" title="Duplicate"><span class="material-icons">content_copy</span><span class="lbl">Duplicate</span></button>
-      <button class="btn btn-sm btn-danger" (click)="svc.deleteSelected()" title="Delete"><span class="material-icons">delete</span><span class="lbl">Delete</span></button>
-    </div>
-  </div>
+  </section>
 } @else {
-  <div class="section empty">
-    <p class="muted">Select an element to edit its properties — or add one from the rail. Background &amp; theme live in the <b>Background</b> panel.</p>
+  <div class="pp-empty">
+    <span class="pp-empty-ic"><span class="material-icons">ads_click</span></span>
+    <b>Nothing selected</b>
+    <p>Click an element on the canvas to edit it — or add one from the rail. Background &amp; theme live in the <b>Background</b> panel.</p>
   </div>
 }
 
+<!-- reusable color studio -->
+<ng-template #colorRow let-label="label" let-prop="prop">
+  <div class="cstudio">
+    <div class="cs-row">
+      <label class="cs-chip" [style.background]="val(prop) || '#000000'" [title]="val(prop)">
+        <input type="color" [value]="val(prop) || '#000000'" (input)="set(prop, $any($event.target).value)" (change)="commit()" />
+      </label>
+      <span class="cs-name">{{ label }}</span>
+      <input class="cs-hex" [value]="val(prop) || '#000000'" (change)="applyColor(prop, $any($event.target).value)" spellcheck="false" />
+    </div>
+    <div class="cs-sw-grid">
+      @for (c of swatches; track c) {
+        <button class="cs-sw" [style.background]="c" [class.on]="eqColor(val(prop), c)" (click)="applyColor(prop, c)" [title]="c"></button>
+      }
+    </div>
+    @if (recent().length) {
+      <div class="cs-recent">
+        <span class="cs-recent-l">Recent</span>
+        @for (c of recent(); track c) { <button class="cs-sw sm" [style.background]="c" (click)="applyColor(prop, c)" [title]="c"></button> }
+      </div>
+    }
+  </div>
+</ng-template>
 
-<!-- preset value lists for the ribbon's number boxes (type or pick, like Word) -->
 <datalist id="op_opacity"><option value="0"></option><option value="0.25"></option><option value="0.5"></option><option value="0.75"></option><option value="1"></option></datalist>
 <datalist id="op_rot"><option value="0"></option><option value="45"></option><option value="90"></option><option value="135"></option><option value="180"></option><option value="270"></option><option value="360"></option></datalist>
-<datalist id="op_spacing"><option value="-50"></option><option value="0"></option><option value="50"></option><option value="100"></option><option value="200"></option><option value="400"></option></datalist>
-<datalist id="op_signed"><option value="-0.5"></option><option value="-0.25"></option><option value="0"></option><option value="0.25"></option><option value="0.5"></option></datalist>
-<datalist id="op_blur"><option value="0"></option><option value="0.1"></option><option value="0.25"></option><option value="0.5"></option><option value="1"></option></datalist>
-<datalist id="op_pix"><option value="0"></option><option value="4"></option><option value="8"></option><option value="12"></option><option value="20"></option></datalist>
