@@ -79,11 +79,13 @@ interface NotifItem { id: number; icon: string; tone: 'brand' | 'success' | 'war
   </ng-template>
 
   <ng-template #navTpl>
-    <a *ngFor="let item of nav" class="navitem" [routerLink]="item.link" routerLinkActive="active" [title]="item.label | transloco"
+    <a *ngFor="let item of nav" class="navitem" [routerLink]="item.link" routerLinkActive="active"
+       [attr.title]="navTop() ? null : (item.label | transloco)" [attr.data-tip]="item.label | transloco" [attr.aria-label]="item.label | transloco"
        [appHasAction]="item.action" [tooltipMessage]="'🔒 ' + (item.label | transloco) + ' ' + ('shell.locked' | transloco)">
       <span class="material-icons">{{ item.icon }}</span><span class="lbl">{{ item.label | transloco }}</span>
     </a>
-    <a class="navitem" routerLink="/app/support" routerLinkActive="active" title="Support">
+    <a class="navitem" routerLink="/app/support" routerLinkActive="active"
+       [attr.title]="navTop() ? null : 'Support'" data-tip="Support" aria-label="Support">
       <span class="material-icons">support_agent</span><span class="lbl">Support</span>
     </a>
   </ng-template>
@@ -259,9 +261,11 @@ interface NotifItem { id: number; icon: string; tone: 'brand' | 'success' | 'war
     .shell.postop .content{height:100%;overflow:auto;padding-top:82px}
     .topbar .brand{padding:0;margin-inline-end:10px;flex:0 0 auto}
     .topbar .brand .mark{box-shadow:0 5px 14px -5px color-mix(in srgb, var(--cf-brand-600) 80%, transparent)}
-    .nav-h{display:flex;flex-direction:row;gap:4px;flex:1 1 auto;min-width:0;overflow-x:auto;overflow-y:hidden;scrollbar-width:none;padding:0 2px;-webkit-mask:linear-gradient(90deg,transparent,#000 14px,#000 calc(100% - 14px),transparent);mask:linear-gradient(90deg,transparent,#000 14px,#000 calc(100% - 14px),transparent)}
+    .nav-h{display:flex;flex-direction:row;flex-wrap:nowrap;gap:4px;flex:1 1 auto;min-width:0;padding:0 2px;overflow:visible}
     .nav-h::-webkit-scrollbar{height:0}
-    .topbar .navitem{padding:8px 13px;white-space:nowrap;flex:0 0 auto;border-radius:999px;color:var(--cf-ink-600);transition:background .16s,color .16s,box-shadow .16s}
+    .topbar .navitem{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:4px 9px;flex:0 0 auto;border-radius:11px;color:var(--cf-ink-600);transition:background .16s,color .16s,box-shadow .16s}
+    .topbar .navitem .material-icons{font-size:20px}
+    .topbar .navitem .lbl{display:block;font-size:9.5px;font-weight:600;line-height:1;letter-spacing:.01em;white-space:nowrap}  /* small name under the icon */
     .topbar .navitem:hover{background:color-mix(in srgb, var(--cf-surface) 80%, transparent);color:var(--cf-ink-900)}
     .topbar .navitem.active{background:color-mix(in srgb, var(--cf-brand-500) 18%, transparent);color:var(--cf-brand-700);box-shadow:inset 0 0 0 1px color-mix(in srgb, var(--cf-brand-500) 32%, transparent)}
     .topbar .navitem.active .material-icons{color:var(--cf-brand-600)}
@@ -269,23 +273,22 @@ interface NotifItem { id: number; icon: string; tone: 'brand' | 'success' | 'war
     .topbar .ico{background:transparent}
     .topbar .ico:hover{background:color-mix(in srgb, var(--cf-surface) 74%, transparent)}
     .topbar .lang{background:color-mix(in srgb, var(--cf-surface-2) 55%, transparent)}
-    /* --- top bar responsive: on laptops & down, compact to an icon-only nav so nothing is cut off --- */
-    @media(max-width:1366px){
-      .shell.postop .topbar{gap:8px;padding:0 14px}
+    /* --- top bar responsive: small label under each icon; drop extras as width tightens --- */
+    @media(max-width:1080px){
+      .shell.postop .topbar{gap:8px;padding:0 12px}
       .shell.postop .topbar .co-name{display:none}
-      .shell.postop .topbar .cobrand{padding:5px;margin-inline-end:2px}
+      .shell.postop .topbar .brand .name{display:none}
+    }
+    @media(max-width:880px){
+      .shell.postop .topbar{gap:6px;padding:0 8px}
       .shell.postop .topbar .new .lbl{display:none}
       .shell.postop .topbar .new{padding:0 12px}
-      .shell.postop .topbar .navitem .lbl{display:none}
-      .shell.postop .topbar .navitem{padding:8px 10px}
-      .shell.postop .topbar .navitem .material-icons{font-size:21px}
-    }
-    @media(max-width:1080px){
-      .shell.postop .topbar{gap:6px;padding:0 10px}
-      .shell.postop .topbar .brand .name{display:none}
       .shell.postop .topbar .lang{padding:0 9px}
+      /* too tight for labels — go icon-only and surface the name as a tooltip instead */
+      .shell.postop .topbar .navitem .lbl{display:none}
+      .shell.postop .topbar .navitem::after{content:attr(data-tip);position:absolute;top:calc(100% + 7px);left:50%;transform:translate(-50%,-4px);background:var(--cf-ink-900);color:#fff;font-size:11px;font-weight:600;white-space:nowrap;padding:5px 8px;border-radius:7px;box-shadow:0 10px 24px -8px rgba(2,6,23,.55);opacity:0;pointer-events:none;transition:opacity .14s,transform .14s;z-index:90}
+      .shell.postop .topbar .navitem:hover::after{opacity:1;transform:translate(-50%,0)}
     }
-    @media(max-width:880px){.topbar .brand .name{display:none}}
 
     @media(max-width:880px){.shell:not(.postop){grid-template-columns:1fr}.shell:not(.postop) .side{display:none}.hello .sub{display:none}}
   `],

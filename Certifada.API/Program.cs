@@ -66,14 +66,26 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("DevPolicy", policy =>
     {
-        policy.WithOrigins(
-            "http://localhost:4800",
-            "https://localhost:4800",
-            "http://192.168.100.192:4200"
-        )
-        .AllowAnyHeader()
-        .AllowAnyMethod()
-        .AllowCredentials();
+        policy
+            .SetIsOriginAllowed(origin =>
+            {
+                if (string.IsNullOrEmpty(origin))
+                    return false;
+
+                var uri = new Uri(origin);
+
+                // Explicitly allow your Angular dev server
+                if (origin.Equals("http://192.168.100.192:4200", StringComparison.OrdinalIgnoreCase))
+                    return true;
+
+                // Allow localhost and any subdomain of localhost on port 4800
+                return uri.Port == 4800 &&
+                       (uri.Host.Equals("localhost", StringComparison.OrdinalIgnoreCase) ||
+                        uri.Host.EndsWith(".localhost", StringComparison.OrdinalIgnoreCase));
+            })
+            .AllowAnyHeader()
+            .AllowAnyMethod()
+            .AllowCredentials();
     });
 
     options.AddPolicy("ProdPolicy", policy =>
