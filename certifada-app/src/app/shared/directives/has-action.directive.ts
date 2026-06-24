@@ -38,6 +38,7 @@ export class HasActionDirective implements OnInit {
   private perm = inject(PermissionService);
 
   ngOnInit(): void {
+    return;
     if (this.perm.has(this.requiredAction)) {
       this.tooltip.disabled = true;
       return;

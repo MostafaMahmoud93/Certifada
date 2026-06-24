@@ -58,7 +58,7 @@ import { AlertService, AlertType } from '../../../core/services/alert.service';
   styles: [`
     :host{position:fixed;inset:0;z-index:95;pointer-events:none}
     .stack{position:absolute;top:16px;inset-inline-end:16px;display:flex;flex-direction:column;gap:10px;width:350px;max-width:calc(100vw - 32px)}
-    .toast{--ac:var(--cf-brand-600);position:relative;display:flex;align-items:flex-start;gap:11px;padding:13px 13px 13px 14px;background:var(--cf-surface);border:1px solid var(--cf-line);border-inline-start:3px solid var(--ac);border-radius:var(--cf-radius-md);box-shadow:var(--cf-shadow-lg);overflow:hidden;pointer-events:auto}
+    .toast{--ac:var(--cf-brand-600);position:relative;display:flex;align-items:flex-start;gap:11px;padding:13px 13px 13px 14px;background:var(--cf-surface);border:1px solid var(--cf-line);border-inline-start:3px solid var(--ac);border-radius:13px;box-shadow:0 16px 40px -18px rgba(2,6,23,.4);overflow:hidden;pointer-events:auto}
     .toast.success{--ac:#16a34a}
     .toast.error{--ac:var(--cf-danger)}
     .toast.info{--ac:var(--cf-brand-600)}
@@ -75,15 +75,15 @@ import { AlertService, AlertType } from '../../../core/services/alert.service';
     .toast:hover .bar{animation-play-state:paused}
     @keyframes cf-shrink{from{transform:scaleX(1)}to{transform:scaleX(0)}}
 
-    .ov{position:absolute;inset:0;background:rgba(2,6,23,.5);display:grid;place-items:center;padding:20px;pointer-events:auto}
-    .dlg{width:100%;max-width:400px;background:var(--cf-surface);border:1px solid var(--cf-line);border-radius:var(--cf-radius-lg);box-shadow:var(--cf-shadow-lg);padding:24px;text-align:center}
-    .dic{width:52px;height:52px;border-radius:50%;margin:0 auto 14px;display:grid;place-items:center;background:var(--cf-brand-50);color:var(--cf-brand-600)}
-    .dic.danger{background:var(--cf-danger-soft);color:var(--cf-danger)}
+    .ov{position:absolute;inset:0;background:rgba(2,6,23,.45);-webkit-backdrop-filter:blur(6px) saturate(1.1);backdrop-filter:blur(6px) saturate(1.1);display:grid;place-items:center;padding:20px;pointer-events:auto}
+    .dlg{width:100%;max-width:420px;background:var(--cf-surface);border:1px solid var(--cf-line);border-radius:18px;box-shadow:0 30px 70px -25px rgba(2,6,23,.6),0 10px 24px -12px rgba(2,6,23,.3);padding:28px 26px;text-align:center}
+    .dic{width:58px;height:58px;border-radius:16px;margin:0 auto 16px;display:grid;place-items:center;background:color-mix(in srgb,var(--cf-brand-500) 14%,transparent);color:var(--cf-brand-600);box-shadow:0 8px 20px -10px color-mix(in srgb,var(--cf-brand-600) 70%,transparent)}
+    .dic.danger{background:var(--cf-danger-soft);color:var(--cf-danger);box-shadow:0 8px 20px -10px color-mix(in srgb,var(--cf-danger) 60%,transparent)}
     .dic .material-icons{font-size:28px}
-    .dlg h3{font-size:17px;color:var(--cf-ink-900);margin-bottom:6px}
-    .dlg p{font-size:13.5px;color:var(--cf-ink-600);line-height:1.5}
-    .acts{display:flex;gap:10px;margin-top:20px}
-    .b{flex:1;height:40px;border-radius:var(--cf-radius-sm);font:inherit;font-size:13.5px;font-weight:500;cursor:pointer;border:1px solid var(--cf-line);background:var(--cf-surface);color:var(--cf-ink-700)}
+    .dlg h3{font-size:18px;font-weight:800;letter-spacing:-.01em;color:var(--cf-ink-900);margin-bottom:7px}
+    .dlg p{font-size:13.5px;color:var(--cf-ink-500);line-height:1.55;max-width:340px;margin:0 auto}
+    .acts{display:flex;gap:10px;margin-top:22px}
+    .b{flex:1;height:43px;border-radius:11px;font:inherit;font-size:13.5px;font-weight:600;cursor:pointer;border:1px solid var(--cf-line);background:var(--cf-surface);color:var(--cf-ink-700);transition:background .14s,border-color .14s,filter .14s}
     .b.sec:hover{background:var(--cf-surface-2)}
     .b.prim{background:var(--cf-brand-600);border-color:var(--cf-brand-600);color:#fff}
     .b.prim:hover{background:var(--cf-brand-700)}

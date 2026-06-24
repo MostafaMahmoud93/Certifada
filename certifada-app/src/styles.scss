@@ -88,3 +88,17 @@ a:hover{color:var(--cf-brand-700)}
 .cf-stub .ic .material-icons{font-size:28px}
 .cf-stub h1{font-size:22px;color:var(--cf-ink-900)}
 .cf-stub p{margin-top:6px}
+
+/* ---- creative theme & language transitions (View Transitions API) ---- */
+/* Theme & language: JS-driven circular reveal (clip-path) — disable the default crossfade. */
+:root.vt-reveal::view-transition-old(root),
+:root.vt-reveal::view-transition-new(root) { animation: none; mix-blend-mode: normal; }
+:root.vt-reveal::view-transition-new(root) { z-index: 2147483646; }
+:root.vt-reveal::view-transition-old(root) { z-index: 1; }
+
+
+/* Fallback (no View Transitions support): tween colours during a theme switch. */
+.theme-anim, .theme-anim *, .theme-anim *::before, .theme-anim *::after {
+  transition: background-color .45s ease, color .45s ease, border-color .45s ease,
+              fill .45s ease, stroke .45s ease, box-shadow .45s ease !important;
+}

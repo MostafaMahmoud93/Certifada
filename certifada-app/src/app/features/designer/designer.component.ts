@@ -24,6 +24,7 @@ import { AiService, DesignSpec } from './ai.service';
 import { TemplateService } from '../../core/services/template.service';
 import { CertificateService } from '../../core/services/certificate.service';
 import { AssetService, UserAsset, AssetEntry } from '../../core/services/asset.service';
+import { BrandService } from '../../core/services/brand.service';
 import { SaveTemplateRequest } from '../../core/models/models';
 import { exportPdf, exportPng, exportSvg, renderJsonToPng, mergeDataIntoJson, applySignature } from '../../core/utils/render.util';
 
@@ -71,6 +72,7 @@ export class DesignerComponent implements AfterViewInit, OnDestroy {
 
   svc = inject(FabricCanvasService);
   assets = inject(AssetService);
+  brand = inject(BrandService);
   private i18n = inject(TranslocoService);
   private ai = inject(AiService);
   private templates = inject(TemplateService);
@@ -78,6 +80,8 @@ export class DesignerComponent implements AfterViewInit, OnDestroy {
   private route = inject(ActivatedRoute);
   private router = inject(Router);
   private host = inject(ElementRef) as ElementRef<HTMLElement>;
+
+  constructor() { this.brand.reload(); }
 
   templateId = signal<string | null>(null);
   name = 'Untitled Certificate';
@@ -581,7 +585,12 @@ export class DesignerComponent implements AfterViewInit, OnDestroy {
   applyTemplate(t: DesignTemplate): void {
     this.width = t.w; this.height = t.h; this.customW = t.w; this.customH = t.h;
     this.svc.applyTemplate(t.w, t.h, t.items, t.bg ?? '#ffffff');
-    setTimeout(() => { this.drawRulers(); this.zoomToFit(1); }, 0);
+    setTimeout(() => {
+      this.drawRulers();
+      this.zoomToFit(1);
+      // Smart: a ready-made layout instantly adopts the user's brand (logo, colors, fonts).
+      if (this.brand.kit().has) this.applyBrandKit(true);
+    }, 0);
   }
 
   // Elements
@@ -2062,6 +2071,71 @@ export class DesignerComponent implements AfterViewInit, OnDestroy {
     const id = this.templateId();
     if (!id) { this.flash('Save the template first to enable bulk generation.', false); return; }
     this.router.navigate(['/bulk', id]);
+  }
+
+  // -------------------- brand kit (smart apply across templates) --------------------
+  /** Refreshed when the editor opens so the toolbar reflects the latest brand. */
+  brandInit(): void { this.brand.reload(); }
+
+  /**
+   * Smartly apply the saved brand kit to the current design:
+   * headings → brand heading font (+ brand colour), body → brand body font,
+   * accent shapes recoloured to the brand colour (full-page backgrounds left alone),
+   * and the logo dropped in if the design doesn't already have one.
+   */
+  applyBrandKit(silent = false): void {
+    this.brand.reload();
+    const k = this.brand.kit();
+    if (!k.has) { if (!silent) this.flash('Claim your domain and brand kit in Settings first.', false); return; }
+    const c = this.svc.getCanvas();
+    const W = c.getWidth(), H = c.getHeight();
+    const objs = c.getObjects() as any[];
+    const texts = objs.filter((o) => ['textbox', 'i-text', 'text'].includes(o.type) && o.objType !== 'cell');
+    const maxFs = texts.reduce((m, o) => Math.max(m, (o.fontSize ?? 0) as number), 0);
+    let n = 0;
+    for (const o of objs) {
+      if (o.objType === 'grid' || o.excludeFromExport) continue;
+      const t = o.type;
+      if (t === 'textbox' || t === 'i-text' || t === 'text') {
+        const role = this.brandTextRole(o, maxFs, H);
+        if (role === 'title') o.set({ fontFamily: k.fontHeading, fill: k.primary });
+        else if (role === 'name') o.set('fontFamily', k.fontHeading);
+        else o.set('fontFamily', k.fontBody);
+        n++;
+      } else if (t === 'rect' || t === 'circle' || t === 'triangle' || t === 'line') {
+        const ow = (o.getScaledWidth?.() ?? o.width ?? 0) as number;
+        const oh = (o.getScaledHeight?.() ?? o.height ?? 0) as number;
+        const isFilledBackground = ow >= W * 0.92 && oh >= H * 0.92 && !!o.fill && (!o.stroke || !o.strokeWidth);
+        if (isFilledBackground) continue;                          // leave full-page background fills
+        if (o.stroke && o.stroke !== 'transparent') o.set('stroke', k.primary);  // borders / frames / lines
+        else o.set('fill', k.primary);                              // accent shapes
+        n++;
+      }
+    }
+    if (k.logo && !objs.some((o) => o.objType === 'logo')) {
+      this.svc.addImageFromUrl(k.logo, 'logo').catch(() => { /* ignore */ });
+    }
+    c.requestRenderAll();
+    const fonts: any = (document as any).fonts;
+    if (fonts?.load) {
+      [k.fontHeading, k.fontBody].forEach((f) => fonts.load(`24px "${f}"`).then(() => this.svc.touch()).catch(() => { /* ignore */ }));
+    }
+    this.svc.commit();
+    if (!silent) this.flash(`Applied your brand kit to ${n} element${n === 1 ? '' : 's'}.`, true);
+  }
+
+  /** Infer an element's role in the certificate layout, so brand styling lands sensibly. */
+  private brandTextRole(o: any, maxFs: number, H: number): 'title' | 'name' | 'footer' | 'body' {
+    const txt = `${o.text ?? ''}`.toLowerCase();
+    const key = `${o.fieldKey ?? ''}`.toLowerCase();
+    const fs = (o.fontSize ?? 0) as number;
+    const top = (o.top ?? 0) as number;
+    if (/certificate|diploma|award|completion|achievement|recognition/.test(txt) && fs >= 22) return 'title';
+    if (maxFs && fs >= maxFs * 0.92 && fs >= 22) return 'title';
+    if (/name|recipient|fullname|holder/.test(key)) return 'name';
+    if (top > H * 0.82) return 'footer';
+    if (fs >= 20) return 'name';
+    return 'body';
   }
 
   // -------------------- export --------------------
