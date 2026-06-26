@@ -1,4 +1,5 @@
-import { Routes } from '@angular/router';
+import { Routes, Router } from '@angular/router';
+import { inject } from '@angular/core';
 import { PublicLayout } from './layout/public-layout/public-layout';
 import { AppLayout } from './layout/app-layout/app-layout';
 import { CanvasLayout } from './layout/canvas-layout/canvas-layout';
@@ -34,6 +35,8 @@ export const routes: Routes = [
     children: [
       { path: 'dashboard', loadComponent: () => import('./features/dashboard/dashboard').then((m) => m.DashboardPage) },
       { path: 'templates', loadComponent: () => import('./features/templates/templates').then((m) => m.TemplatesPage), canActivate: [permissionGuard], data: { action: Actions.Template_View } },
+      { path: 'templates/:id/issue', loadComponent: () => import('./features/issue/issue.component').then((m) => m.IssueComponent), canActivate: [permissionGuard], data: { action: Actions.Credential_Generate } },
+      { path: 'templates/:id/issued', loadComponent: () => import('./features/issued/issued.component').then((m) => m.IssuedComponent), canActivate: [permissionGuard], data: { action: Actions.Credential_View } },
       { path: 'credentials', loadComponent: () => import('./features/credentials/credentials').then((m) => m.CredentialsPage), canActivate: [permissionGuard], data: { action: Actions.Credential_View } },
       { path: 'approvals', loadComponent: () => import('./features/approvals/approvals').then((m) => m.ApprovalsPage), canActivate: [permissionGuard], data: { action: Actions.Credential_Approve } },
       { path: 'branding', loadComponent: () => import('./features/branding/branding').then((m) => m.BrandingPage), canActivate: [permissionGuard], data: { action: Actions.Branding_Manage } },
@@ -57,15 +60,20 @@ export const routes: Routes = [
     ],
   },
 
-  // ---- bulk certificate generation ----
+  // ---- bulk is folded into the per-template Issue page (legacy /bulk/:id redirects there) ----
   {
     path: 'bulk',
-    component: CanvasLayout,
-    // canActivate: [authGuard],
     children: [
-      { path: ':id', loadComponent: () => import('./features/bulk/bulk.component').then((m) => m.BulkComponent), canActivate: [permissionGuard], data: { action: Actions.Credential_Bulk } },
+      {
+        path: ':id',
+        canActivate: [(route: any) => inject(Router).createUrlTree(['/app/templates', route.paramMap.get('id'), 'issue'])],
+        loadComponent: () => import('./features/bulk/bulk.component').then((m) => m.BulkComponent),
+      },
     ],
   },
+
+  // ---- public credential verification ----
+  { path: 'verify/:id', loadComponent: () => import('./features/verify/verify.component').then((m) => m.VerifyComponent) },
 
   { path: '**', redirectTo: '' },
 ];

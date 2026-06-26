@@ -184,7 +184,7 @@ interface CertRow { recipient: string; template: string; status: 'Active' | 'Pen
   <h3 class="qa-title">{{ 'dash.quickActions' | transloco }}</h3>
   <div class="qa">
     <a class="cf-card qa-card" routerLink="/canvas" [appHasAction]="A.Template_Edit" [tooltipMessage]="'🔒 Not in your plan.'"><span class="material-icons">add_circle</span><span>{{ 'nav.newTemplate' | transloco }}</span></a>
-    <a class="cf-card qa-card" routerLink="/app/credentials" [appHasAction]="A.Credential_Generate" [tooltipMessage]="'🔒 Not in your plan.'"><span class="material-icons">workspace_premium</span><span>{{ 'dash.generate' | transloco }}</span></a>
+    <a class="cf-card qa-card" routerLink="/app/templates" [appHasAction]="A.Credential_Generate" [tooltipMessage]="'🔒 Not in your plan.'"><span class="material-icons">send</span><span>{{ 'dash.generate' | transloco }}</span></a>
     <a class="cf-card qa-card" routerLink="/app/branding" [appHasAction]="A.Branding_Manage" [tooltipMessage]="'🔒 Not in your plan.'"><span class="material-icons">palette</span><span>{{ 'nav.branding' | transloco }}</span></a>
     <a class="cf-card qa-card" routerLink="/app/approvals" [appHasAction]="A.Credential_Approve" [tooltipMessage]="'🔒 Not in your plan.'"><span class="material-icons">fact_check</span><span>{{ 'nav.approvals' | transloco }}</span></a>
   </div>

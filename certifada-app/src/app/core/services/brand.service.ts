@@ -49,7 +49,14 @@ export class BrandService {
     const vars = ['--cf-brand-50', '--cf-brand-100', '--cf-brand-200', '--cf-brand-500', '--cf-brand-600', '--cf-brand-700', '--cf-ring'];
     const k = this.kit();
     if (!k.has || !this.isHex(k.primary)) { vars.forEach((v) => root.style.removeProperty(v)); return; }
-    const p = k.primary;
+    this.setRamp(k.primary);
+  }
+
+  /** Apply a specific brand colour ramp to the document (used by the public verify portal,
+   *  which is always branded to the issuer regardless of host gating). */
+  themeFrom(primary: string): void { if (this.isHex(primary)) this.setRamp(primary); }
+  private setRamp(p: string): void {
+    const root = document.documentElement;
     root.style.setProperty('--cf-brand-700', this.shade(p, -0.16));
     root.style.setProperty('--cf-brand-600', p);
     root.style.setProperty('--cf-brand-500', this.shade(p, 0.10));
