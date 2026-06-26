@@ -62,15 +62,38 @@ const DEFAULT: Brand = {
       </div>
 
       <div class="card sect">
-        <h3>Colors</h3>
-        <span class="fld lbl">Primary color</span>
-        <span class="color-pick"><input type="color" [(ngModel)]="b.primary" /><input class="hex" [(ngModel)]="b.primary" /></span>
-        <span class="fld lbl" style="margin-top:14px">Palette</span>
-        <div class="swatches">
+        <h3>Brand colors</h3>
+        <p class="hint">The <b>first</b> color leads your whole theme. The <b>2nd</b> &amp; <b>3rd</b> become accents used in charts, traffic-origin bars and gradients across the app.</p>
+        <div class="roles">
           @for (c of b.colors; track $index) {
-            <span class="sw" [style.background]="c" [title]="c"><button (click)="removeColor($index)"><span class="material-icons">close</span></button></span>
+            <div class="role" [class.lead]="$index === 0">
+              <label class="rsw" [style.background]="c">
+                @if ($index === 0) { <span class="material-icons crown">star</span> }
+                <input type="color" [value]="c" (input)="setColor($index, $any($event.target).value)" />
+              </label>
+              <div class="rmeta">
+                <span class="rname">{{ roleName($index) }}</span>
+                <input class="rhex" [ngModel]="c" (ngModelChange)="setColor($index, $event)" maxlength="7" />
+              </div>
+              <div class="racts">
+                @if ($index !== 0) { <button class="ra" (click)="makePrimary($index)" title="Make primary"><span class="material-icons">star_border</span></button> }
+                <button class="ra del" (click)="removeColor($index)" title="Remove" [disabled]="b.colors.length <= 1"><span class="material-icons">close</span></button>
+              </div>
+            </div>
           }
-          <span class="sw add"><input type="color" [(ngModel)]="newColor" /><button class="addbtn" (click)="addColor()" title="Add color"><span class="material-icons">add</span></button></span>
+          <label class="role add">
+            <span class="rsw addsw"><span class="material-icons">add</span><input type="color" [(ngModel)]="newColor" (change)="addColor()" /></span>
+            <span class="addtx">Add another color</span>
+          </label>
+        </div>
+
+        <div class="bsys" [style.--p]="b.colors[0]" [style.--s]="sec()" [style.--t]="ter()">
+          <div class="bsys-grad"><span class="bsys-tag">your brand gradient</span></div>
+          <div class="bsys-row">
+            <button type="button" class="bsys-btn">Primary action</button>
+            <span class="bsys-chip">Accent</span>
+            <span class="bsys-bars" title="how analytics bars will look"><i class="b1"></i><i class="b2"></i><i class="b3"></i></span>
+          </div>
         </div>
       </div>
 
@@ -156,6 +179,38 @@ const DEFAULT: Brand = {
     .cert-pal i{width:26px;height:8px;border-radius:999px}
     .cert-foot{font-size:11px;margin-top:6px}
     .toast{position:fixed;bottom:22px;inset-inline-end:22px;background:var(--cf-ink-900);color:#fff;padding:11px 16px;border-radius:var(--cf-radius-md);box-shadow:var(--cf-shadow-lg);font-size:13.5px;z-index:80}
+    .hint{font-size:12px;color:var(--cf-ink-500);margin:-6px 0 13px;line-height:1.55}
+    .roles{display:flex;flex-direction:column;gap:8px}
+    .role{display:flex;align-items:center;gap:11px;padding:7px;border:1px solid var(--cf-line);border-radius:11px;background:var(--cf-surface);transition:border-color .14s,box-shadow .14s}
+    .role.lead{border-color:color-mix(in srgb,var(--cf-brand-500) 42%,var(--cf-line));box-shadow:0 6px 16px -12px color-mix(in srgb,var(--cf-brand-600) 55%,transparent)}
+    .role:hover{border-color:color-mix(in srgb,var(--cf-brand-500) 30%,var(--cf-line))}
+    .rsw{position:relative;width:42px;height:42px;border-radius:10px;flex:none;border:1px solid rgba(0,0,0,.1);display:grid;place-items:center;cursor:pointer;overflow:hidden;box-shadow:inset 0 0 0 1px rgba(255,255,255,.15)}
+    .rsw .crown{font-size:17px;color:#fff;filter:drop-shadow(0 1px 2px rgba(0,0,0,.45))}
+    .rsw input[type=color]{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;border:0;padding:0}
+    .rmeta{display:flex;flex-direction:column;gap:3px;min-width:0;flex:1}
+    .rname{font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:var(--cf-ink-500)}
+    .rhex{height:28px!important;border:1px solid var(--cf-line);border-radius:7px;padding:0 8px!important;font-size:12.5px;text-transform:uppercase;width:108px;max-width:120px}
+    .racts{display:flex;gap:2px;margin-inline-start:auto}
+    .ra{width:28px;height:28px;display:grid;place-items:center;border:0;background:none;border-radius:7px;color:var(--cf-ink-400);cursor:pointer;transition:background .14s,color .14s}
+    .ra:hover{background:var(--cf-surface-2);color:var(--cf-brand-600)}
+    .ra.del:hover{color:var(--cf-danger)}
+    .ra:disabled{opacity:.3;cursor:not-allowed}
+    .ra .material-icons{font-size:16px}
+    .role.add{cursor:pointer;border-style:dashed}
+    .rsw.addsw{position:relative;background:var(--cf-surface-2);color:var(--cf-ink-500);border-style:dashed}
+    .rsw.addsw .material-icons{font-size:19px}
+    .rsw.addsw input[type=color]{position:absolute;inset:0;opacity:0;cursor:pointer}
+    .role.add .addtx{font-size:13px;font-weight:600;color:var(--cf-ink-600)}
+    .bsys{margin-top:15px;border:1px solid var(--cf-line);border-radius:13px;overflow:hidden;background:var(--cf-surface)}
+    .bsys-grad{position:relative;height:52px;background:linear-gradient(135deg,var(--p),var(--s) 64%,var(--t))}
+    .bsys-grad::after{content:'';position:absolute;inset:0;background:radial-gradient(420px 120px at 100% -20%,rgba(255,255,255,.35),transparent 70%)}
+    .bsys-tag{position:absolute;bottom:7px;inset-inline-start:12px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:rgba(255,255,255,.92);text-shadow:0 1px 4px rgba(0,0,0,.35);z-index:1}
+    .bsys-row{display:flex;align-items:center;gap:10px;padding:13px 13px;flex-wrap:wrap}
+    .bsys-btn{border:0;border-radius:9px;padding:9px 15px;font:inherit;font-size:12.5px;font-weight:700;color:#fff;background:linear-gradient(135deg,var(--p),var(--s));cursor:default;box-shadow:0 8px 18px -10px var(--p)}
+    .bsys-chip{font-size:12px;font-weight:700;padding:6px 12px;border-radius:999px;color:var(--s);background:color-mix(in srgb,var(--s) 15%,transparent);border:1px solid color-mix(in srgb,var(--s) 32%,transparent)}
+    .bsys-bars{display:inline-flex;align-items:flex-end;gap:5px;height:28px;margin-inline-start:auto}
+    .bsys-bars i{width:10px;border-radius:3px 3px 0 0;display:block}
+    .bsys-bars .b1{height:100%;background:var(--p)}.bsys-bars .b2{height:68%;background:var(--s)}.bsys-bars .b3{height:44%;background:var(--t)}
     @media(max-width:880px){.cols{grid-template-columns:1fr}}
   `],
 })
@@ -184,9 +239,14 @@ export class BrandingPage {
   }
 
   addColor(): void {
-    if (this.newColor && !this.b.colors.includes(this.newColor)) this.b.colors = [...this.b.colors, this.newColor];
+    if (this.newColor && !this.b.colors.includes(this.newColor)) { this.b.colors = [...this.b.colors, this.newColor]; if (!this.b.primary) this.b.primary = this.b.colors[0]; }
   }
-  removeColor(i: number): void { this.b.colors = this.b.colors.filter((_, k) => k !== i); }
+  removeColor(i: number): void { this.b.colors = this.b.colors.filter((_, k) => k !== i); this.b.primary = this.b.colors[0] || '#4f46e5'; }
+  setColor(i: number, val: string): void { const c = [...this.b.colors]; c[i] = val; this.b.colors = c; if (i === 0) this.b.primary = val; }
+  makePrimary(i: number): void { const c = [...this.b.colors]; const [m] = c.splice(i, 1); c.unshift(m); this.b.colors = c; this.b.primary = m; }
+  roleName(i: number): string { return i === 0 ? 'Primary' : i === 1 ? 'Secondary' : i === 2 ? 'Accent' : 'Extra ' + (i - 2); }
+  sec(): string { return this.b.colors[1] || this.b.colors[0] || '#4f46e5'; }
+  ter(): string { return this.b.colors[2] || this.sec(); }
 
   save(): void {
     localStorage.setItem(KEY, JSON.stringify(this.b));

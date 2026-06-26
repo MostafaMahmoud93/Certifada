@@ -204,10 +204,10 @@ type Origin = 'Email' | 'Direct' | 'QR' | '—';
 
     .origin{display:flex;flex-direction:column;gap:5px;min-width:118px}
     .obar{display:flex;height:7px;border-radius:999px;overflow:hidden;background:var(--cf-surface-2);border:1px solid var(--cf-line)}
-    .obar span{display:block}.obar .oe{background:var(--cf-brand-500)}.obar .od{background:#0ea5e9}.obar .oq{background:#8b5cf6}
+    .obar span{display:block}.obar .oe{background:var(--cf-brand-500)}.obar .od{background:var(--cf-accent-500)}.obar .oq{background:var(--cf-accent2-500)}
     .o-lbl{display:inline-flex;align-items:center;gap:4px;font-size:11.5px;font-weight:600;color:var(--cf-ink-600)}
     .o-lbl .material-icons{font-size:14px}
-    .o-lbl .material-icons[data-o="Email"]{color:var(--cf-brand-600)}.o-lbl .material-icons[data-o="Direct"]{color:#0284c7}.o-lbl .material-icons[data-o="QR"]{color:#7c3aed}
+    .o-lbl .material-icons[data-o="Email"]{color:var(--cf-brand-600)}.o-lbl .material-icons[data-o="Direct"]{color:var(--cf-accent-600)}.o-lbl .material-icons[data-o="QR"]{color:var(--cf-accent2-600)}
     .views{display:inline-flex;flex-direction:column;align-items:center;gap:4px;min-width:48px}
     .views b{font-size:14px;font-weight:800;color:var(--cf-ink-900)}
     .vbar{width:44px;height:5px;border-radius:999px;background:var(--cf-surface-2);overflow:hidden;border:1px solid var(--cf-line)}
@@ -246,7 +246,7 @@ type Origin = 'Email' | 'Direct' | 'QR' | '—';
     .ol-label{font-weight:700;color:var(--cf-ink-700)}
     .origin-legend .lg{display:inline-flex;align-items:center;gap:5px;font-weight:600;color:var(--cf-ink-600)}
     .origin-legend .lg i{width:9px;height:9px;border-radius:3px;display:inline-block}
-    .origin-legend .lg i.oe{background:var(--cf-brand-500)}.origin-legend .lg i.od{background:#0ea5e9}.origin-legend .lg i.oq{background:#8b5cf6}
+    .origin-legend .lg i.oe{background:var(--cf-brand-500)}.origin-legend .lg i.od{background:var(--cf-accent-500)}.origin-legend .lg i.oq{background:var(--cf-accent2-500)}
     .ol-hint{margin-inline-start:auto;color:var(--cf-ink-400);font-style:italic}
     .otip{position:fixed;z-index:200;transform:translate(-50%,calc(-100% - 12px));width:252px;background:var(--cf-ink-900);color:#fff;border-radius:13px;padding:13px 14px;box-shadow:0 22px 48px -16px rgba(2,6,23,.62);pointer-events:none;animation:otip-in .14s ease}
     @keyframes otip-in{from{opacity:0;transform:translate(-50%,calc(-100% - 4px))}to{opacity:1;transform:translate(-50%,calc(-100% - 12px))}}
@@ -259,7 +259,7 @@ type Origin = 'Email' | 'Direct' | 'QR' | '—';
     .otip-row .otip-name{flex:1;color:rgba(255,255,255,.92)}
     .otip-row b{font-weight:800}
     .otip-row .otip-pct{width:40px;text-align:end;color:rgba(255,255,255,.6);font-variant-numeric:tabular-nums}
-    .oswatch.oe{background:var(--cf-brand-500)}.oswatch.od{background:#0ea5e9}.oswatch.oq{background:#8b5cf6}
+    .oswatch.oe{background:var(--cf-brand-500)}.oswatch.od{background:var(--cf-accent-500)}.oswatch.oq{background:var(--cf-accent2-500)}
     .otip-foot{font-size:10px;line-height:1.55;color:rgba(255,255,255,.55);margin-top:10px;border-top:1px solid rgba(255,255,255,.13);padding-top:8px}
     .otip-arrow{position:absolute;bottom:-6px;left:50%;transform:translateX(-50%) rotate(45deg);width:12px;height:12px;background:var(--cf-ink-900);border-radius:0 0 3px 0}
   `],

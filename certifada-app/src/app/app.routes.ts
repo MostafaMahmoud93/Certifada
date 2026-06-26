@@ -31,7 +31,7 @@ export const routes: Routes = [
   {
     path: 'app',
     component: AppLayout,
-    // canActivate: [authGuard],
+    canActivate: [authGuard],
     children: [
       { path: 'dashboard', loadComponent: () => import('./features/dashboard/dashboard').then((m) => m.DashboardPage) },
       { path: 'templates', loadComponent: () => import('./features/templates/templates').then((m) => m.TemplatesPage), canActivate: [permissionGuard], data: { action: Actions.Template_View } },
@@ -74,6 +74,9 @@ export const routes: Routes = [
 
   // ---- public credential verification ----
   { path: 'verify/:id', loadComponent: () => import('./features/verify/verify.component').then((m) => m.VerifyComponent) },
+
+  // ---- public pricing ----
+  { path: 'pricing', loadComponent: () => import('./features/pricing/pricing').then((m) => m.PricingPage) },
 
   { path: '**', redirectTo: '' },
 ];

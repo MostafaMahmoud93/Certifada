@@ -112,14 +112,21 @@ type StatusFilter = 'all' | 'active' | 'archived';
     <div class="grid">
       @for (t of paged(); track t.id) {
         <div class="card tcard" [class.raised]="menuId() === t.id">
-          <button class="thumb" (click)="edit(t)" title="Open in designer">
+          <div class="thumb" (click)="edit(t)" title="Open in designer">
             @if (t.thumbnailDataUrl) { <img [src]="t.thumbnailDataUrl" [alt]="t.name" /> }
             @else { <div class="thumb-empty"><span class="material-icons">workspace_premium</span></div> }
             <span class="thumb-grad"></span>
             <span class="orient">{{ orientation(t) }}</span>
             @if (issuedCount(t)) { <span class="badge-issued"><span class="material-icons">verified</span> {{ issuedCount(t) }}</span> }
             @if (t.status === 'Archived') { <span class="status arch">Archived</span> }
-          </button>
+            <div class="thumb-actions" (click)="$event.stopPropagation()">
+              <button class="ta-open" (click)="edit(t)" [appHasAction]="A.Template_Edit" [tooltipMessage]="'🔒 Editing is not in your plan.'"><span class="material-icons">edit</span> Open</button>
+              <button class="ta-btn" (click)="issue(t)" title="Issue" [appHasAction]="A.Credential_Bulk" [tooltipMessage]="'🔒 Not in your plan.'"><span class="material-icons">send</span></button>
+              <button class="ta-btn" (click)="insights(t)" title="Issued & insights"><span class="material-icons">insights</span></button>
+              <button class="ta-btn" (click)="info.set(t)" title="Details"><span class="material-icons">info</span></button>
+              <button class="ta-btn danger" (click)="remove(t)" title="Delete" [appHasAction]="A.Template_Delete" [tooltipMessage]="'🔒 Not in your plan.'"><span class="material-icons">delete</span></button>
+            </div>
+          </div>
           <div class="tbody">
             <div class="tname-row">
               <strong class="tname" [title]="t.name">{{ t.name || 'Untitled Certificate' }}</strong>
@@ -310,6 +317,21 @@ type StatusFilter = 'all' | 'active' | 'archived';
     .orient{position:absolute;top:9px;inset-inline-end:9px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:#fff;background:rgba(2,6,23,.42);-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px);padding:3px 7px;border-radius:6px}
     .badge-issued{position:absolute;bottom:9px;inset-inline-start:9px;display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:700;padding:4px 9px;border-radius:999px;background:color-mix(in srgb,#16a34a 92%,transparent);color:#fff;box-shadow:0 3px 10px -3px rgba(0,0,0,.45)}
     .badge-issued .material-icons{font-size:13px}
+    /* creative hover action bar on the card thumbnail */
+    .thumb img{transition:transform .35s cubic-bezier(.2,.8,.3,1)}
+    .tcard:hover{transform:translateY(-3px);box-shadow:0 22px 44px -26px rgba(15,23,42,.5);border-color:color-mix(in srgb,var(--cf-brand-500) 24%,var(--cf-line))}
+    .tcard:hover .thumb img{transform:scale(1.05)}
+    .tcard .actions{display:none}
+    .thumb-actions{position:absolute;left:0;right:0;bottom:0;z-index:3;display:flex;align-items:center;gap:7px;padding:10px;background:linear-gradient(transparent,rgba(2,6,23,.5) 28%,rgba(2,6,23,.86));transform:translateY(100%);opacity:0;transition:transform .3s cubic-bezier(.2,.9,.3,1),opacity .2s}
+    .tcard:hover .thumb-actions,.thumb:focus-within .thumb-actions{transform:translateY(0);opacity:1}
+    .ta-open{flex:1;display:inline-flex;align-items:center;justify-content:center;gap:6px;height:34px;border-radius:9px;border:0;background:#fff;color:var(--cf-brand-700);font:inherit;font-size:12.5px;font-weight:700;cursor:pointer;box-shadow:0 8px 18px -8px rgba(0,0,0,.55);transition:transform .12s,filter .14s}
+    .ta-open .material-icons{font-size:16px}
+    .ta-open:hover{transform:translateY(-1px);filter:brightness(1.03)}
+    .ta-btn{width:34px;height:34px;border-radius:9px;flex:none;display:grid;place-items:center;border:1px solid rgba(255,255,255,.28);background:rgba(255,255,255,.16);color:#fff;cursor:pointer;-webkit-backdrop-filter:blur(5px);backdrop-filter:blur(5px);transition:background .14s,transform .12s,border-color .14s}
+    .ta-btn .material-icons{font-size:17px}
+    .ta-btn:hover{background:rgba(255,255,255,.32);transform:translateY(-1px)}
+    .ta-btn.danger:hover{background:var(--cf-danger);border-color:var(--cf-danger)}
+    @media (hover:none){.thumb-actions{transform:none;opacity:1}}
     .status{position:absolute;top:9px;inset-inline-start:9px;font-size:11px;font-weight:600;padding:3px 8px;border-radius:999px}
     .status.arch{background:var(--cf-ink-700);color:#fff}
     .tbody{padding:14px 15px 15px;display:flex;flex-direction:column;gap:9px}

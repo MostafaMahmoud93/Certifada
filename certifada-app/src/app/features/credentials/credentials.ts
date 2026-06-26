@@ -272,10 +272,10 @@ import { ExcelExportService, ExcelColumn } from '../../core/services/excel-expor
     .ta-c{text-align:center}
     .origin{display:flex;flex-direction:column;gap:5px;min-width:116px;cursor:default}
     .obar{display:flex;height:7px;border-radius:999px;overflow:hidden;background:var(--cf-surface-2);border:1px solid var(--cf-line)}
-    .obar span{display:block}.obar .oe{background:var(--cf-brand-500)}.obar .od{background:#0ea5e9}.obar .oq{background:#8b5cf6}
+    .obar span{display:block}.obar .oe{background:var(--cf-brand-500)}.obar .od{background:var(--cf-accent-500)}.obar .oq{background:var(--cf-accent2-500)}
     .o-lbl{display:inline-flex;align-items:center;gap:4px;font-size:11.5px;font-weight:600;color:var(--cf-ink-600)}
     .o-lbl .material-icons{font-size:14px}
-    .o-lbl .material-icons[data-o="Email"]{color:var(--cf-brand-600)}.o-lbl .material-icons[data-o="Direct"]{color:#0284c7}.o-lbl .material-icons[data-o="QR"]{color:#7c3aed}
+    .o-lbl .material-icons[data-o="Email"]{color:var(--cf-brand-600)}.o-lbl .material-icons[data-o="Direct"]{color:var(--cf-accent-600)}.o-lbl .material-icons[data-o="QR"]{color:var(--cf-accent2-600)}
     .views{display:inline-flex;flex-direction:column;align-items:center;gap:4px;min-width:46px}
     .views b{font-size:14px;font-weight:800;color:var(--cf-ink-900)}
     .vbar{width:44px;height:5px;border-radius:999px;background:var(--cf-surface-2);overflow:hidden;border:1px solid var(--cf-line)}
@@ -287,7 +287,7 @@ import { ExcelExportService, ExcelColumn } from '../../core/services/excel-expor
     .otip-row{display:flex;align-items:center;gap:8px;font-size:12px;padding:3px 0}.otip-row .material-icons{font-size:14px;color:rgba(255,255,255,.7)}
     .otip-row .oswatch{width:9px;height:9px;border-radius:3px;flex:none}.otip-row .otip-name{flex:1;color:rgba(255,255,255,.92)}
     .otip-row b{font-weight:800}.otip-row .otip-pct{width:40px;text-align:end;color:rgba(255,255,255,.6);font-variant-numeric:tabular-nums}
-    .oswatch.oe{background:var(--cf-brand-500)}.oswatch.od{background:#0ea5e9}.oswatch.oq{background:#8b5cf6}
+    .oswatch.oe{background:var(--cf-brand-500)}.oswatch.od{background:var(--cf-accent-500)}.oswatch.oq{background:var(--cf-accent2-500)}
     .otip-foot{font-size:10px;line-height:1.55;color:rgba(255,255,255,.55);margin-top:10px;border-top:1px solid rgba(255,255,255,.13);padding-top:8px}
     .otip-arrow{position:absolute;bottom:-6px;left:50%;transform:translateX(-50%) rotate(45deg);width:12px;height:12px;background:var(--cf-ink-900)}
   `],

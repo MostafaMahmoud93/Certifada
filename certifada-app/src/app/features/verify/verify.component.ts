@@ -92,17 +92,22 @@ import { mergeDataIntoJson, applySignature, renderJsonToPng } from '../../core/u
             <div class="pp-item"><span class="pp-ic">@if (issuerLogo()) { <img [src]="issuerLogo()" alt="" /> } @else { <span class="material-icons">apartment</span> }</span><div><span class="pp-l">Issued by</span><span class="pp-v">{{ issuerOrg() }}</span></div></div>
             <div class="pp-item"><span class="pp-ic"><span class="material-icons">event_available</span></span><div><span class="pp-l">Issued date</span><span class="pp-v">{{ record()!.createdAt | date: 'longDate' }}</span></div></div>
             <div class="pp-item"><span class="pp-ic"><span class="material-icons">tag</span></span><div><span class="pp-l">Credential ID</span><span class="pp-v id"><code>{{ record()!.id }}</code><button class="mini-copy" (click)="copy(record()!.id, 'Credential ID')" title="Copy"><span class="material-icons">content_copy</span></button></span></div></div>
-            @for (f of fields(); track f.k) { <div class="pp-item"><span class="pp-ic alt"><span class="material-icons">data_object</span></span><div><span class="pp-l">{{ f.k }}</span><span class="pp-v">{{ f.v }}</span></div></div> }
             <div class="pp-status" [class.bad]="record()!.status === 'Revoked'"><span class="material-icons">{{ record()!.status === 'Revoked' ? 'block' : 'verified' }}</span>{{ record()!.status === 'Revoked' ? 'Revoked' : 'Verified & authentic' }}</div>
           </div>
 
           <div class="card share-card">
-            <h3 class="card-t"><span class="material-icons">share</span> Share</h3>
+            <h3 class="card-t"><span class="material-icons">share</span> Share this credential</h3>
+            <a class="li-feature" [href]="addToLinkedIn()" target="_blank" rel="noopener">
+              <span class="li-logo"><span class="li-in">in</span></span>
+              <span class="li-tx"><b>Add to LinkedIn profile</b><small>Showcase it in your Licenses &amp; Certifications</small></span>
+              <span class="material-icons li-go">arrow_forward</span>
+            </a>
+            <span class="share-or">or share a link</span>
             <div class="share-grid">
               <a class="sbtn li" [href]="shareLinkedIn()" target="_blank" rel="noopener"><span class="si">in</span> LinkedIn</a>
               <a class="sbtn x" [href]="shareX()" target="_blank" rel="noopener"><span class="si">𝕏</span> Twitter / X</a>
               <a class="sbtn fb" [href]="shareFacebook()" target="_blank" rel="noopener"><span class="si">f</span> Facebook</a>
-              <a class="sbtn add" [href]="addToLinkedIn()" target="_blank" rel="noopener"><span class="material-icons">add</span> Add to profile</a>
+              <button class="sbtn copy" (click)="copyLink()"><span class="material-icons">link</span> Copy link</button>
             </div>
           </div>
         </aside>
@@ -154,7 +159,7 @@ import { mergeDataIntoJson, applySignature, renderJsonToPng } from '../../core/u
 
     /* hero banner (contained, rounded) */
     .hero{position:relative;margin-top:18px;border-radius:20px;overflow:hidden;padding:22px 28px;text-align:start;color:#fff;box-shadow:0 20px 44px -26px color-mix(in srgb,var(--cf-brand-700) 80%,transparent)}
-    .hero-bg{position:absolute;inset:0;background:linear-gradient(135deg,var(--cf-brand-600),var(--cf-brand-700) 78%);z-index:0}
+    .hero-bg{position:absolute;inset:0;background:linear-gradient(135deg,var(--cf-brand-600),var(--cf-brand-700) 56%,var(--cf-accent-700) 128%);z-index:0}
     .hero-bg::after{content:'';position:absolute;inset:0;background:radial-gradient(640px 260px at 50% -12%,rgba(255,255,255,.24),transparent 70%),repeating-linear-gradient(45deg,rgba(255,255,255,.05) 0 2px,transparent 2px 24px)}
     .confetti{position:absolute;inset:0;overflow:hidden;pointer-events:none;z-index:1}
     .confetti i{position:absolute;top:-16px;width:8px;height:13px;border-radius:2px;opacity:0;animation-name:vfall;animation-timing-function:linear;animation-fill-mode:forwards}
@@ -237,8 +242,21 @@ import { mergeDataIntoJson, applySignature, renderJsonToPng } from '../../core/u
     .sbtn:hover{transform:translateY(-2px);box-shadow:0 10px 22px -12px rgba(15,23,42,.5)}
     .sbtn .si{width:23px;height:23px;border-radius:7px;display:grid;place-items:center;font-size:12px;font-weight:800;color:#fff;flex:none}
     .sbtn.li .si{background:#0a66c2}.sbtn.x .si{background:#000}.sbtn.fb .si{background:#1877f2}
-    .sbtn.add{grid-column:1 / -1;color:var(--cf-brand-700);border-color:var(--cf-brand-200);background:var(--cf-brand-50);justify-content:center}
-    .sbtn.add .material-icons{font-size:18px}
+    .sbtn.copy{color:var(--cf-ink-700);background:var(--cf-surface);cursor:pointer}
+    .sbtn.copy .material-icons{font-size:17px;color:var(--cf-ink-400)}
+    .sbtn.copy:hover .material-icons{color:var(--cf-brand-600)}
+    .li-feature{display:flex;align-items:center;gap:13px;text-decoration:none;border:1px solid color-mix(in srgb,#0a66c2 30%,var(--cf-line));background:linear-gradient(135deg,color-mix(in srgb,#0a66c2 10%,var(--cf-surface)),var(--cf-surface) 72%);border-radius:13px;padding:13px 14px;margin-bottom:13px;transition:border-color .15s,box-shadow .16s,transform .12s}
+    .li-feature:hover{transform:translateY(-2px);box-shadow:0 16px 32px -16px color-mix(in srgb,#0a66c2 60%,transparent);border-color:#0a66c2}
+    .li-logo{width:44px;height:44px;border-radius:11px;background:#0a66c2;display:grid;place-items:center;flex:none;box-shadow:0 6px 14px -6px rgba(10,102,194,.6)}
+    .li-in{color:#fff;font-weight:800;font-size:20px;font-family:Georgia,"Times New Roman",serif;line-height:1}
+    .li-tx{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+    .li-tx b{font-size:13.5px;font-weight:800;color:var(--cf-ink-900)}
+    .li-tx small{font-size:11.5px;color:var(--cf-ink-500);line-height:1.4}
+    .li-go{font-size:18px;color:#0a66c2;flex:none;transition:transform .15s}
+    .li-feature:hover .li-go{transform:translateX(3px)}
+    .share-or{display:block;position:relative;text-align:center;font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--cf-ink-400);margin:0 0 12px}
+    .share-or::before,.share-or::after{content:"";position:absolute;top:50%;width:26%;height:1px;background:var(--cf-line)}
+    .share-or::before{inset-inline-start:0}.share-or::after{inset-inline-end:0}
 
     .contact{margin-top:20px}
     .contact-head{display:flex;align-items:center;gap:13px;margin-bottom:16px}
@@ -329,7 +347,7 @@ export class VerifyComponent {
     this.issued.syncFromApi();
     this.verifyUrl = this.buildVerifyUrl();
     const primary = this.brand().primary || (this.brand().colors || [])[0];
-    if (primary) this.brandSvc.themeFrom(primary);
+    if (primary) this.brandSvc.themeFrom(primary, this.brand().colors);
     const org = this.issuerOrg();
     document.title = `Verified Credential${org && org !== 'the issuing organization' ? ' · ' + org : ' · Certifada'}`;
     setTimeout(() => this.load(), 10);
@@ -395,6 +413,7 @@ export class VerifyComponent {
   private fileName(ext: string): string { return `${(this.record()?.recipientName || 'certificate').replace(/[^a-z0-9]+/gi, '-')}-credential.${ext}`; }
 
   private enc(): string { return encodeURIComponent(this.verifyUrl); }
+  copyLink(): void { this.copy(location.href, 'Verification link'); }
   shareLinkedIn(): string { return `https://www.linkedin.com/sharing/share-offsite/?url=${this.enc()}`; }
   shareX(): string { return `https://twitter.com/intent/tweet?text=${encodeURIComponent('I earned a verified credential from ' + this.issuerOrg() + '!')}&url=${this.enc()}`; }
   shareFacebook(): string { return `https://www.facebook.com/sharer/sharer.php?u=${this.enc()}`; }

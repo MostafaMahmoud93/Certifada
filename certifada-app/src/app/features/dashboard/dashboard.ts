@@ -1,12 +1,17 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, computed, effect, inject, signal, untracked, WritableSignal } from '@angular/core';
 import { CommonModule, DatePipe } from '@angular/common';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { TemplateService } from '../../core/services/template.service';
 import { TemplateListItem } from '../../core/models/models';
 import { HasActionDirective } from '../../shared/directives/has-action.directive';
 import { Actions } from '../../core/constants/actions';
 import { TranslocoModule } from '@ngneat/transloco';
 import { OnboardingDialogComponent } from './onboarding-dialog';
+import { AlertService } from '../../core/services/alert.service';
+import { ApprovalService, Approval } from '../../core/services/approval.service';
+import { AuthService } from '../../core/services/auth.service';
+import { IssuedService } from '../../core/services/issued.service';
+import { PlanService } from '../../core/services/plan.service';
 
 interface MonthVal { label: string; v: number; }
 interface StatusSeg { label: string; value: number; color: string; }
@@ -20,159 +25,254 @@ interface CertRow { recipient: string; template: string; status: 'Active' | 'Pen
   template: `
   @if (showOnboarding()) { <app-onboarding (done)="showOnboarding.set(false)" /> }
 
-  <div class="head">
-    <div>
-      <h1>{{ 'dash.title' | transloco }}</h1>
-      <p class="cf-muted">{{ 'dash.subtitle' | transloco }}</p>
+  <div class="hero">
+    <div class="hero-bar">
+      <div class="th-l">
+        <span class="th-badge"><span class="material-icons">workspace_premium</span></span>
+        <div class="th-tx">
+          <span class="th-eyebrow">{{ plan.current().name }} workspace · {{ today() }}</span>
+          <h1>{{ greeting() }}</h1>
+        </div>
+      </div>
+      <div class="th-r">
+        <a class="th-chip" routerLink="/app/templates" [appHasAction]="A.Credential_Generate" [tooltipMessage]="'🔒 Not in your plan.'"><span class="material-icons">send</span> Issue</a>
+        <a class="th-chip" routerLink="/app/branding" [appHasAction]="A.Branding_Manage" [tooltipMessage]="'🔒 Not in your plan.'"><span class="material-icons">palette</span> Branding</a>
+        <a class="th-chip" routerLink="/app/approvals" [appHasAction]="A.Credential_Approve" [tooltipMessage]="'🔒 Not in your plan.'"><span class="material-icons">fact_check</span> Approvals</a>
+        <a class="cf-btn cf-btn-primary" routerLink="/canvas" [appHasAction]="A.Template_Edit" [tooltipMessage]="'🔒 Upgrade your plan to create templates.'"><span class="material-icons">add</span> {{ 'dash.newCertificate' | transloco }}</a>
+      </div>
     </div>
-    <a class="cf-btn cf-btn-primary" routerLink="/canvas"
-       [appHasAction]="A.Template_Edit" [tooltipMessage]="'🔒 Upgrade your plan to create templates.'">
-      <span class="material-icons">add</span> {{ 'dash.newCertificate' | transloco }}
-    </a>
+    <div class="hero-kpis">
+      <a class="hkpi" routerLink="/app/credentials">
+        <span class="hk-ic brand"><span class="material-icons">verified</span></span>
+        <div class="hk-tx"><span class="hk-v">{{ aIssued().toLocaleString() }}</span><span class="hk-l">Certificates issued</span></div>
+        <span class="hk-delta up"><span class="material-icons">trending_up</span> 12.5%</span>
+      </a>
+      <a class="hkpi" routerLink="/app/credentials">
+        <span class="hk-ic violet"><span class="material-icons">visibility</span></span>
+        <div class="hk-tx"><span class="hk-v">{{ aViews().toLocaleString() }}</span><span class="hk-l">Total views</span></div>
+        <span class="hk-delta up"><span class="material-icons">trending_up</span> 9.4%</span>
+      </a>
+      <div class="hkpi">
+        <span class="hk-ic green"><span class="material-icons">mark_email_read</span></span>
+        <div class="hk-tx"><span class="hk-v">{{ aDelivery() }}%</span><span class="hk-l">Delivery success</span></div>
+        <span class="hk-delta ok"><span class="material-icons">check_circle</span></span>
+      </div>
+      <a class="hkpi" routerLink="/app/approvals">
+        <span class="hk-ic amber"><span class="material-icons">hourglass_top</span></span>
+        <div class="hk-tx"><span class="hk-v">{{ aPending() }}</span><span class="hk-l">Pending approvals</span></div>
+        <span class="hk-delta go"><span class="material-icons">arrow_forward</span></span>
+      </a>
+    </div>
   </div>
 
   <!-- metrics -->
   <div class="cf-metrics">
     <div class="cf-metric">
       <div class="ic" style="background:var(--cf-brand-50);color:var(--cf-brand-600)"><span class="material-icons">verified</span></div>
-      <div class="cf-metric-lbl">{{ 'dash.issued' | transloco }}</div>
-      <div class="cf-metric-val">{{ issued().toLocaleString() }}</div>
+      <div class="cf-metric-lbl">Certificates issued</div>
+      <div class="cf-metric-val">{{ aIssued().toLocaleString() }}</div>
       <div class="delta up"><span class="material-icons">trending_up</span>+12.5%</div>
+      <svg class="kpi-spark s1" viewBox="0 0 120 34" preserveAspectRatio="none"><polyline [attr.points]="kpiSpark(0)"></polyline></svg>
     </div>
     <div class="cf-metric">
       <div class="ic" style="background:var(--cf-gold-soft);color:var(--cf-gold-ink)"><span class="material-icons">dashboard_customize</span></div>
-      <div class="cf-metric-lbl">{{ 'dash.templates' | transloco }}</div>
-      <div class="cf-metric-val">{{ templateCount() }}</div>
-      <div class="delta cf-muted">{{ loading() ? ('common.loading' | transloco) : ('dash.totalDesigns' | transloco) }}</div>
+      <div class="cf-metric-lbl">Templates</div>
+      <div class="cf-metric-val">{{ aTemplates() }}</div>
+      <div class="delta cf-muted">{{ loading() ? 'Loading…' : 'Total designs' }}</div>
+      <svg class="kpi-spark s2" viewBox="0 0 120 34" preserveAspectRatio="none"><polyline [attr.points]="kpiSpark(1)"></polyline></svg>
     </div>
     <div class="cf-metric">
-      <div class="ic" style="background:var(--cf-warning-soft);color:var(--cf-warning)"><span class="material-icons">hourglass_top</span></div>
-      <div class="cf-metric-lbl">{{ 'dash.pending' | transloco }}</div>
-      <div class="cf-metric-val">{{ pending() }}</div>
-      <div class="delta down"><span class="material-icons">trending_down</span>-4 vs last week</div>
+      <div class="ic" style="background:color-mix(in srgb,#8b5cf6 14%,transparent);color:#7c3aed"><span class="material-icons">visibility</span></div>
+      <div class="cf-metric-lbl">Total Views</div>
+      <div class="cf-metric-val">{{ aViews().toLocaleString() }}</div>
+      <div class="delta up"><span class="material-icons">trending_up</span>+9.4%</div>
+      <svg class="kpi-spark s3" viewBox="0 0 120 34" preserveAspectRatio="none"><polyline [attr.points]="kpiSpark(2)"></polyline></svg>
     </div>
     <div class="cf-metric">
-      <div class="ic" style="background:var(--cf-info-soft);color:var(--cf-info)"><span class="material-icons">group</span></div>
-      <div class="cf-metric-lbl">{{ 'dash.activeUsers' | transloco }}</div>
-      <div class="cf-metric-val">{{ activeUsers() }}</div>
-      <div class="delta up"><span class="material-icons">trending_up</span>+8.1%</div>
+      <div class="ic" style="background:#dcfce7;color:#15803d"><span class="material-icons">mark_email_read</span></div>
+      <div class="cf-metric-lbl">Delivery Success</div>
+      <div class="cf-metric-val">{{ aDelivery() }}%</div>
+      <div class="delta up"><span class="material-icons">check_circle</span>Sent successfully</div>
+      <svg class="kpi-spark s4" viewBox="0 0 120 34" preserveAspectRatio="none"><polyline [attr.points]="kpiSpark(3)"></polyline></svg>
     </div>
   </div>
 
-  <!-- analytics: chart + status donut -->
+  <!-- traffic trend + verification (compact 2-col) -->
   <div class="row analytics">
-    <div class="cf-card cf-card-pad">
+    <div class="cf-card cf-card-pad chart-card">
       <div class="card-head">
-        <h3>{{ 'dash.issued' | transloco }}</h3>
+        <h3><span class="material-icons ch-ic">show_chart</span> Traffic &amp; Issuance Trend</h3>
         <div class="seg">
           <button [class.on]="range()==='6m'" (click)="range.set('6m')">6M</button>
           <button [class.on]="range()==='12m'" (click)="range.set('12m')">12M</button>
         </div>
       </div>
-      <div class="bars">
-        @for (b of bars(); track b.label) {
-          <div class="col" [class.hot]="b.hot">
-            <div class="bar" [style.height.%]="b.pct"><span class="val">{{ b.value }}</span></div>
-            <span class="cap">{{ b.label }}</span>
+      <div class="ch-summary">
+        <div class="chs"><span class="chs-dot issued"></span><div class="chs-tx"><span class="chs-v">{{ chart().totalIssued.toLocaleString() }}</span><span class="chs-l">Issued</span></div></div>
+        <div class="chs"><span class="chs-dot traffic"></span><div class="chs-tx"><span class="chs-v">{{ chart().totalTraffic.toLocaleString() }}</span><span class="chs-l">Verification traffic</span></div></div>
+        <div class="chs"><span class="chs-ic"><span class="material-icons">bolt</span></span><div class="chs-tx"><span class="chs-v">{{ chart().peakLabel }}</span><span class="chs-l">Peak · {{ chart().peakVal.toLocaleString() }}</span></div></div>
+      </div>
+      <div class="linewrap">
+        <svg [attr.viewBox]="'0 0 ' + chart().W + ' ' + chart().H" class="linechart">
+          <defs>
+            <linearGradient id="gIssued" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="var(--cf-brand-500)" stop-opacity="0.30"/><stop offset="100%" stop-color="var(--cf-brand-500)" stop-opacity="0"/></linearGradient>
+            <linearGradient id="gTraffic" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="var(--cf-accent-500)" stop-opacity="0.26"/><stop offset="100%" stop-color="var(--cf-accent-500)" stop-opacity="0"/></linearGradient>
+          </defs>
+          @for (g of chart().grid; track g.y) {
+            <line class="grid" [attr.x1]="chart().padL" [attr.x2]="chart().W - 14" [attr.y1]="g.y" [attr.y2]="g.y"></line>
+            <text class="gridv" [attr.x]="chart().padL - 7" [attr.y]="+g.y + 3">{{ g.v }}</text>
+          }
+          <path class="area" [attr.d]="chart().trafficArea" fill="url(#gTraffic)"></path>
+          <path class="area" [attr.d]="chart().issuedArea" fill="url(#gIssued)"></path>
+          <polyline class="line traffic" [attr.points]="chart().trafficLine"></polyline>
+          <polyline class="line issued" [attr.points]="chart().issuedLine"></polyline>
+          <circle class="peak-ring" [attr.cx]="chart().peakX" [attr.cy]="chart().peakY" r="6"></circle>
+          <circle class="peak" [attr.cx]="chart().peakX" [attr.cy]="chart().peakY" r="3.5"></circle>
+          @for (d of chart().tdots; track $index) { <circle class="cdot traffic" [attr.cx]="d.x" [attr.cy]="d.y" r="2.6"></circle> }
+          @for (d of chart().idots; track $index) { <circle class="cdot issued" [attr.cx]="d.x" [attr.cy]="d.y" r="2.6"></circle> }
+        </svg>
+        <div class="xlabels" [style.padding-inline-start.px]="32">@for (l of chart().labels; track $index) { <span>{{ l }}</span> }</div>
+      </div>
+    </div>
+
+    <div class="cf-card cf-card-pad verif-card">
+      <div class="card-head"><h3><span class="material-icons ch-ic v">qr_code_scanner</span> Verification Traffic</h3><span class="vf-trend"><span class="material-icons">trending_up</span> +14%</span></div>
+      <div class="vf-top2"><span class="vf-num">{{ verif().total.toLocaleString() }}</span><span class="vf-lbl">total verifications</span></div>
+      <div class="vf-channels">
+        @for (sg of verif().segs; track sg.key) {
+          <div class="vf-ch" [class]="'s-' + sg.key">
+            <span class="vf-ch-ic"><span class="material-icons">{{ sg.icon }}</span></span>
+            <div class="vf-ch-tx">
+              <span class="vf-ch-top"><span class="vf-ch-name">{{ sg.label }}</span><span class="vf-ch-pct">{{ sg.pct }}%</span></span>
+              <span class="vf-ch-bar"><i [style.width.%]="sg.pct"></i></span>
+            </div>
+            <span class="vf-ch-num">{{ sg.value.toLocaleString() }}</span>
           </div>
         }
       </div>
     </div>
+  </div>
 
-    <div class="cf-card cf-card-pad">
-      <div class="card-head"><h3>{{ 'dash.statusBreakdown' | transloco }}</h3></div>
-      <div class="donut-wrap">
-        <div class="donut">
-          <svg viewBox="0 0 120 120">
-            <circle class="track" cx="60" cy="60" r="52"></circle>
-            @for (s of donut(); track s.label) {
-              <circle class="seg" cx="60" cy="60" r="52"
-                [style.stroke]="s.color" [style.stroke-dasharray]="s.dash" [style.stroke-dashoffset]="s.offset"></circle>
-            }
-          </svg>
-          <div class="donut-center"><span class="dt">{{ statusTotal().toLocaleString() }}</span><span class="cf-muted small">{{ 'dash.total' | transloco }}</span></div>
+  <!-- pending approvals queue -->
+  @if (pendingItems().length) {
+    <div class="cf-card ap-cta">
+      <div class="apq-top">
+        <span class="apq-ic"><span class="material-icons">verified_user</span></span>
+        <div class="apq-tx">
+          <h3>Pending Approvals Queue <span class="apq-count">{{ pending() }} Waiting</span></h3>
+          <p>Review and sign certificates that require approver verification before dispatch.</p>
         </div>
-        <div class="legend">
-          @for (s of donut(); track s.label) {
-            <div class="lg"><span class="dot" [style.background]="s.color"></span><span class="lg-lbl">{{ s.label }}</span><span class="lg-val">{{ s.value.toLocaleString() }} · {{ s.pct }}%</span></div>
-          }
+        <a class="apq-open" routerLink="/app/approvals">Open Approvals <span class="material-icons">arrow_forward</span></a>
+      </div>
+      <div class="apq-bar">
+        <label class="apq-selall"><input type="checkbox" [checked]="dashAllSel()" (change)="dashToggleAll()" /><span></span> Select all</label>
+        <button class="apq-approve" [class.ready]="dashSelCount() > 0" [disabled]="!dashSelCount()" (click)="approveSelectedDash()" [appHasAction]="A.Credential_Approve" [tooltipMessage]="'🔒 Approving is not in your plan.'">
+          <span class="material-icons">done_all</span> Approve selected
+          @if (dashSelCount() > 0) { <span class="cnt">{{ dashSelCount() }}</span> }
+        </button>
+      </div>
+      <div class="ap-list">
+        @for (a of pendingItems(); track a.id) {
+          <div class="ap-item" [class.sel]="dashIsSel(a.id)">
+            <label class="cbx"><input type="checkbox" [checked]="dashIsSel(a.id)" (change)="dashToggle(a.id)" /><span></span></label>
+            <span class="ap-av" [class]="'t-' + a.type.toLowerCase()"><span class="material-icons">{{ a.type === 'Batch' ? 'groups' : a.type === 'Template' ? 'dashboard_customize' : 'workspace_premium' }}</span></span>
+            <div class="ap-info">
+              <div class="ap-top"><strong>{{ a.recipient }}</strong>@if (a.count) { <span class="ap-n">{{ a.count }}</span> }<span class="ap-age">{{ apAge(a) }}</span></div>
+              <span class="ap-sub cf-muted">{{ a.item }} · by {{ a.requestedBy }}</span>
+            </div>
+            <div class="ap-rowact">
+              <button class="ap-mini view" (click)="openDashView(a)" title="View & sign"><span class="material-icons">visibility</span></button>
+              <button class="ap-approve-row" (click)="approveRow(a)" [appHasAction]="A.Credential_Approve" [tooltipMessage]="'🔒 Not in your plan.'"><span class="material-icons">check_circle</span> Approve</button>
+            </div>
+          </div>
+        }
+      </div>
+      @if (pendingAll().length > apqPageSize) {
+        <div class="apq-pager">
+          <span class="apq-info">Showing {{ (apqPage() - 1) * apqPageSize + 1 }}–{{ min(apqPage() * apqPageSize, pendingAll().length) }} of {{ pendingAll().length }}</span>
+          <div class="apq-pg-btns">
+            <button (click)="apqPrev()" [disabled]="apqPage() === 1" title="Previous"><span class="material-icons">chevron_left</span></button>
+            <span class="apq-pg">{{ apqPage() }} / {{ apqPages() }}</span>
+            <button (click)="apqNext()" [disabled]="apqPage() >= apqPages()" title="Next"><span class="material-icons">chevron_right</span></button>
+          </div>
         </div>
+      }
+    </div>
+  }
+
+  <!-- plan quotas & storage -->
+  <div class="cf-card quotas">
+    <div class="qz-head">
+      <div class="qz-h-tx">
+        <span class="qz-badge"><span class="material-icons">workspace_premium</span> {{ plan.current().name }}</span>
+        <h3>Plan Quotas &amp; Storage</h3>
+        <p class="cf-muted">{{ plan.priceLabel() }} · renews automatically</p>
+      </div>
+      <button class="cf-btn cf-btn-primary" (click)="subOpen.set(true)"><span class="material-icons">tune</span> Manage Subscription Quotas</button>
+    </div>
+    <div class="qz-grid">
+      <div class="qz t-tpl">
+        <div class="qz-row"><span class="qz-ic"><span class="material-icons">dashboard_customize</span></span><span class="qz-name">Templates</span><span class="qz-pct">{{ tplPct() }}%</span></div>
+        <div class="qz-num">{{ templateCount() }} <small>/ {{ tplLimitLabel() }}</small></div>
+        <div class="qz-bar"><span [style.width.%]="tplPct()"></span></div>
+      </div>
+      <div class="qz t-cred">
+        <div class="qz-row"><span class="qz-ic"><span class="material-icons">workspace_premium</span></span><span class="qz-name">Credentials this month</span><span class="qz-pct">{{ credPct() }}%</span></div>
+        <div class="qz-num">{{ credentialsUsed().toLocaleString() }} <small>/ {{ credLimitLabel() }}</small></div>
+        <div class="qz-bar"><span [style.width.%]="credPct()"></span></div>
+      </div>
+      <div class="qz t-sto">
+        <div class="qz-row"><span class="qz-ic"><span class="material-icons">cloud</span></span><span class="qz-name">Storage</span><span class="qz-pct">{{ storagePct() }}%</span></div>
+        <div class="qz-num">{{ storageUsedMB() }} <small>MB / {{ storageLimitLabel() }} MB</small></div>
+        <div class="qz-bar"><span [style.width.%]="storagePct()"></span></div>
       </div>
     </div>
   </div>
 
-  <!-- plan & usage -->
-  <div class="cf-card plan">
-    <div class="plan-left">
-      <span class="plan-pill"><span class="material-icons">workspace_premium</span>{{ planType() }} plan</span>
-      <h3>{{ 'dash.subscription' | transloco }}</h3>
-      <div class="plan-meta">
-        <div><span class="pl">{{ 'dash.renewalDate' | transloco }}</span><span class="pv">{{ renewalDate() }}</span></div>
-        <div><span class="pl">{{ 'dash.status' | transloco }}</span><span class="pv ok">{{ 'dash.active' | transloco }}</span></div>
-        <div><span class="pl">{{ 'dash.planType' | transloco }}</span><span class="pv">{{ planType() }}</span></div>
-      </div>
-      <a class="cf-btn cf-btn-primary" routerLink="/app/settings"
-         [appHasAction]="A.Settings_Manage" [tooltipMessage]="'🔒 Plan changes are managed by an admin.'">
-        <span class="material-icons">upgrade</span> {{ 'dash.upgrade' | transloco }}
-      </a>
-    </div>
-    <div class="plan-right">
-      <div class="ring">
-        <svg viewBox="0 0 120 120">
-          <circle class="track" cx="60" cy="60" r="52"></circle>
-          <circle class="prog" cx="60" cy="60" r="52" [style.stroke-dasharray]="circ" [style.stroke-dashoffset]="dashOffset()"></circle>
-        </svg>
-        <div class="ring-center"><span class="pct">{{ usagePct() }}%</span><span class="cf-muted small">{{ 'dash.used' | transloco }}</span></div>
-      </div>
-      <div class="usage-legend">
-        <div class="ul"><span class="dot brand"></span><span><b>{{ created().toLocaleString() }}</b> {{ 'dash.created' | transloco }}</span></div>
-        <div class="ul"><span class="dot track2"></span><span><b>{{ remaining().toLocaleString() }}</b> {{ 'dash.remaining' | transloco }}</span></div>
-        <div class="cf-muted small">of {{ limit().toLocaleString() }} this period</div>
-      </div>
-    </div>
-  </div>
-
-  <!-- activity + recent templates -->
+  <!-- recent activity + top templates -->
   <div class="row two">
     <div class="cf-card cf-card-pad">
-      <div class="card-head"><h3>{{ 'dash.recentActivity' | transloco }}</h3></div>
-      <ul class="feed">
+      <div class="card-head"><h3><span class="material-icons sec-ic">history</span> Recent activity</h3></div>
+      <ul class="timeline">
         @for (a of activity; track a.text) {
-          <li><span class="fic" [style.background]="a.color + '22'" [style.color]="a.color"><span class="material-icons">{{ a.icon }}</span></span>
-            <span class="ftext"><span>{{ a.text }}</span><span class="cf-muted small">{{ a.time }}</span></span></li>
+          <li><span class="tl-dot" [style.background]="a.color"><span class="material-icons">{{ a.icon }}</span></span>
+            <div class="tl-tx"><span class="tl-main">{{ a.text }}</span><span class="cf-muted small">{{ a.time }}</span></div></li>
         }
       </ul>
     </div>
 
     <div class="cf-card cf-card-pad">
-      <div class="card-head"><h3>{{ 'dash.recentTemplates' | transloco }}</h3><a class="link" routerLink="/app/templates">{{ 'common.viewAll' | transloco }}</a></div>
-      @if (loading()) { <p class="cf-muted small">Loading…</p> }
-      @else if (recent().length === 0) {
-        <p class="cf-muted small">No templates yet. <a routerLink="/canvas" [appHasAction]="A.Template_Edit">Create one →</a></p>
-      } @else {
-        @for (t of recent(); track t.id) {
-          <a class="rec" [routerLink]="['/canvas', t.id]">
-            <span class="mini">@if (t.thumbnailDataUrl) { <img [src]="t.thumbnailDataUrl" alt="" /> } @else { <span class="material-icons">workspace_premium</span> }</span>
-            <span class="rec-body"><span class="rec-name">{{ t.name || 'Untitled Certificate' }}</span><span class="cf-muted small">Updated {{ t.updatedAt | date: 'mediumDate' }}</span></span>
-          </a>
+      <div class="card-head"><h3><span class="material-icons sec-ic">leaderboard</span> Top Templates</h3><a class="link" routerLink="/app/templates">View all</a></div>
+      <p class="sec-sub cf-muted">Most issued certificate designs</p>
+      <div class="top-list">
+        @for (t of topTemplates(); track t.name) {
+          <div class="top-row">
+            <span class="top-rank" [class.gold]="t.rank === 1">{{ t.rank }}</span>
+            <span class="top-thumb">@if (t.thumb) { <img [src]="t.thumb" alt="" /> } @else { <span class="material-icons">workspace_premium</span> }</span>
+            <div class="top-body">
+              <span class="top-name">{{ t.name }}</span>
+              <span class="top-bar"><i [style.width.%]="t.pct"></i></span>
+            </div>
+            <span class="top-n">{{ t.n.toLocaleString() }}<small>issued</small></span>
+          </div>
         }
-      }
+      </div>
     </div>
   </div>
 
   <!-- recent certificates -->
-  <div class="cf-card cf-card-pad" style="margin-top:16px">
-    <div class="card-head"><h3>{{ 'dash.recentCertificates' | transloco }}</h3><a class="link" routerLink="/app/credentials">{{ 'nav.credentials' | transloco }}</a></div>
-    <div style="overflow-x:auto">
-      <table class="cf-table">
-        <thead><tr><th>{{ 'dash.recipient' | transloco }}</th><th>{{ 'dash.template' | transloco }}</th><th>{{ 'dash.status' | transloco }}</th><th>{{ 'dash.date' | transloco }}</th></tr></thead>
+  <div class="cf-card cf-card-pad certs-card" style="margin-top:14px">
+    <div class="card-head"><h3><span class="material-icons sec-ic">workspace_premium</span> Recent certificates</h3><a class="link" routerLink="/app/credentials">View all <span class="material-icons">arrow_forward</span></a></div>
+    <div class="tablewrap">
+      <table class="cf-table pro">
+        <thead><tr><th>Recipient</th><th>Template</th><th>Status</th><th class="ta-end">Issued on</th></tr></thead>
         <tbody>
           @for (c of certs; track c.recipient + c.date) {
-            <tr>
-              <td style="color:var(--cf-ink-900);font-weight:500">{{ c.recipient }}</td>
-              <td>{{ c.template }}</td>
+            <tr routerLink="/app/credentials">
+              <td><div class="cr-recip"><span class="cr-av">{{ certInitials(c.recipient) }}</span><span class="cr-name">{{ c.recipient }}</span></div></td>
+              <td><span class="cr-tpl"><span class="material-icons">workspace_premium</span>{{ c.template }}</span></td>
               <td><span class="cf-badge" [ngClass]="badge(c.status)"><span class="cf-dot" *ngIf="c.status==='Active'"></span>{{ c.status }}</span></td>
-              <td class="cf-muted">{{ c.date }}</td>
+              <td class="ta-end cf-muted">{{ c.date }}</td>
             </tr>
           }
         </tbody>
@@ -180,17 +280,105 @@ interface CertRow { recipient: string; template: string; status: 'Active' | 'Pen
     </div>
   </div>
 
-  <!-- quick actions -->
-  <h3 class="qa-title">{{ 'dash.quickActions' | transloco }}</h3>
-  <div class="qa">
-    <a class="cf-card qa-card" routerLink="/canvas" [appHasAction]="A.Template_Edit" [tooltipMessage]="'🔒 Not in your plan.'"><span class="material-icons">add_circle</span><span>{{ 'nav.newTemplate' | transloco }}</span></a>
-    <a class="cf-card qa-card" routerLink="/app/templates" [appHasAction]="A.Credential_Generate" [tooltipMessage]="'🔒 Not in your plan.'"><span class="material-icons">send</span><span>{{ 'dash.generate' | transloco }}</span></a>
-    <a class="cf-card qa-card" routerLink="/app/branding" [appHasAction]="A.Branding_Manage" [tooltipMessage]="'🔒 Not in your plan.'"><span class="material-icons">palette</span><span>{{ 'nav.branding' | transloco }}</span></a>
-    <a class="cf-card qa-card" routerLink="/app/approvals" [appHasAction]="A.Credential_Approve" [tooltipMessage]="'🔒 Not in your plan.'"><span class="material-icons">fact_check</span><span>{{ 'nav.approvals' | transloco }}</span></a>
-  </div>
+
+  @if (subOpen()) {
+    <div class="overlay" (click)="subOpen.set(false)">
+      <div class="submodal" (click)="$event.stopPropagation()">
+        <button class="close" (click)="subOpen.set(false)"><span class="material-icons">close</span></button>
+        <div class="sm-hero">
+          <span class="sm-seal"><span class="material-icons">verified</span></span>
+          <h3>Subscription Active</h3>
+          <p>Your subscription is active. You have full access to the platform.</p>
+        </div>
+        <div class="sm-rows">
+          <div class="sm-row"><span class="sm-k">Current Status</span><span class="sm-v"><span class="sm-pill ok">Active</span></span></div>
+          <div class="sm-row"><span class="sm-k">Plan</span><span class="sm-v">{{ plan.current().name }}</span></div>
+          <div class="sm-row"><span class="sm-k">Trial ends</span><span class="sm-v">{{ plan.trialEnds() | date: 'M/d/yyyy' }}</span></div>
+          <div class="sm-row"><span class="sm-k">Price</span><span class="sm-v">{{ plan.priceLabel() }}</span></div>
+        </div>
+        <div class="sm-actions">
+          <button class="cf-btn cf-btn-secondary" (click)="subOpen.set(false)">Go to Dashboard</button>
+          <button class="cf-btn cf-btn-primary" (click)="goPricing()"><span class="material-icons">workspace_premium</span> Change Plan</button>
+        </div>
+      </div>
+    </div>
+  }
+  @if (dashView(); as a) {
+    <div class="overlay" (click)="closeDashView()">
+      <div class="submodal vmodal" (click)="$event.stopPropagation()">
+        <button class="close" (click)="closeDashView()"><span class="material-icons">close</span></button>
+        <div class="vm-grid">
+          <div class="vm-cert">
+            <div class="cert-mock">
+              <span class="cm-seal"><span class="material-icons">workspace_premium</span></span>
+              <span class="cm-eyebrow">CERTIFICATE</span>
+              <span class="cm-title">{{ a.item }}</span>
+              <span class="cm-pres">This is proudly presented to</span>
+              <span class="cm-name">{{ a.recipient }}</span>
+              <span class="cm-rule"></span>
+              @if (a.count) { <span class="cm-batch"><span class="material-icons">groups</span> {{ a.count }} recipients in this batch</span> }
+            </div>
+          </div>
+          <div class="vm-body">
+            <div class="vm-head"><span class="tchip">{{ a.type }}</span><span class="age"><span class="material-icons">schedule</span>{{ apAge(a) }} waiting</span></div>
+            <h3>{{ a.recipient }}</h3>
+            <div class="vm-meta">
+              @if (a.email) { <div><span class="material-icons">mail</span> {{ a.email }}</div> }
+              <div><span class="material-icons">workspace_premium</span> {{ a.item }}</div>
+              <div><span class="material-icons">person</span> Requested by {{ a.requestedBy }}</div>
+            </div>
+            @if (a.note) { <div class="vm-note"><span class="material-icons">sticky_note_2</span> {{ a.note }}</div> }
+            <div class="signbox">
+              <span class="sb-lbl">Sign as approver</span>
+              <span class="sb-sign">{{ approver() }}</span>
+              <span class="sb-name cf-muted">{{ approver() }} · {{ today() }}</span>
+            </div>
+            <div class="vm-actions">
+              <button class="cf-btn cf-btn-secondary" (click)="dashReject(a)"><span class="material-icons">close</span> Reject</button>
+              <button class="cf-btn cf-btn-primary" (click)="dashSign(a)"><span class="material-icons">draw</span> Sign &amp; Approve Now</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  }
   `,
   styles: [`
     :host{display:block}
+    .hero{position:relative;overflow:hidden;background:var(--cf-surface);border:1px solid var(--cf-line);border-radius:16px;padding:16px 18px 16px 20px;margin-bottom:14px;box-shadow:0 1px 2px rgba(15,23,42,.04)}
+    .hero::before{content:"";position:absolute;inset:0 auto 0 0;width:4px;background:linear-gradient(var(--cf-brand-500),var(--cf-brand-700))}
+    .hero-bar{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+    .th-l{display:flex;align-items:center;gap:13px;min-width:0}
+    .th-badge{width:44px;height:44px;border-radius:12px;display:grid;place-items:center;background:linear-gradient(135deg,var(--cf-brand-500),var(--cf-brand-700));color:#fff;flex:none;box-shadow:0 7px 16px -7px color-mix(in srgb,var(--cf-brand-600) 75%,transparent)}
+    .th-badge .material-icons{font-size:22px}
+    .th-tx{display:flex;flex-direction:column;min-width:0}
+    .th-eyebrow{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--cf-brand-600)}
+    .th-tx h1{font-size:20px;font-weight:800;letter-spacing:-.01em;color:var(--cf-ink-900);line-height:1.15;margin-top:2px}
+    .th-r{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+    .th-chip{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:600;color:var(--cf-ink-600);text-decoration:none;border:1px solid var(--cf-line);background:none;padding:8px 12px;border-radius:9px;transition:border-color .14s,color .14s,background .14s}
+    .th-chip:hover{border-color:color-mix(in srgb,var(--cf-brand-500) 40%,var(--cf-line));color:var(--cf-brand-700);background:var(--cf-brand-50)}
+    .th-chip .material-icons{font-size:16px;color:var(--cf-ink-400)}
+    .th-chip:hover .material-icons{color:var(--cf-brand-600)}
+    .hero-kpis{display:grid;grid-template-columns:repeat(4,1fr);margin-top:15px;padding-top:15px;border-top:1px solid var(--cf-line-soft)}
+    .hkpi{position:relative;display:flex;align-items:center;gap:12px;padding:2px 18px;text-decoration:none;transition:transform .12s}
+    .hkpi:first-child{padding-inline-start:0}
+    .hkpi + .hkpi::before{content:"";position:absolute;inset-inline-start:0;top:50%;transform:translateY(-50%);height:38px;width:1px;background:var(--cf-line)}
+    a.hkpi:hover{transform:translateY(-1px)}
+    a.hkpi:hover .hk-v{color:var(--cf-brand-700)}
+    .hk-ic{width:40px;height:40px;border-radius:11px;display:grid;place-items:center;flex:none}.hk-ic .material-icons{font-size:20px}
+    .hk-ic.brand{background:var(--cf-brand-50);color:var(--cf-brand-600)}
+    .hk-ic.violet{background:color-mix(in srgb,#8b5cf6 14%,transparent);color:#7c3aed}
+    .hk-ic.green{background:#dcfce7;color:#15803d}
+    .hk-ic.amber{background:var(--cf-warning-soft);color:var(--cf-warning)}
+    .hk-tx{display:flex;flex-direction:column;min-width:0;flex:1}
+    .hk-v{font-size:22px;font-weight:800;letter-spacing:-.02em;color:var(--cf-ink-900);line-height:1;font-variant-numeric:tabular-nums;transition:color .14s}
+    .hk-l{font-size:11.5px;color:var(--cf-ink-500);margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .hk-delta{display:inline-flex;align-items:center;gap:2px;font-size:11px;font-weight:700;color:#15803d;flex:none}
+    .hk-delta .material-icons{font-size:14px}
+    .hk-delta.go{color:var(--cf-brand-600)}
+    .cf-metrics{display:none}
+    @media(max-width:980px){.hero-kpis{grid-template-columns:repeat(2,1fr);gap:16px 0}.hkpi{padding:0 16px}.hkpi::before{display:none}}
+    @media(max-width:520px){.hero-kpis{grid-template-columns:1fr;gap:14px}.th-r{justify-content:flex-start}}
     .cf-card-pad{padding:15px 17px}
     .cf-metrics{gap:12px}
     .cf-metric{padding:14px 16px}
@@ -280,11 +468,366 @@ interface CertRow { recipient: string; template: string; status: 'Active' | 'Pen
     .usage-legend .dot{width:10px;height:10px;border-radius:3px;flex:none}
     .usage-legend .dot.brand{background:var(--cf-brand-600)}
     .usage-legend .dot.track2{background:var(--cf-line)}
+    .ap-cta{margin-bottom:16px;position:relative;overflow:hidden;padding:0;border-color:color-mix(in srgb,var(--cf-brand-500) 22%,var(--cf-line))}
+    .apq-top{display:flex;align-items:flex-start;gap:13px;padding:16px 17px 13px;background:linear-gradient(135deg,color-mix(in srgb,var(--cf-brand-500) 10%,var(--cf-surface)),var(--cf-surface) 70%);border-bottom:1px solid var(--cf-line)}
+    .apq-ic{width:42px;height:42px;border-radius:12px;display:grid;place-items:center;flex:none;background:linear-gradient(135deg,var(--cf-brand-500),var(--cf-brand-700));color:#fff;box-shadow:0 8px 18px -8px color-mix(in srgb,var(--cf-brand-600) 80%,transparent)}
+    .apq-ic .material-icons{font-size:22px}
+    .apq-tx{flex:1;min-width:0}
+    .apq-tx h3{font-size:15px;font-weight:800;letter-spacing:-.01em;color:var(--cf-ink-900);display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+    .apq-count{font-size:11px;font-weight:800;color:#fff;background:var(--cf-warning);padding:3px 10px;border-radius:999px;box-shadow:0 4px 10px -4px var(--cf-warning)}
+    .apq-tx p{font-size:12.5px;color:var(--cf-ink-500);margin-top:3px;line-height:1.5}
+    .apq-open{display:inline-flex;align-items:center;gap:4px;font-size:12.5px;font-weight:700;color:var(--cf-brand-700);white-space:nowrap;flex:none}
+    .apq-open .material-icons{font-size:15px;transition:transform .15s}
+    .apq-open:hover .material-icons{transform:translateX(3px)}
+    .apq-bar{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 17px;background:var(--cf-surface-2);border-bottom:1px solid var(--cf-line)}
+    .apq-selall{display:inline-flex;align-items:center;gap:8px;font-size:12.5px;font-weight:600;color:var(--cf-ink-600);cursor:pointer;position:relative}
+    .apq-selall input{position:absolute;opacity:0;width:0;height:0}
+    .apq-selall span{width:18px;height:18px;border:1.5px solid var(--cf-line);border-radius:5px;display:inline-grid;place-items:center;transition:.14s}
+    .apq-selall input:checked + span{background:var(--cf-brand-600);border-color:var(--cf-brand-600)}
+    .apq-selall input:checked + span::after{content:'';width:5px;height:9px;border:solid #fff;border-width:0 2px 2px 0;transform:rotate(45deg);margin-top:-2px}
+    .apq-approve{display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 11px;border-radius:9px;border:1px solid var(--cf-line);background:var(--cf-surface);color:var(--cf-ink-500);font:inherit;font-size:12.5px;font-weight:700;cursor:pointer;transition:background .16s,color .16s,border-color .16s,transform .12s,box-shadow .16s}
+    .apq-approve .material-icons{font-size:16px}
+    .apq-approve:disabled{opacity:.65;cursor:not-allowed}
+    .apq-approve.ready{background:linear-gradient(135deg,var(--cf-brand-500),var(--cf-brand-700));border-color:transparent;color:#fff;box-shadow:0 8px 18px -10px color-mix(in srgb,var(--cf-brand-600) 80%,transparent)}
+    .apq-approve.ready:hover{transform:translateY(-1px);filter:brightness(1.03)}
+    .apq-approve .cnt{display:inline-grid;place-items:center;min-width:18px;height:18px;padding:0 5px;border-radius:999px;background:rgba(255,255,255,.26);font-size:11px;font-weight:800;animation:cntpop .2s ease}
+    @keyframes cntpop{from{transform:scale(.4);opacity:0}to{transform:scale(1);opacity:1}}
+    .ap-list{display:flex;flex-direction:column;gap:7px;padding:12px 14px 14px}
+    .ap-item{display:flex;align-items:center;gap:12px;padding:9px 11px;border:1px solid var(--cf-line);border-radius:11px;background:var(--cf-surface);transition:border-color .14s,box-shadow .14s,background .14s}
+    .ap-item:hover{border-color:color-mix(in srgb,var(--cf-brand-500) 26%,var(--cf-line));box-shadow:0 8px 20px -14px rgba(15,23,42,.4)}
+    .ap-item.sel{border-color:var(--cf-brand-500);background:color-mix(in srgb,var(--cf-brand-50) 55%,var(--cf-surface))}
+    .cbx{position:relative;display:inline-flex;flex:none;cursor:pointer}
+    .cbx input{position:absolute;opacity:0;width:0;height:0}
+    .cbx span{width:18px;height:18px;border:1.5px solid var(--cf-line);border-radius:5px;display:inline-grid;place-items:center;transition:.14s}
+    .cbx input:checked + span{background:var(--cf-brand-600);border-color:var(--cf-brand-600)}
+    .cbx input:checked + span::after{content:'';width:5px;height:9px;border:solid #fff;border-width:0 2px 2px 0;transform:rotate(45deg);margin-top:-2px}
+    .ap-av{width:34px;height:34px;border-radius:9px;display:grid;place-items:center;flex:none}.ap-av .material-icons{font-size:17px}
+    .ap-av.t-credential{background:var(--cf-brand-50);color:var(--cf-brand-600)}
+    .ap-av.t-batch{background:color-mix(in srgb,#8b5cf6 14%,transparent);color:#7c3aed}
+    .ap-av.t-template{background:var(--cf-gold-soft);color:var(--cf-gold-ink)}
+    .ap-info{flex:1;min-width:0}
+    .ap-top{display:flex;align-items:center;gap:8px}
+    .ap-top strong{font-size:13.5px;color:var(--cf-ink-900);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .ap-n{font-size:10.5px;font-weight:700;color:var(--cf-ink-500);background:var(--cf-surface-2);border-radius:999px;padding:1px 7px;flex:none}
+    .ap-age{font-size:10.5px;font-weight:700;color:var(--cf-ink-400);margin-inline-start:auto;flex:none}
+    .ap-sub{display:block;font-size:11.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px}
+    .ap-view{width:32px;height:32px;border-radius:9px;display:grid;place-items:center;border:1px solid var(--cf-line);background:var(--cf-surface);color:var(--cf-ink-400);flex:none;transition:.14s}
+    .ap-view .material-icons{font-size:17px}
+    .ap-view:hover{color:var(--cf-brand-600);border-color:color-mix(in srgb,var(--cf-brand-500) 35%,var(--cf-line));background:var(--cf-brand-50)}
+    /* analytics layout */
+    .row.analytics{display:grid;grid-template-columns:1.7fr 1fr;gap:16px;margin-bottom:16px}
+    @media(max-width:900px){.row.analytics{grid-template-columns:1fr}}
+    .ch-ic{font-size:18px;color:var(--cf-brand-600);vertical-align:middle;margin-inline-end:5px}
+    /* line chart */
+    .legend2{display:flex;gap:16px;margin-top:2px}
+    .lg2{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;font-weight:600;color:var(--cf-ink-600)}
+    .lg2 i{width:14px;height:3px;border-radius:2px;display:inline-block}
+    .lg2 .d-issued{background:var(--cf-brand-600)}.lg2 .d-traffic{background:var(--cf-accent-500)}
+    .linewrap{margin-top:8px}
+    .linechart{width:100%;height:auto;display:block;overflow:visible}
+    .linechart .grid{stroke:var(--cf-line);stroke-width:1;stroke-dasharray:3 4}
+    .linechart .line{fill:none;stroke-width:2.5;stroke-linejoin:round;stroke-linecap:round;stroke-dasharray:1700;stroke-dashoffset:1700;animation:cdraw 1.5s cubic-bezier(.4,0,.2,1) forwards}
+    .linechart .line.issued{stroke:var(--cf-brand-600)}
+    .linechart .line.traffic{stroke:var(--cf-accent-500);animation-delay:.18s}
+    @keyframes cdraw{to{stroke-dashoffset:0}}
+    .linechart .area{opacity:0;animation:cfade .9s ease .55s forwards}@keyframes cfade{to{opacity:1}}
+    .cdot{stroke:var(--cf-surface);stroke-width:2;opacity:0;animation:cfade .4s ease .9s forwards}
+    .cdot.issued{fill:var(--cf-brand-600)}.cdot.traffic{fill:var(--cf-accent-500)}
+    .xlabels{display:flex;justify-content:space-between;padding:3px 8px 0;font-size:10.5px;color:var(--cf-ink-400)}
+    /* verification traffic */
+    .vf-total{display:flex;align-items:baseline;gap:8px;margin-top:8px;flex-wrap:wrap}
+    .vf-num{font-size:30px;font-weight:800;letter-spacing:-.02em;color:var(--cf-ink-900)}
+    .vf-lbl{font-size:12px;color:var(--cf-ink-500)}
+    .vf-trend{margin-inline-start:auto;display:inline-flex;align-items:center;gap:3px;font-size:12px;font-weight:700;color:#15803d}.vf-trend .material-icons{font-size:15px}
+    .spark{width:100%;height:48px;display:block;margin:10px 0 14px;overflow:visible}
+    .spark .line{fill:none;stroke:var(--cf-brand-600);stroke-width:2;stroke-linejoin:round;stroke-dasharray:700;stroke-dashoffset:700;animation:cdraw 1.3s ease .2s forwards}
+    .spark .area{opacity:0;animation:cfade .8s ease .5s forwards}
+    .vf-breakdown{display:flex;flex-direction:column;gap:11px}
+    .vfb-top{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--cf-ink-600)}.vfb-top b{margin-inline-start:auto;color:var(--cf-ink-900)}
+    .vfb-dot{width:8px;height:8px;border-radius:50%}.vfb-dot.e{background:var(--cf-brand-500)}.vfb-dot.d{background:var(--cf-accent-500)}.vfb-dot.q{background:var(--cf-accent2-500)}
+    .vfb-bar{display:block;height:6px;border-radius:999px;background:var(--cf-surface-2);overflow:hidden;margin-top:6px}
+    .vfb-bar i{display:block;height:100%;border-radius:999px;transition:width .6s ease}.vfb-bar i.e{background:var(--cf-brand-500)}.vfb-bar i.d{background:var(--cf-accent-500)}.vfb-bar i.q{background:var(--cf-accent2-500)}
+    /* quotas */
+    .quotas{padding:18px 18px 20px;margin-bottom:16px}
+    .qz-head{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;margin-bottom:16px}
+    .qz-h-tx h3{display:flex;align-items:center;gap:7px;font-size:15px;font-weight:800;color:var(--cf-ink-900)}.qz-h-tx h3 .material-icons{font-size:18px;color:var(--cf-brand-600)}
+    .qz-h-tx p{font-size:12.5px;margin-top:3px}
+    .qz-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+    @media(max-width:680px){.qz-grid{grid-template-columns:1fr}}
+    .qz-top{display:flex;align-items:center;gap:9px;margin-bottom:9px}
+    .qz-ic{width:30px;height:30px;border-radius:8px;display:grid;place-items:center;flex:none}.qz-ic .material-icons{font-size:16px}
+    .qz-ic.tpl{background:var(--cf-brand-50);color:var(--cf-brand-600)}
+    .qz-ic.sto{background:color-mix(in srgb,var(--cf-accent-500) 14%,transparent);color:var(--cf-accent-600)}
+    .qz-name{font-size:13px;font-weight:700;color:var(--cf-ink-800)}
+    .qz-val{margin-inline-start:auto;font-size:12.5px;font-weight:700;color:var(--cf-ink-600);font-variant-numeric:tabular-nums}
+    .qz-bar{height:9px;border-radius:999px;background:var(--cf-surface-2);border:1px solid var(--cf-line);overflow:hidden}
+    .qz-bar span{display:block;height:100%;border-radius:999px;transition:width .6s ease}
+    .qz-bar span.tpl{background:linear-gradient(90deg,var(--cf-brand-500),var(--cf-brand-600))}
+    .qz-bar span.sto{background:linear-gradient(90deg,var(--cf-accent-500),var(--cf-accent-600))}
+    /* subscription modal */
+    .overlay{position:fixed;inset:0;background:rgba(2,6,23,.5);display:grid;place-items:center;z-index:80;padding:20px;animation:ovin .15s ease}@keyframes ovin{from{opacity:0}to{opacity:1}}
+    .submodal{position:relative;width:100%;max-width:430px;background:var(--cf-surface);border:1px solid var(--cf-line);border-radius:18px;box-shadow:var(--cf-shadow-lg);overflow:hidden;animation:smin .2s ease}
+    @keyframes smin{from{opacity:0;transform:translateY(10px) scale(.98)}to{opacity:1;transform:none}}
+    .submodal .close{position:absolute;top:12px;inset-inline-end:12px;border:0;background:none;color:var(--cf-ink-400);cursor:pointer;z-index:2}
+    .sm-hero{text-align:center;padding:26px 22px 18px;background:linear-gradient(135deg,color-mix(in srgb,#16a34a 12%,var(--cf-surface)),var(--cf-surface) 72%);border-bottom:1px solid var(--cf-line)}
+    .sm-seal{width:54px;height:54px;border-radius:50%;display:grid;place-items:center;margin:0 auto 10px;background:linear-gradient(135deg,#16a34a,#15803d);color:#fff;box-shadow:0 12px 26px -12px #15803d}.sm-seal .material-icons{font-size:28px}
+    .sm-hero h3{font-size:18px;font-weight:800;color:var(--cf-ink-900)}
+    .sm-hero p{font-size:12.5px;color:var(--cf-ink-500);margin-top:5px;line-height:1.5}
+    .sm-rows{padding:14px 20px;display:flex;flex-direction:column}
+    .sm-row{display:flex;align-items:center;justify-content:space-between;padding:11px 0;border-bottom:1px solid var(--cf-line-soft);font-size:13px}
+    .sm-row:last-child{border-bottom:0}
+    .sm-k{color:var(--cf-ink-500)}.sm-v{font-weight:700;color:var(--cf-ink-900)}
+    .sm-pill{font-size:11px;font-weight:800;padding:3px 11px;border-radius:999px}.sm-pill.ok{background:#dcfce7;color:#15803d}
+    .sm-actions{display:flex;gap:10px;padding:2px 20px 20px}.sm-actions .cf-btn{flex:1;justify-content:center}
+    /* ---- compact charts ---- */
+    .chart-card .linechart{max-height:172px}
+    .verif-card .vf-num{font-size:26px}
+    .verif-card .vf-total{margin-top:4px}
+    .spark{height:40px;margin:9px 0 13px}
+    .vf-breakdown{gap:10px}
+    .card-head h3{display:inline-flex;align-items:center;gap:7px}
+    .sec-ic{font-size:17px;color:var(--cf-brand-600)}
+    /* ---- approvals row actions ---- */
+    .ap-rowact{display:flex;gap:6px;flex:none}
+    .ap-mini{width:32px;height:32px;border-radius:9px;display:grid;place-items:center;border:1px solid var(--cf-line);background:var(--cf-surface);cursor:pointer;transition:.14s}
+    .ap-mini .material-icons{font-size:17px}
+    .ap-mini.view{color:var(--cf-ink-400)}.ap-mini.view:hover{color:var(--cf-brand-600);border-color:color-mix(in srgb,var(--cf-brand-500) 35%,var(--cf-line));background:var(--cf-brand-50)}
+    .ap-mini.ok{color:#15803d}.ap-mini.ok:hover{background:#16a34a;border-color:#16a34a;color:#fff;transform:translateY(-1px);box-shadow:0 8px 16px -8px #16a34a}
+    /* ---- quotas (creative tiles) ---- */
+    .qz-h-tx{display:flex;flex-direction:column;gap:3px}
+    .qz-badge{display:inline-flex;align-items:center;gap:5px;align-self:flex-start;font-size:11px;font-weight:800;color:var(--cf-brand-700);background:var(--cf-brand-50);border:1px solid var(--cf-brand-100);padding:3px 10px;border-radius:999px;margin-bottom:3px}
+    .qz-badge .material-icons{font-size:14px}
+    .qz-h-tx h3{font-size:15px;font-weight:800;color:var(--cf-ink-900)}
+    .qz-grid{grid-template-columns:repeat(3,1fr)}
+    @media(max-width:820px){.quotas .qz-grid{grid-template-columns:1fr}}
+    .qz{border:1px solid var(--cf-line);border-radius:13px;padding:14px;background:var(--cf-surface);transition:border-color .14s,box-shadow .14s}
+    .qz:hover{border-color:color-mix(in srgb,var(--cf-brand-500) 24%,var(--cf-line));box-shadow:0 8px 20px -14px rgba(15,23,42,.4)}
+    .qz-row{display:flex;align-items:center;gap:9px;margin-bottom:10px}
+    .qz-ic{width:32px;height:32px;border-radius:9px;display:grid;place-items:center;flex:none}.qz-ic .material-icons{font-size:17px}
+    .qz.t-tpl .qz-ic{background:var(--cf-brand-50);color:var(--cf-brand-600)}
+    .qz.t-cred .qz-ic{background:color-mix(in srgb,var(--cf-accent2-500) 15%,transparent);color:var(--cf-accent2-600)}
+    .qz.t-sto .qz-ic{background:color-mix(in srgb,var(--cf-accent-500) 15%,transparent);color:var(--cf-accent-600)}
+    .qz-name{font-size:12.5px;font-weight:700;color:var(--cf-ink-700)}
+    .qz-pct{margin-inline-start:auto;font-size:11.5px;font-weight:800;color:var(--cf-ink-400);font-variant-numeric:tabular-nums}
+    .qz-num{font-size:21px;font-weight:800;letter-spacing:-.02em;color:var(--cf-ink-900);margin-bottom:9px}.qz-num small{font-size:12px;font-weight:600;color:var(--cf-ink-400)}
+    .qz-bar span{display:block}
+    .qz.t-tpl .qz-bar span{background:linear-gradient(90deg,var(--cf-brand-500),var(--cf-brand-600))}
+    .qz.t-cred .qz-bar span{background:linear-gradient(90deg,var(--cf-accent2-500),var(--cf-accent2-600))}
+    .qz.t-sto .qz-bar span{background:linear-gradient(90deg,var(--cf-accent-500),var(--cf-accent-600))}
+    /* ---- timeline activity ---- */
+    .timeline{list-style:none;position:relative;padding-inline-start:6px;margin-top:4px}
+    .timeline::before{content:'';position:absolute;inset-inline-start:18px;top:8px;bottom:8px;width:2px;background:var(--cf-line)}
+    .timeline li{position:relative;display:flex;gap:13px;padding:8px 0}
+    .tl-dot{width:26px;height:26px;border-radius:50%;display:grid;place-items:center;flex:none;color:#fff;z-index:1;box-shadow:0 0 0 3px var(--cf-surface)}
+    .tl-dot .material-icons{font-size:14px;color:#fff}
+    .tl-tx{display:flex;flex-direction:column;min-width:0;padding-top:2px}
+    .tl-main{font-size:13px;color:var(--cf-ink-800);line-height:1.4}
+    /* ---- top templates ---- */
+    .sec-sub{font-size:12px;margin:-4px 0 12px}
+    .top-list{display:flex;flex-direction:column;gap:11px}
+    .top-row{display:flex;align-items:center;gap:11px}
+    .top-rank{width:22px;height:22px;border-radius:7px;display:grid;place-items:center;flex:none;font-size:11.5px;font-weight:800;color:var(--cf-ink-500);background:var(--cf-surface-2);border:1px solid var(--cf-line)}
+    .top-rank.gold{background:linear-gradient(135deg,#f6c453,#d9a441);color:#fff;border-color:transparent;box-shadow:0 4px 10px -4px #d9a441}
+    .top-thumb{width:38px;height:28px;border-radius:6px;overflow:hidden;flex:none;display:grid;place-items:center;background:var(--cf-surface-2);border:1px solid var(--cf-line)}
+    .top-thumb img{width:100%;height:100%;object-fit:cover}.top-thumb .material-icons{font-size:15px;color:var(--cf-brand-500)}
+    .top-body{flex:1;min-width:0}
+    .top-name{display:block;font-size:12.5px;font-weight:600;color:var(--cf-ink-900);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:5px}
+    .top-bar{display:block;height:5px;border-radius:999px;background:var(--cf-surface-2);overflow:hidden}
+    .top-bar i{display:block;height:100%;border-radius:999px;background:linear-gradient(90deg,var(--cf-brand-500),var(--cf-accent-500))}
+    .top-n{flex:none;display:flex;flex-direction:column;align-items:flex-end;font-size:13.5px;font-weight:800;color:var(--cf-ink-900);line-height:1}.top-n small{font-size:9.5px;font-weight:600;color:var(--cf-ink-400);margin-top:2px;text-transform:uppercase;letter-spacing:.03em}
+    /* ---- recent templates strip ---- */
+    .rt-card{margin-top:16px}
+    .rt-strip{display:flex;gap:12px;overflow-x:auto;padding:4px 2px 6px;scrollbar-width:thin}
+    .rt-strip::-webkit-scrollbar{height:7px}.rt-strip::-webkit-scrollbar-thumb{background:var(--cf-line);border-radius:999px}
+    .rt-tile{flex:none;width:150px;text-decoration:none;display:flex;flex-direction:column;gap:6px;border:1px solid var(--cf-line);border-radius:12px;padding:8px;background:var(--cf-surface);transition:transform .14s,box-shadow .14s,border-color .14s}
+    .rt-tile:hover{transform:translateY(-2px);border-color:color-mix(in srgb,var(--cf-brand-500) 30%,var(--cf-line));box-shadow:0 12px 26px -16px rgba(15,23,42,.45)}
+    .rt-thumb{height:84px;border-radius:8px;overflow:hidden;display:grid;place-items:center;background:var(--cf-surface-2);border:1px solid var(--cf-line)}
+    .rt-thumb img{width:100%;height:100%;object-fit:cover}.rt-thumb .material-icons{font-size:26px;color:var(--cf-brand-400)}
+    .rt-name{font-size:12.5px;font-weight:700;color:var(--cf-ink-900);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    /* ---- certs pro table ---- */
+    .certs-card .tablewrap{overflow-x:auto;margin-top:4px}
+    .cf-table.pro th{font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--cf-ink-500);font-weight:700;text-align:start;padding:10px 12px;border-bottom:1px solid var(--cf-line);background:var(--cf-surface-2)}
+    .cf-table.pro td{padding:11px 12px;border-bottom:1px solid var(--cf-line-soft);vertical-align:middle}
+    .cf-table.pro tr:last-child td{border-bottom:0}.cf-table.pro tbody tr:hover{background:var(--cf-surface-2)}
+    .cf-table.pro .ta-end{text-align:end}
+    .cr-recip{display:flex;align-items:center;gap:9px}
+    .cr-av{width:30px;height:30px;border-radius:50%;background:var(--cf-brand-50);color:var(--cf-brand-700);border:1px solid var(--cf-brand-100);display:grid;place-items:center;font-size:10.5px;font-weight:800;flex:none}
+    .cr-name{font-weight:600;color:var(--cf-ink-900)}
+    .cr-tpl{display:inline-flex;align-items:center;gap:5px;font-size:12.5px;color:var(--cf-ink-600)}.cr-tpl .material-icons{font-size:14px;color:var(--cf-brand-500)}
+    /* ---- view/sign modal ---- */
+    .submodal.vmodal{max-width:720px}
+    .vm-grid{display:grid;grid-template-columns:1.05fr 1fr}
+    @media(max-width:640px){.vm-grid{grid-template-columns:1fr}}
+    .vm-cert{padding:22px;background:linear-gradient(135deg,color-mix(in srgb,var(--cf-brand-500) 12%,var(--cf-surface-2)),var(--cf-surface-2));display:grid;place-items:center}
+    .cert-mock{width:100%;background:var(--cf-surface);border:1px solid var(--cf-line);border-top:4px solid var(--cf-brand-600);border-radius:12px;padding:24px 20px;text-align:center;box-shadow:0 18px 40px -22px rgba(2,6,23,.5);display:flex;flex-direction:column;align-items:center;gap:4px}
+    .cm-seal{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;background:linear-gradient(135deg,var(--cf-brand-500),var(--cf-brand-700));color:#fff;margin-bottom:6px;box-shadow:0 8px 18px -8px color-mix(in srgb,var(--cf-brand-600) 80%,transparent)}.cm-seal .material-icons{font-size:23px}
+    .cm-eyebrow{font-size:9.5px;font-weight:800;letter-spacing:.22em;color:var(--cf-ink-400)}
+    .cm-title{font-size:16px;font-weight:800;color:var(--cf-ink-900)}
+    .cm-pres{font-size:11px;color:var(--cf-ink-500);margin-top:5px}
+    .cm-name{font-size:20px;font-weight:800;color:var(--cf-brand-700);font-family:'Playfair Display',Georgia,serif}
+    .cm-rule{width:74px;height:2px;border-radius:2px;background:linear-gradient(90deg,transparent,var(--cf-brand-500),transparent);margin:6px 0}
+    .cm-batch{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;color:var(--cf-ink-500)}.cm-batch .material-icons{font-size:14px}
+    .vm-body{padding:20px 20px 18px;display:flex;flex-direction:column;min-width:0}
+    .vm-head{display:flex;align-items:center;gap:8px;margin-bottom:9px}
+    .vm-body h3{font-size:17px;font-weight:800;color:var(--cf-ink-900);margin-bottom:11px}
+    .tchip{display:inline-flex;align-items:center;font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;padding:3px 9px;border-radius:999px;background:var(--cf-brand-50);color:var(--cf-brand-700)}
+    .vm-head .age{display:inline-flex;align-items:center;gap:3px;font-size:11px;font-weight:700;color:var(--cf-warning);background:var(--cf-warning-soft);padding:3px 9px;border-radius:999px}.vm-head .age .material-icons{font-size:12px}
+    .vm-meta{display:flex;flex-direction:column;gap:8px;font-size:12.5px;color:var(--cf-ink-700)}
+    .vm-meta>div{display:flex;align-items:center;gap:8px;min-width:0}.vm-meta .material-icons{font-size:16px;color:var(--cf-ink-400);flex:none}
+    .vm-note{display:flex;align-items:flex-start;gap:7px;margin-top:12px;padding:8px 11px;background:var(--cf-surface-2);border-radius:9px;font-size:12.5px;color:var(--cf-ink-700)}.vm-note .material-icons{font-size:16px;color:var(--cf-ink-400)}
+    .signbox{margin-top:14px;border:1px dashed color-mix(in srgb,var(--cf-brand-500) 40%,var(--cf-line));border-radius:12px;padding:11px 14px;background:var(--cf-brand-50);display:flex;flex-direction:column;gap:1px}
+    .sb-lbl{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--cf-brand-700)}
+    .sb-sign{font-family:'Brush Script MT','Segoe Script',cursive;font-size:28px;line-height:1.2;color:var(--cf-ink-900)}
+    .sb-name{font-size:11px}
+    .vm-actions{display:flex;gap:10px;margin-top:auto;padding-top:15px}.vm-actions .cf-btn{flex:1;justify-content:center}
+    /* ===== amazing polish ===== */
+    @keyframes dUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+    @media (prefers-reduced-motion: no-preference){
+      .hero{animation:dUp .55s cubic-bezier(.2,.7,.2,1) both}
+      .cf-metric{animation:dUp .5s ease both}
+      .cf-metric:nth-child(1){animation-delay:.05s}.cf-metric:nth-child(2){animation-delay:.1s}.cf-metric:nth-child(3){animation-delay:.15s}.cf-metric:nth-child(4){animation-delay:.2s}
+      .row.analytics{animation:dUp .55s ease .2s both}
+      .ap-cta{animation:dUp .55s ease .24s both}
+      .quotas{animation:dUp .55s ease .28s both}
+      .row.two{animation:dUp .55s ease .32s both}
+      .rt-card{animation:dUp .55s ease .36s both}
+      .certs-card{animation:dUp .55s ease .4s both}
+    }
+    /* KPI metric cards: count-up + sparkline + hover */
+    .cf-metric{position:relative;overflow:hidden;transition:transform .18s,box-shadow .18s,border-color .18s}
+    .cf-metric:hover{transform:translateY(-3px);box-shadow:0 18px 36px -22px rgba(15,23,42,.55)}
+    .cf-metric .ic{transition:transform .2s cubic-bezier(.2,1.3,.4,1)}
+    .cf-metric:hover .ic{transform:scale(1.08) rotate(-4deg)}
+    .cf-metric-val{font-variant-numeric:tabular-nums}
+    .kpi-spark{position:absolute;left:0;right:0;bottom:0;width:100%;height:30px;opacity:.16;pointer-events:none}
+    .kpi-spark polyline{fill:none;stroke-width:2.5;vector-effect:non-scaling-stroke;stroke-linecap:round;stroke-linejoin:round}
+    .kpi-spark.s1 polyline{stroke:var(--cf-brand-600)}
+    .kpi-spark.s2 polyline{stroke:var(--cf-gold-ink)}
+    .kpi-spark.s3 polyline{stroke:#7c3aed}
+    .kpi-spark.s4 polyline{stroke:#15803d}
+    .cf-metric:hover .kpi-spark{opacity:.32}
+    /* living hero */
+    .hero-bg::before{content:'';position:absolute;width:360px;height:360px;border-radius:50%;top:-170px;inset-inline-end:-70px;background:radial-gradient(circle,rgba(255,255,255,.20),transparent 70%);animation:heroFloat 10s ease-in-out infinite}
+    @keyframes heroFloat{0%,100%{transform:translate(0,0)}50%{transform:translate(-26px,22px)}}
+    .hero-cta{transition:transform .14s,box-shadow .16s,filter .16s}
+    .hero-cta:hover{transform:translateY(-2px);filter:brightness(1.02)}
+    /* gentle card lift for content cards */
+    .row.two .cf-card,.rt-card,.certs-card{transition:box-shadow .18s,border-color .18s}
+    .row.two .cf-card:hover,.rt-card:hover,.certs-card:hover{box-shadow:0 16px 34px -24px rgba(15,23,42,.5)}
+    /* timeline entrance + activity row hover */
+    .timeline li{transition:transform .14s}.timeline li:hover{transform:translateX(2px)}
+    .top-row{transition:transform .14s}.top-row:hover{transform:translateX(2px)}
+    /* iconed section headers */
+    .card-head h3 .sec-ic,.card-head h3 .ch-ic{width:26px;height:26px;border-radius:8px;display:inline-grid;place-items:center;background:var(--cf-brand-50);color:var(--cf-brand-600);font-size:15px;margin:0}
+    .card-head h3 .ch-ic.v{background:color-mix(in srgb,var(--cf-accent-500) 15%,transparent);color:var(--cf-accent-600)}
+    /* KPI hover accent line */
+    .cf-metric::before{content:"";position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--cf-brand-500),var(--cf-accent-500));transform:scaleX(0);transform-origin:left;transition:transform .3s ease;z-index:2}
+    .cf-metric:hover::before{transform:scaleX(1)}
+    /* full-width traffic chart */
+    .chart-card{animation:dUp .55s ease .2s both}
+    .verif-card{animation:dUp .55s ease .26s both}
+    .ch-summary{display:flex;gap:22px;flex-wrap:wrap;margin:6px 0 2px;padding-bottom:10px;border-bottom:1px solid var(--cf-line-soft)}
+    .chs{display:flex;align-items:center;gap:9px}
+    .chs-dot{width:10px;height:10px;border-radius:50%;flex:none}.chs-dot.issued{background:var(--cf-brand-600)}.chs-dot.traffic{background:var(--cf-accent-500)}
+    .chs-ic{width:26px;height:26px;border-radius:8px;display:grid;place-items:center;background:var(--cf-gold-soft);color:var(--cf-gold-ink);flex:none}.chs-ic .material-icons{font-size:15px}
+    .chs-tx{display:flex;flex-direction:column;line-height:1.15}
+    .chs-v{font-size:15px;font-weight:800;color:var(--cf-ink-900);letter-spacing:-.01em}
+    .chs-l{font-size:11px;color:var(--cf-ink-500);margin-top:2px}
+    .gridv{font-size:11px;fill:var(--cf-ink-300);text-anchor:end;font-weight:600}
+    .peak{fill:var(--cf-accent-500)}
+    .peak-ring{fill:none;stroke:var(--cf-accent-500);stroke-width:2;opacity:.45;animation:peakP 2.2s ease-in-out infinite}
+    @keyframes peakP{0%,100%{opacity:.5}50%{opacity:.12}}
+    .xlabels{padding-top:4px}
+    /* verification traffic — ring + channels */
+    .verif-card .vf-trend{margin-inline-start:auto}
+    .vf-top2{display:flex;align-items:baseline;gap:8px;margin:8px 0 14px;flex-wrap:wrap}
+    .vf-top2 .vf-num{font-size:24px;font-weight:800;color:var(--cf-ink-900);letter-spacing:-.02em}
+    .vf-top2 .vf-lbl{font-size:12px;color:var(--cf-ink-500)}
+    .vf-grid{display:grid;grid-template-columns:auto 1fr;gap:30px;align-items:center;margin-top:10px}
+    @media(max-width:620px){.vf-grid{grid-template-columns:1fr;justify-items:center;gap:18px}}
+    .vf-ring{position:relative;width:150px;height:150px;flex:none}
+    .vf-ring svg{width:150px;height:150px;transform:rotate(-90deg)}
+    .vt-track{fill:none;stroke:var(--cf-surface-2);stroke-width:14}
+    .vt-seg{fill:none;stroke-width:14;stroke-linecap:butt;transition:stroke-dasharray .7s ease}
+    .vt-seg.s-e{stroke:var(--cf-brand-500)}.vt-seg.s-d{stroke:var(--cf-accent-500)}.vt-seg.s-q{stroke:var(--cf-accent2-500)}
+    .vf-center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+    .vf-center .vf-num{font-size:25px;font-weight:800;color:var(--cf-ink-900);letter-spacing:-.02em}
+    .vf-center .vf-lbl{font-size:10px;color:var(--cf-ink-500);text-transform:uppercase;letter-spacing:.05em;margin-top:2px}
+    .vf-channels{display:flex;flex-direction:column;gap:13px;width:100%}
+    .vf-ch{display:flex;align-items:center;gap:12px}
+    .vf-ch-ic{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;flex:none}.vf-ch-ic .material-icons{font-size:17px}
+    .vf-ch.s-e .vf-ch-ic{background:var(--cf-brand-50);color:var(--cf-brand-600)}
+    .vf-ch.s-d .vf-ch-ic{background:color-mix(in srgb,var(--cf-accent-500) 14%,transparent);color:var(--cf-accent-600)}
+    .vf-ch.s-q .vf-ch-ic{background:color-mix(in srgb,var(--cf-accent2-500) 14%,transparent);color:var(--cf-accent2-600)}
+    .vf-ch-tx{flex:1;min-width:0}
+    .vf-ch-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+    .vf-ch-name{font-size:13px;font-weight:600;color:var(--cf-ink-800)}
+    .vf-ch-pct{font-size:12px;font-weight:700;color:var(--cf-ink-500)}
+    .vf-ch-bar{display:block;height:7px;border-radius:999px;background:var(--cf-surface-2);overflow:hidden}
+    .vf-ch-bar i{display:block;height:100%;border-radius:999px;transition:width .7s ease}
+    .vf-ch.s-e .vf-ch-bar i{background:var(--cf-brand-500)}.vf-ch.s-d .vf-ch-bar i{background:var(--cf-accent-500)}.vf-ch.s-q .vf-ch-bar i{background:var(--cf-accent2-500)}
+    .vf-ch-num{font-size:16px;font-weight:800;color:var(--cf-ink-900);flex:none;min-width:56px;text-align:end;font-variant-numeric:tabular-nums}
+    /* smart hero summary */
+    .hero-sum{display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:13.5px;color:var(--cf-ink-500);max-width:none}
+    .hero-sum b{color:var(--cf-ink-900);font-weight:800}
+    .hero-sum .sep{color:var(--cf-ink-300)}
+    /* ===== compact density pass ===== */
+    .cf-card-pad{padding:13px 15px}
+    .cf-metrics{gap:11px;margin-bottom:12px}
+    .cf-metric{padding:12px 14px}
+    .cf-metric .ic{width:33px;height:33px;margin-bottom:8px;border-radius:9px}
+    .cf-metric .ic .material-icons{font-size:18px}
+    .cf-metric-lbl{font-size:12px}
+    .cf-metric-val{font-size:21px}
+    .delta{font-size:11.5px}
+    .hero{margin-bottom:14px}
+    .row.analytics{gap:12px;margin-bottom:12px}
+    .row.two{gap:12px;margin-bottom:12px}
+    .ap-cta{margin-bottom:12px}
+    .quotas{padding:14px 15px;margin-bottom:12px}
+    .qz{padding:12px}
+    .qz-row{margin-bottom:8px}
+    .qz-num{font-size:19px;margin-bottom:7px}
+    .rt-card,.certs-card{margin-top:12px}
+    .chart-card .linechart{max-height:150px}
+    .ch-summary{gap:18px;margin:4px 0 2px;padding-bottom:8px}
+    .chs-v{font-size:14px}
+    .chs-ic,.chs-dot{transform:scale(.92)}
+    .vf-top2{margin:6px 0 11px}
+    .vf-top2 .vf-num{font-size:22px}
+    .vf-channels{gap:11px}
+    .timeline li{padding:6px 0}
+    .top-list{gap:9px}
+    .rt-thumb{height:74px}
+    .rt-tile{width:140px}
+    /* labeled approve + queue pager */
+    .ap-approve-row{display:inline-flex;align-items:center;gap:5px;height:32px;padding:0 12px;border-radius:9px;border:1px solid color-mix(in srgb,#16a34a 40%,var(--cf-line));background:none;color:#15803d;font:inherit;font-size:12.5px;font-weight:700;cursor:pointer;transition:background .14s,color .14s,border-color .14s,transform .12s,box-shadow .16s}
+    .ap-approve-row .material-icons{font-size:16px}
+    .ap-approve-row:hover{background:#16a34a;border-color:#16a34a;color:#fff;transform:translateY(-1px);box-shadow:0 8px 16px -8px #16a34a}
+    .apq-pager{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 14px 12px;border-top:1px solid var(--cf-line-soft)}
+    .apq-info{font-size:12px;color:var(--cf-ink-500)}
+    .apq-pg-btns{display:flex;align-items:center;gap:6px}
+    .apq-pg-btns button{width:30px;height:30px;border-radius:8px;border:1px solid var(--cf-line);background:var(--cf-surface);color:var(--cf-ink-600);cursor:pointer;display:grid;place-items:center;transition:.14s}
+    .apq-pg-btns button:hover:not(:disabled){border-color:color-mix(in srgb,var(--cf-brand-500) 40%,var(--cf-line));color:var(--cf-brand-700);background:var(--cf-brand-50)}
+    .apq-pg-btns button:disabled{opacity:.4;cursor:not-allowed}
+    .apq-pg-btns .material-icons{font-size:18px}
+    .apq-pg{font-size:12px;font-weight:700;color:var(--cf-ink-700);min-width:42px;text-align:center}
+    /* recent certificates polish */
+    .certs-card .card-head .link{display:inline-flex;align-items:center;gap:3px}
+    .certs-card .card-head .link .material-icons{font-size:15px;transition:transform .15s}
+    .certs-card .card-head .link:hover .material-icons{transform:translateX(3px)}
+    .certs-card .cf-table.pro tbody tr{cursor:pointer;transition:background .12s}
     @media(max-width:720px){.plan{grid-template-columns:1fr}.plan-right{justify-content:flex-start}}
   `],
 })
 export class DashboardPage {
   private templates = inject(TemplateService);
+  private alerts = inject(AlertService);
+  readonly approvals = inject(ApprovalService);
+  private issuedSvc = inject(IssuedService);
+  private router = inject(Router);
+  readonly plan = inject(PlanService);
+  private auth = inject(AuthService);
   readonly A = Actions;
 
   showOnboarding = signal(localStorage.getItem('cf-onboarding-done') !== '1');
@@ -298,7 +841,15 @@ export class DashboardPage {
 
   // Illustrative until the backend reports real figures.
   issued = signal(2847);
-  pending = signal(18);
+  pending = computed(() => this.approvals.pendingCount());
+  apqPage = signal(1);
+  apqPageSize = 10;
+  pendingAll = computed(() => this.approvals.pending());
+  pendingItems = computed(() => { const all = this.pendingAll(); const start = (this.apqPage() - 1) * this.apqPageSize; return all.slice(start, start + this.apqPageSize); });
+  apqPages = computed(() => Math.max(1, Math.ceil(this.pendingAll().length / this.apqPageSize)));
+  apqPrev(): void { if (this.apqPage() > 1) this.apqPage.update((p) => p - 1); }
+  apqNext(): void { if (this.apqPage() < this.apqPages()) this.apqPage.update((p) => p + 1); }
+  min(a: number, b: number): number { return Math.min(a, b); }
   activeUsers = signal(24);
 
   // Plan & usage
@@ -364,11 +915,126 @@ export class DashboardPage {
     { recipient: 'Yousef Nabil', template: 'Cloud Practitioner', status: 'Expired', date: 'Jun 10, 2026' },
   ];
 
+  dashSel = signal<Set<number>>(new Set<number>());
+  dashSelCount = computed(() => this.dashSel().size);
+  dashIsSel(id: number): boolean { return this.dashSel().has(id); }
+  dashToggle(id: number): void { const s = new Set(this.dashSel()); s.has(id) ? s.delete(id) : s.add(id); this.dashSel.set(s); }
+  dashAllSel = computed(() => { const p = this.pendingItems(); return p.length > 0 && p.every((a) => this.dashSel().has(a.id)); });
+  dashToggleAll(): void { const p = this.pendingItems(); const s = new Set(this.dashSel()); const all = p.every((a) => s.has(a.id)); p.forEach((a) => (all ? s.delete(a.id) : s.add(a.id))); this.dashSel.set(s); }
+  approveSelectedDash(): void { const ids = [...this.dashSel()]; if (!ids.length) return; this.approvals.approveMany(ids); this.dashSel.set(new Set<number>()); this.alerts.success(ids.length + ' approved.'); }
+  apAge(a: Approval): string { const d = +new Date(a.requestedAt); const n = d ? Math.floor((Date.now() - d) / 86400000) : 0; return n <= 0 ? 'today' : n === 1 ? '1d' : n + 'd'; }
+
+  // ---- live metrics ----
+  issuedTotal = computed(() => this.issuedSvc.stats().total || 2847);
+  totalViews = computed(() => { let v = 0; for (const r of this.issuedSvc.records()) v += this.issuedSvc.analytics(r).views; return v || 9482; });
+  deliverySuccess = computed(() => { const s = this.issuedSvc.stats(); const denom = s.sent + s.failed; return denom ? Math.round((s.sent / denom) * 100) : 100; });
+
+  // ---- quotas & storage ----
+  tplLimitLabel(): string { const l = this.plan.templateLimit(); return isFinite(l) ? String(l) : '∞'; }
+  tplPct(): number { const l = this.plan.templateLimit(); return !isFinite(l) || l <= 0 ? 0 : Math.min(100, Math.round((this.templateCount() / l) * 100)); }
+  storageUsedMB = computed(() => { let b = 0; try { Object.keys(localStorage).forEach((k) => { b += (localStorage.getItem(k) || '').length + k.length; }); } catch { /* ignore */ } return Math.max(0.1, Math.round((b / 1048576) * 10) / 10); });
+  storageLimitLabel(): string { const l = this.plan.storageLimitMB(); return isFinite(l) ? l.toLocaleString() : '∞'; }
+  storagePct(): number { const l = this.plan.storageLimitMB(); return !isFinite(l) || l <= 0 ? 0 : Math.min(100, Math.round((this.storageUsedMB() / l) * 100)); }
+
+  // ---- subscription modal ----
+  subOpen = signal(false);
+  goPricing(): void { this.subOpen.set(false); this.router.navigate(['/pricing']); }
+
+  // ---- traffic & issuance trend (line chart) ----
+  chart = computed(() => {
+    const d = this.range() === '6m' ? this.data6 : this.data12;
+    const issued = d.map((x) => x.v);
+    const traffic = issued.map((v, i) => Math.round(v * 2.6 + 140 + (i % 3) * 45));
+    const labels = d.map((x) => x.label);
+    const W = 1000, H = 150, padL = 38, padR = 12, padT = 12, padB = 22;
+    const pw = W - padL - padR, ph = H - padT - padB, n = labels.length;
+    const max = Math.max(...issued, ...traffic, 1) * 1.16;
+    const xs = (i: number) => padL + (n <= 1 ? pw / 2 : (pw * i) / (n - 1));
+    const ys = (v: number) => padT + ph * (1 - v / max);
+    const line = (a: number[]) => a.map((v, i) => xs(i).toFixed(1) + ',' + ys(v).toFixed(1)).join(' ');
+    const area = (a: number[]) => 'M' + padL + ',' + ys(0).toFixed(1) + ' ' + a.map((v, i) => 'L' + xs(i).toFixed(1) + ',' + ys(v).toFixed(1)).join(' ') + ' L' + (padL + pw).toFixed(1) + ',' + ys(0).toFixed(1) + ' Z';
+    const grid = [1, 0.75, 0.5, 0.25, 0].map((f) => ({ y: ys(max * f).toFixed(1), v: Math.round((max * f) / 100) * 100 }));
+    const dots = (a: number[]) => a.map((v, i) => ({ x: +xs(i).toFixed(1), y: +ys(v).toFixed(1) }));
+    const peakIdx = traffic.indexOf(Math.max(...traffic));
+    return {
+      W, H, padL, labels, grid,
+      issuedLine: line(issued), issuedArea: area(issued), trafficLine: line(traffic), trafficArea: area(traffic),
+      idots: dots(issued), tdots: dots(traffic),
+      totalIssued: issued.reduce((a, b) => a + b, 0), totalTraffic: traffic.reduce((a, b) => a + b, 0),
+      peakLabel: labels[peakIdx] || '', peakVal: traffic[peakIdx] || 0, peakX: +xs(peakIdx).toFixed(1), peakY: +ys(traffic[peakIdx]).toFixed(1),
+    };
+  });
+
+  // ---- verification traffic ----
+  verif = computed(() => {
+    let e = 0, dr = 0, q = 0;
+    for (const r of this.issuedSvc.records()) { const a = this.issuedSvc.analytics(r); e += a.email; dr += a.direct; q += a.qr; }
+    if (e + dr + q === 0) { e = 742; dr = 389; q = 153; }
+    const total = e + dr + q; const pct = (x: number) => Math.round((x / total) * 100);
+    const C = 2 * Math.PI * 42; let acc = 0;
+    const mk = (v: number, key: string, label: string, icon: string) => { const len = total ? (v / total) * C : 0; const o = -acc; acc += len; return { key, label, icon, value: v, pct: pct(v), dash: len.toFixed(2) + ' ' + (C - len).toFixed(2), offset: o.toFixed(2) }; };
+    const segs = [mk(e, 'e', 'Email', 'mail'), mk(dr, 'd', 'Direct visit', 'ads_click'), mk(q, 'q', 'QR scan', 'qr_code_2')];
+    return { total, email: e, direct: dr, qr: q, ePct: pct(e), dPct: pct(dr), qPct: pct(q), segs };
+  });
+
+  // ---- animated KPI counters + sparklines ----
+  aIssued = signal(0); aTemplates = signal(0); aViews = signal(0); aDelivery = signal(0); aPending = signal(0);
+  private sparks = [[6, 9, 7, 12, 10, 15, 13, 19], [7, 6, 9, 8, 12, 10, 14, 17], [5, 8, 7, 11, 9, 14, 12, 18], [9, 11, 10, 13, 14, 15, 17, 19]];
+  kpiSpark(i: number): string {
+    const a = this.sparks[i] || this.sparks[0]; const max = Math.max(...a, 1); const W = 120, H = 34;
+    const xs = (k: number) => (W * k) / (a.length - 1); const ys = (v: number) => H - 3 - (H - 6) * (v / max);
+    return a.map((v, k) => xs(k).toFixed(0) + ',' + ys(v).toFixed(1)).join(' ');
+  }
+  private tween(getTarget: () => number, out: WritableSignal<number>): void {
+    effect((onCleanup) => {
+      const to = getTarget(); const from = untracked(out); const t0 = performance.now(); const dur = 900; let raf = 0;
+      const step = (now: number) => { const p = Math.min(1, (now - t0) / dur); const e = 1 - Math.pow(1 - p, 3); out.set(Math.round(from + (to - from) * e)); if (p < 1) raf = requestAnimationFrame(step); };
+      raf = requestAnimationFrame(step); onCleanup(() => cancelAnimationFrame(raf));
+    });
+  }
+
+  // ---- credentials quota (this month) ----
+  credentialsUsed = computed(() => { const n = new Date(); const real = this.issuedSvc.records().filter((r) => { const d = new Date(r.createdAt); return d.getMonth() === n.getMonth() && d.getFullYear() === n.getFullYear(); }).length; return real || 1209; });
+  credLimitLabel(): string { const l = this.plan.issueLimit(); return isFinite(l) ? l.toLocaleString() : '∞'; }
+  credPct(): number { const l = this.plan.issueLimit(); return !isFinite(l) || l <= 0 ? 0 : Math.min(100, Math.round((this.credentialsUsed() / l) * 100)); }
+
+  // ---- top templates (most issued) ----
+  topTemplates = computed(() => {
+    const real = this.items().map((t) => ({ name: t.name || 'Untitled', thumb: t.thumbnailDataUrl || null, n: this.issuedSvc.countFor(t.id) })).filter((x) => x.n > 0).sort((a, b) => b.n - a.n).slice(0, 5);
+    const list = real.length ? real : [
+      { name: 'Professional Certificate', thumb: null, n: 1284 },
+      { name: 'Workshop Attendance', thumb: null, n: 946 },
+      { name: 'Excellence Award', thumb: null, n: 712 },
+      { name: 'Completion Diploma', thumb: null, n: 498 },
+      { name: 'Webinar Badge', thumb: null, n: 321 },
+    ];
+    const max = Math.max(...list.map((x) => x.n), 1);
+    return list.map((x, i) => ({ ...x, rank: i + 1, pct: Math.round((x.n / max) * 100) }));
+  });
+
+  // ---- approvals: row actions + view/sign popup ----
+  approver = computed(() => { const n = (this.auth.userName || '').trim(); return n ? n.charAt(0).toUpperCase() + n.slice(1) : 'You'; });
+  today(): string { return new Date().toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }); }
+  greeting(): string { const h = new Date().getHours(); return h < 12 ? 'Good morning' : h < 18 ? 'Good afternoon' : 'Good evening'; }
+  dashView = signal<Approval | null>(null);
+  openDashView(a: Approval): void { this.dashView.set(a); }
+  closeDashView(): void { this.dashView.set(null); }
+  approveRow(a: Approval): void { this.approvals.approve(a.id, this.approver()); this.alerts.success('Approved — ' + a.recipient + '.'); }
+  dashReject(a: Approval): void { this.approvals.reject(a.id); this.closeDashView(); this.alerts.info('Rejected — ' + a.recipient + '.'); }
+  dashSign(a: Approval): void { this.approvals.approve(a.id, this.approver()); this.closeDashView(); this.alerts.success('Signed & approved — ' + a.recipient + '.'); }
+
+  certInitials(n: string): string { return n.split(/[\s—-]+/).filter(Boolean).map((x) => x[0]).join('').slice(0, 2).toUpperCase(); }
+
   badge(s: string): string {
     return s === 'Active' ? 'cf-badge-success' : s === 'Pending' ? 'cf-badge-warning' : 'cf-badge-danger';
   }
 
   constructor() {
+    this.tween(() => this.issuedTotal(), this.aIssued);
+    this.tween(() => this.templateCount(), this.aTemplates);
+    this.tween(() => this.totalViews(), this.aViews);
+    this.tween(() => this.deliverySuccess(), this.aDelivery);
+    this.tween(() => this.pending(), this.aPending);
     this.templates.list().subscribe({
       next: (items) => { this.items.set(items ?? []); this.loading.set(false); },
       error: () => this.loading.set(false),

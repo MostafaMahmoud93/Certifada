@@ -3,6 +3,9 @@
 :root {
   --cf-brand-50:#EEF2FF; --cf-brand-100:#E0E7FF; --cf-brand-200:#C7D2FE;
   --cf-brand-500:#6366F1; --cf-brand-600:#4F46E5; --cf-brand-700:#4338CA;
+  --cf-accent-50:#E0F2FE; --cf-accent-100:#BAE6FD; --cf-accent-200:#7DD3FC; --cf-accent-500:#0EA5E9; --cf-accent-600:#0284C7; --cf-accent-700:#0369A1;
+  --cf-accent2-50:#F5F3FF; --cf-accent2-100:#EDE9FE; --cf-accent2-200:#DDD6FE; --cf-accent2-500:#8B5CF6; --cf-accent2-600:#7C3AED; --cf-accent2-700:#6D28D9;
+  --cf-brand-grad:linear-gradient(135deg,var(--cf-brand-500),var(--cf-accent-500)); --cf-brand-grad-soft:linear-gradient(135deg,var(--cf-brand-50),var(--cf-accent-50));
   --cf-on-brand:#FFFFFF;
   --cf-gold:#D9A441; --cf-gold-soft:#FBF1DC; --cf-gold-ink:#8A5A0B;
   --cf-ink-900:#0F172A; --cf-ink-700:#334155; --cf-ink-600:#475569;
@@ -24,6 +27,9 @@
 :root.dark {
   --cf-brand-50:#1E1B4B; --cf-brand-100:#272264; --cf-brand-200:#312E81;
   --cf-brand-500:#818CF8; --cf-brand-600:#6366F1; --cf-brand-700:#A5B4FC;
+  --cf-accent-50:#0B2434; --cf-accent-100:#0C2E45; --cf-accent-200:#0E4F6E; --cf-accent-500:#38BDF8; --cf-accent-600:#0EA5E9; --cf-accent-700:#7DD3FC;
+  --cf-accent2-50:#1E1B33; --cf-accent2-100:#2A2348; --cf-accent2-200:#4C3A8A; --cf-accent2-500:#A78BFA; --cf-accent2-600:#8B5CF6; --cf-accent2-700:#C4B5FD;
+  --cf-brand-grad:linear-gradient(135deg,var(--cf-brand-500),var(--cf-accent-500)); --cf-brand-grad-soft:linear-gradient(135deg,var(--cf-brand-50),var(--cf-accent-50));
   --cf-gold:#E2B45A; --cf-gold-soft:#2A2310; --cf-gold-ink:#E9C97E;
   --cf-ink-900:#F1F5F9; --cf-ink-700:#CBD5E1; --cf-ink-600:#AEB9C9;
   --cf-ink-500:#8A97A8; --cf-ink-400:#64748B;
