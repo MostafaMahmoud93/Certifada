@@ -19,8 +19,8 @@ export const permissionGuard: CanActivateFn = (route) => {
 
   if (perm.has(action)) return true;
 
-  // Send denied users to the dashboard (which is NOT gated) — never to another
-  // gated route, to avoid a redirect loop.
-  router.navigateByUrl('/app/dashboard');
+  // Authenticated but the role lacks this action -> dedicated Access Restricted page
+  // (/app/forbidden is NOT gated, so there is no redirect loop).
+  router.navigateByUrl('/app/forbidden');
   return false;
 };

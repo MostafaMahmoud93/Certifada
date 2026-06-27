@@ -45,6 +45,8 @@ export const routes: Routes = [
       { path: 'automation', loadComponent: () => import('./features/automation/automation').then((m) => m.AutomationPage), canActivate: [permissionGuard], data: { action: Actions.Automation_View } },
       { path: 'settings', loadComponent: () => import('./features/settings/settings').then((m) => m.SettingsPage), canActivate: [permissionGuard], data: { action: Actions.Settings_Manage } },
       { path: 'support', loadComponent: () => import('./features/support/support').then((m) => m.SupportPage) },
+      { path: 'messages', loadComponent: () => import('./features/messages/messages').then((m) => m.MessagesPage) },
+      { path: 'forbidden', loadComponent: () => import('./features/errors/error.pages').then((m) => m.ForbiddenPage) },
       { path: '', pathMatch: 'full', redirectTo: 'dashboard' },
     ],
   },
@@ -78,5 +80,8 @@ export const routes: Routes = [
   // ---- public pricing ----
   { path: 'pricing', loadComponent: () => import('./features/pricing/pricing').then((m) => m.PricingPage) },
 
-  { path: '**', redirectTo: '' },
+  // ---- error pages ----
+  { path: '403', loadComponent: () => import('./features/errors/error.pages').then((m) => m.ForbiddenPage) },
+  { path: '404', loadComponent: () => import('./features/errors/error.pages').then((m) => m.NotFoundPage) },
+  { path: '**', loadComponent: () => import('./features/errors/error.pages').then((m) => m.NotFoundPage) },
 ];

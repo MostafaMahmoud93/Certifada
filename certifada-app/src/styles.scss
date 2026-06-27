@@ -116,3 +116,17 @@ a:hover{color:var(--cf-brand-700)}
   transition: background-color .45s ease, color .45s ease, border-color .45s ease,
               fill .45s ease, stroke .45s ease, box-shadow .45s ease !important;
 }
+
+/* ── Permission gate (appHasAction — disable mode) ─────────────────────────── */
+.cf-locked{opacity:.5;cursor:not-allowed;filter:grayscale(.15);position:relative;-webkit-user-select:none;user-select:none}
+.cf-locked[data-locktip]:hover::after{content:attr(data-locktip);position:absolute;bottom:calc(100% + 7px);left:50%;transform:translateX(-50%);background:var(--cf-ink-900,#0f172a);color:#fff;font-size:11px;font-weight:600;line-height:1.4;width:max-content;max-width:240px;padding:6px 9px;border-radius:8px;box-shadow:0 10px 26px -8px rgba(2,6,23,.55);z-index:9999;pointer-events:none;text-align:center;white-space:normal}
+
+/* ── Plan gate (appPlanFeature — premium crown lock) ───────────────────────── */
+.cf-plan-locked{position:relative;opacity:.62;cursor:pointer;filter:grayscale(.2)}
+.cf-crown{position:absolute;top:-7px;inset-inline-end:-7px;width:20px;height:20px;border-radius:50%;display:grid;place-items:center;
+  background:linear-gradient(135deg,#f0d27a,#bd902a);color:#fff;box-shadow:0 3px 8px -2px rgba(189,144,42,.75);z-index:6;pointer-events:none}
+.cf-crown .material-icons{font-size:13px}
+/* canvas rail premium crown */
+.rail-btn{position:relative}
+.rail-btn.locked{opacity:.66}
+.rail-crown{position:absolute;top:3px;inset-inline-end:7px;font-size:14px !important;color:#e0b53e;filter:drop-shadow(0 1px 2px rgba(0,0,0,.35))}

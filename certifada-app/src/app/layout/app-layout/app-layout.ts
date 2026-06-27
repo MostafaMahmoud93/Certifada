@@ -11,6 +11,8 @@ import { LanguageService } from '../../core/services/language.service';
 import { LayoutService } from '../../core/services/layout.service';
 import { BrandService } from '../../core/services/brand.service';
 import { ApprovalService } from '../../core/services/approval.service';
+import { MessageService } from '../../core/services/message.service';
+import { UpgradeDialogComponent } from '../../shared/components/upgrade-dialog/upgrade-dialog';
 
 interface NavItem { label: string; icon: string; link: string; action: string; }
 interface NotifItem { id: number; icon: string; tone: 'brand' | 'success' | 'warn' | 'info'; title: string; body: string; time: string; read: boolean; }
@@ -18,7 +20,7 @@ interface NotifItem { id: number; icon: string; tone: 'brand' | 'success' | 'war
 @Component({
   selector: 'app-app-layout',
   standalone: true,
-  imports: [CommonModule, RouterOutlet, RouterLink, RouterLinkActive, HasActionDirective, SignaturePadComponent, TranslocoModule],
+  imports: [CommonModule, RouterOutlet, RouterLink, RouterLinkActive, HasActionDirective, SignaturePadComponent, TranslocoModule, UpgradeDialogComponent],
   template: `
   <div class="shell" [class.collapsed]="collapsed() && !navTop()" [class.postop]="navTop()">
 
@@ -125,6 +127,10 @@ interface NotifItem { id: number; icon: string; tone: 'brand' | 'success' | 'war
         </div>
       }
     </div>
+    <a class="ico" routerLink="/app/messages" aria-label="Messages" title="Messages" style="position:relative">
+      <span class="material-icons">forum</span>
+      @if (msgs.unread()) { <span class="nbadge">{{ msgs.unread() }}</span> }
+    </a>
     <div class="profile">
       <button class="avatar" (click)="toggleProfile($event)" aria-label="Account">{{ auth.initials }}</button>
       @if (profileOpen()) {
@@ -144,6 +150,7 @@ interface NotifItem { id: number; icon: string; tone: 'brand' | 'success' | 'war
   </ng-template>
 
   <app-signature-pad [open]="signatureOpen()" (closed)="signatureOpen.set(false)"></app-signature-pad>
+  <app-upgrade-dialog />
   `,
   styles: [`
     :host{display:block;height:100vh}
@@ -304,6 +311,7 @@ export class AppLayout {
   layout = inject(LayoutService);
   brand = inject(BrandService);
   approvals = inject(ApprovalService);
+  msgs = inject(MessageService);
   private router = inject(Router);
   readonly A = Actions;
 

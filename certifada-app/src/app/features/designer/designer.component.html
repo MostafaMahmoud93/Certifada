@@ -328,8 +328,9 @@
   <!-- Icon rail -->
   <nav class="rail">
     @for (item of rail; track item.id) {
-      <button class="rail-btn" [class.on]="activePanel() === item.id" (click)="selectPanel(item.id)" (mouseenter)="onRailHover(item.id)" [title]="('canvas.rail.' + item.id) | transloco">
+      <button class="rail-btn" [class.on]="activePanel() === item.id" [class.locked]="railLocked(item.id)" (click)="selectPanel(item.id)" (mouseenter)="onRailHover(item.id)" [title]="railLocked(item.id) ? ('Upgrade to unlock') : (('canvas.rail.' + item.id) | transloco)">
         <span class="material-icons">{{ item.icon }}</span>
+        @if (railLocked(item.id)) { <span class="rail-crown material-icons">workspace_premium</span> }
         <small>{{ ('canvas.rail.' + item.id) | transloco }}</small>
       </button>
     }

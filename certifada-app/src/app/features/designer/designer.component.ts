@@ -25,6 +25,8 @@ import { TemplateService } from '../../core/services/template.service';
 import { CertificateService } from '../../core/services/certificate.service';
 import { AssetService, UserAsset, AssetEntry } from '../../core/services/asset.service';
 import { BrandService } from '../../core/services/brand.service';
+import { PlanService, FeatureKey } from '../../core/services/plan.service';
+import { UpgradeService } from '../../core/services/upgrade.service';
 import { SaveTemplateRequest } from '../../core/models/models';
 import { exportPdf, exportPng, exportSvg, renderJsonToPng, mergeDataIntoJson } from '../../core/utils/render.util';
 
@@ -73,6 +75,8 @@ export class DesignerComponent implements AfterViewInit, OnDestroy {
   svc = inject(FabricCanvasService);
   assets = inject(AssetService);
   brand = inject(BrandService);
+  private plan = inject(PlanService);
+  private upgrade = inject(UpgradeService);
   private i18n = inject(TranslocoService);
   private ai = inject(AiService);
   private templates = inject(TemplateService);
@@ -112,7 +116,11 @@ export class DesignerComponent implements AfterViewInit, OnDestroy {
   ];
   activePanel = signal<PanelId | null>('design');
   search = signal('');
+  railPlan: Partial<Record<PanelId, FeatureKey>> = { ai: 'ai', qr: 'qr', drawing: 'drawing', table: 'table' };
+  railLocked(id: PanelId): boolean { const f = this.railPlan[id]; return !!f && !this.plan.can(f); }
   selectPanel(id: PanelId): void {
+    const f = this.railPlan[id];
+    if (f && !this.plan.can(f)) { this.upgrade.open(f); return; }   // plan-locked -> upgrade dialog
     this.activePanel.set(this.activePanel() === id ? null : id);
     this.search.set('');
   }
@@ -124,7 +132,7 @@ export class DesignerComponent implements AfterViewInit, OnDestroy {
     localStorage.setItem('cf-flyout-pin', this.flyoutPinned() ? '1' : '0');
   }
   /** When unpinned, hovering a rail icon opens that tab. */
-  onRailHover(id: PanelId): void { if (!this.flyoutPinned()) this.activePanel.set(id); }
+  onRailHover(id: PanelId): void { if (this.railLocked(id)) return; if (!this.flyoutPinned()) this.activePanel.set(id); }
 
   // ---- AI designer (chat → generated template) ----
   aiMsgs = signal<{ role: 'user' | 'assistant' | 'error'; text: string }[]>([]);

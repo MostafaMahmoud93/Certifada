@@ -86,6 +86,34 @@ export const PLAN_CATALOG: PlanTier[] = [
   },
 ];
 
+export type FeatureKey =
+  | 'branding' | 'qr' | 'table' | 'ai' | 'drawing' | 'imageStudio' | 'bgStudio'
+  | 'bulk' | 'analytics' | 'multiPage' | 'apiAccess' | 'whiteLabel' | 'sso';
+
+/** Plan rank order, lowest to highest. */
+export const PLAN_ORDER = ['Free', 'Basic', 'Professional', 'Enterprise'];
+
+/**
+ * The single source of truth mapping every gated feature to the minimum plan that
+ * unlocks it. This is the map to mirror on the backend (return the unlocked feature
+ * set / plan in the token or plan payload, then the UI gates against it).
+ */
+export const PLAN_FEATURES: Record<FeatureKey, string> = {
+  branding: 'Basic',
+  qr: 'Professional', table: 'Professional', ai: 'Professional', drawing: 'Professional',
+  imageStudio: 'Professional', bgStudio: 'Professional', bulk: 'Professional',
+  analytics: 'Professional', multiPage: 'Professional',
+  apiAccess: 'Enterprise', whiteLabel: 'Enterprise', sso: 'Enterprise',
+};
+
+/** Human-readable labels for the upgrade dialog / tooltips. */
+export const FEATURE_LABELS: Record<FeatureKey, string> = {
+  branding: 'Custom branding', qr: 'QR code studio', table: 'Table tool', ai: 'AI design assistant',
+  drawing: 'Drawing studio', imageStudio: 'Image studio', bgStudio: 'Background studio',
+  bulk: 'Bulk issuing', analytics: 'Advanced analytics', multiPage: 'Multi-page designs',
+  apiAccess: 'API access', whiteLabel: 'White-label', sso: 'SSO / SAML',
+};
+
 /**
  * Current subscription plan + limits. Backs the Templates usage meter, the Issue
  * flow quota, the dashboard Plan Quotas & Storage card and the Pricing page.
@@ -120,4 +148,15 @@ export class PlanService {
 
   setPlan(id: string): void { if (PLAN_CATALOG.some((p) => p.id === id)) { this.plan.set(id); localStorage.setItem('cf-plan', id); } }
   setBilling(b: 'monthly' | 'yearly'): void { this.billing.set(b); }
+
+  // ---- feature entitlements (plan gating) ----
+  rank(id: string): number { const i = PLAN_ORDER.indexOf(id); return i < 0 ? 0 : i; }
+  /** Does the current plan unlock this feature? Unknown features are allowed. */
+  can(feature: FeatureKey): boolean {
+    const req = PLAN_FEATURES[feature];
+    return !req || this.rank(this.plan()) >= this.rank(req);
+  }
+  requiredPlanId(feature: FeatureKey): string { return PLAN_FEATURES[feature] || 'Free'; }
+  requiredPlan(feature: FeatureKey): PlanTier | undefined { return this.tier(this.requiredPlanId(feature)); }
+  featureLabel(feature: FeatureKey): string { return FEATURE_LABELS[feature] || 'this feature'; }
 }

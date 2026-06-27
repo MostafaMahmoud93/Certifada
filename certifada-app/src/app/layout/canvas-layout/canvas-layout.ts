@@ -2,13 +2,14 @@ import { Component, inject } from '@angular/core';
 import { RouterOutlet, RouterLink } from '@angular/router';
 import { ThemeService } from '../../core/services/theme.service';
 import { LanguageService } from '../../core/services/language.service';
+import { UpgradeDialogComponent } from '../../shared/components/upgrade-dialog/upgrade-dialog';
 
 /** Full-bleed shell for the designer + bulk pages, with a slim top bar
  *  (brand / back, language toggle, light-dark toggle). */
 @Component({
   selector: 'app-canvas-layout',
   standalone: true,
-  imports: [RouterOutlet, RouterLink],
+  imports: [RouterOutlet, RouterLink, UpgradeDialogComponent],
   template: `
   <div class="canvas-shell">
     <header class="cv-top">
@@ -27,6 +28,7 @@ import { LanguageService } from '../../core/services/language.service';
     </header>
     <div class="cv-body"><router-outlet></router-outlet></div>
   </div>
+  <app-upgrade-dialog />
   `,
   styles: [`
     :host{display:block;height:100vh;overflow:hidden}

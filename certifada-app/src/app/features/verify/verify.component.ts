@@ -6,6 +6,7 @@ import { TemplateService } from '../../core/services/template.service';
 import { IssuedService, IssuedRecord } from '../../core/services/issued.service';
 import { AlertService } from '../../core/services/alert.service';
 import { BrandService } from '../../core/services/brand.service';
+import { MessageService } from '../../core/services/message.service';
 import { mergeDataIntoJson, renderJsonToPng } from '../../core/utils/render.util';
 
 @Component({
@@ -132,6 +133,30 @@ import { mergeDataIntoJson, renderJsonToPng } from '../../core/utils/render.util
         <span><span class="material-icons">lock</span> Secured &amp; verified · {{ record()!.createdAt | date: 'y' }} {{ issuerOrg() }}</span>
         <a href="https://certifada.com" target="_blank" rel="noopener">Powered by Certifada</a>
       </footer>
+    }
+
+    @if (convosOpen()) {
+      <div class="cv-overlay" (click)="convosOpen.set(false)">
+        <div class="cv-modal" (click)="$event.stopPropagation()">
+          <div class="cv-head">
+            <div><h3>Your conversations</h3><p>Messages about this credential with {{ issuerOrg() }}.</p></div>
+            <button class="cv-x" (click)="convosOpen.set(false)" aria-label="Close"><span class="material-icons">close</span></button>
+          </div>
+          <div class="cv-body">
+            @for (m of convos(); track m.id) {
+              <div class="cv-thread">
+                <div class="cv-b cv-you"><span class="cv-by">You · {{ m.createdAt | date: 'MMM d, y, h:mm a' }}</span><p>{{ m.body }}</p></div>
+                @for (rp of m.replies; track $index) {
+                  <div class="cv-b cv-iss"><span class="cv-by">{{ issuerOrg() }} · {{ rp.at | date: 'MMM d, y, h:mm a' }}</span><p>{{ rp.body }}</p></div>
+                }
+                @if (!m.replies.length) { <div class="cv-pending"><span class="material-icons">schedule</span> Awaiting a reply from {{ issuerOrg() }}</div> }
+              </div>
+            } @empty {
+              <div class="cv-empty"><span class="material-icons">forum</span><h4>No conversations yet</h4><p>Send a message above and your conversation will appear here.</p></div>
+            }
+          </div>
+        </div>
+      </div>
     }
   </div>
   `,
@@ -274,6 +299,23 @@ import { mergeDataIntoJson, renderJsonToPng } from '../../core/utils/render.util
     .contact-foot{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:15px;flex-wrap:wrap}
     .link-btn{display:inline-flex;align-items:center;gap:6px;border:0;background:none;color:var(--cf-brand-600);font:inherit;font-size:13px;font-weight:600;cursor:pointer}
     .link-btn:hover{text-decoration:underline}.link-btn .material-icons{font-size:16px}
+    .cv-overlay{position:fixed;inset:0;z-index:60;background:rgba(15,23,42,.5);-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px);display:grid;place-items:center;padding:20px;animation:cvfade .15s ease}
+    @keyframes cvfade{from{opacity:0}to{opacity:1}}
+    .cv-modal{width:100%;max-width:540px;max-height:84vh;display:flex;flex-direction:column;background:var(--cf-surface);border:1px solid var(--cf-line);border-radius:18px;box-shadow:0 30px 80px -20px rgba(2,6,23,.5);overflow:hidden;animation:cvpop .2s cubic-bezier(.2,1.2,.4,1)}
+    @keyframes cvpop{from{opacity:0;transform:translateY(10px) scale(.98)}to{opacity:1;transform:none}}
+    .cv-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:18px 20px;border-bottom:1px solid var(--cf-line)}
+    .cv-head h3{font-size:17px;font-weight:800;color:var(--cf-ink-900)}
+    .cv-head p{font-size:12.5px;color:var(--cf-ink-500);margin-top:3px}
+    .cv-x{width:32px;height:32px;border-radius:9px;border:1px solid var(--cf-line);background:var(--cf-surface-2);cursor:pointer;display:grid;place-items:center;color:var(--cf-ink-500);flex:none}.cv-x .material-icons{font-size:18px}
+    .cv-body{overflow-y:auto;padding:18px 20px;display:flex;flex-direction:column;gap:18px}
+    .cv-thread{display:flex;flex-direction:column;gap:9px}
+    .cv-b{max-width:86%;padding:11px 14px;border-radius:14px;font-size:13.5px;line-height:1.55}
+    .cv-b .cv-by{display:block;font-size:11px;font-weight:700;opacity:.8;margin-bottom:4px}
+    .cv-b p{margin:0;white-space:pre-wrap;word-break:break-word}
+    .cv-you{align-self:flex-end;background:linear-gradient(135deg,var(--cf-brand-500),var(--cf-brand-700));color:#fff;border-bottom-right-radius:5px}
+    .cv-iss{align-self:flex-start;background:var(--cf-surface-2);color:var(--cf-ink-800);border:1px solid var(--cf-line);border-bottom-left-radius:5px}
+    .cv-pending{align-self:flex-start;display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--cf-ink-400);font-style:italic}.cv-pending .material-icons{font-size:14px}
+    .cv-empty{text-align:center;padding:40px 20px;color:var(--cf-ink-400)}.cv-empty .material-icons{font-size:36px}.cv-empty h4{font-size:15px;color:var(--cf-ink-700);margin:8px 0 4px}.cv-empty p{font-size:13px}
     .contact-foot .vbtn{flex:none;min-width:170px}
 
     .vfoot{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:26px;padding-top:18px;border-top:1px solid var(--cf-line);font-size:12px;color:var(--cf-ink-400);flex-wrap:wrap}
@@ -331,6 +373,7 @@ export class VerifyComponent {
   private issued = inject(IssuedService);
   private alerts = inject(AlertService);
   private brandSvc = inject(BrandService);
+  private msgs = inject(MessageService);
 
   id = this.route.snapshot.paramMap.get('id') || '';
   loading = signal(true);
@@ -433,8 +476,12 @@ export class VerifyComponent {
 
   sendMessage(): void {
     if (!this.contactValid()) return;
+    const r = this.record();
+    this.msgs.add({ from: this.cName(), email: this.cEmail(), body: this.cMsg(), credentialId: this.id, credentialName: r?.templateName });
     this.alerts.success(`Your message was sent to ${this.issuerOrg()}.`, { title: 'Message sent' });
     this.cName.set(''); this.cEmail.set(''); this.cMsg.set('');
   }
-  pastConvos(): void { this.alerts.info('You have no past conversations with this issuer yet.'); }
+  convosOpen = signal(false);
+  convos = computed(() => this.msgs.items().filter((m) => !!m.credentialId && m.credentialId === this.id).sort((a, b) => +new Date(a.createdAt) - +new Date(b.createdAt)));
+  pastConvos(): void { this.convosOpen.set(true); }
 }
