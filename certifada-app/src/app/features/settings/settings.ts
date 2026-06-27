@@ -8,6 +8,7 @@ import { LayoutService } from '../../core/services/layout.service';
 import { BrandService } from '../../core/services/brand.service';
 import { PlanService } from '../../core/services/plan.service';
 import { AuthService } from '../../core/services/auth.service';
+import { SignaturePadComponent } from '../../shared/components/signature/signature-pad';
 
 interface Settings {
   org: string; website: string; supportEmail: string; timezone: string; dateFormat: string;
@@ -22,7 +23,7 @@ const DEFAULT: Settings = {
 @Component({
   selector: 'app-settings',
   standalone: true,
-  imports: [FormsModule, RouterLink],
+  imports: [FormsModule, RouterLink, SignaturePadComponent],
   template: `
   <div class="head">
     <div>
@@ -62,6 +63,25 @@ const DEFAULT: Settings = {
             <label class="fld">Email<input [(ngModel)]="profile.email" (ngModelChange)="dirty.set(true)" type="email" placeholder="you@company.com" /></label>
           </div>
           <button class="cf-btn cf-btn-secondary sm" (click)="flash('Password reset link sent to your email.')"><span class="material-icons">lock_reset</span> Change password</button>
+        </div>
+
+        <div class="card sect">
+          <h3><span class="material-icons">draw</span> Your signature</h3>
+          <p class="sect-hint">Applied automatically when you sign approvals and issue signed certificates.</p>
+          <div class="sig-block">
+            <div class="sig-preview" [class.empty]="!mySig()">
+              @if (mySig()) { <img [src]="mySig()!" alt="Your signature" /> }
+              @else { <span class="sig-ph"><span class="material-icons">gesture</span> No signature yet</span> }
+            </div>
+            <div class="sig-info">
+              <strong>{{ mySig() ? 'Signature on file' : 'No signature saved' }}</strong>
+              <small class="cf-muted">Draw or type your signature — it is used across approvals and signed certificates.</small>
+              <div class="sig-acts">
+                <button class="cf-btn cf-btn-primary sm" (click)="sigOpen.set(true)"><span class="material-icons">{{ mySig() ? 'edit' : 'draw' }}</span> {{ mySig() ? 'Change signature' : 'Add signature' }}</button>
+                @if (mySig()) { <button class="cf-btn cf-btn-secondary sm" (click)="removeSig()"><span class="material-icons">delete</span> Remove</button> }
+              </div>
+            </div>
+          </div>
         </div>
       }
 
@@ -255,10 +275,21 @@ const DEFAULT: Settings = {
     </div>
   </div>
 
+  <app-signature-pad [open]="sigOpen()" (closed)="onSigClosed()" />
   @if (msg()) { <div class="toast">{{ msg() }}</div> }
   `,
   styles: [`
     :host{display:block}
+    .sect-hint{font-size:12.5px;color:var(--cf-ink-500);margin:-4px 0 14px}
+    .sig-block{display:flex;align-items:center;gap:18px;flex-wrap:wrap}
+    .sig-preview{width:240px;height:100px;border:1px solid var(--cf-line);border-radius:12px;background:var(--cf-surface-2);display:grid;place-items:center;overflow:hidden;flex:none}
+    .sig-preview.empty{border-style:dashed}
+    .sig-preview img{max-width:88%;max-height:80%;object-fit:contain}
+    .sig-ph{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;color:var(--cf-ink-400)}.sig-ph .material-icons{font-size:18px}
+    .sig-info{display:flex;flex-direction:column;gap:3px;min-width:200px}
+    .sig-info strong{font-size:13.5px;color:var(--cf-ink-900)}
+    .sig-info small{font-size:12px;max-width:340px}
+    .sig-acts{display:flex;gap:9px;flex-wrap:wrap;margin-top:8px}
     .head{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;padding-bottom:18px;border-bottom:1px solid var(--cf-line);margin-bottom:22px}
     .head h1{font-size:25px;font-weight:800;letter-spacing:-.02em;color:var(--cf-ink-900)}
     .head p{font-size:13.5px;margin-top:3px}
@@ -425,6 +456,11 @@ export class SettingsPage {
 
   msg = signal('');
   dirty = signal(false);
+  sigOpen = signal(false);
+  mySig = signal<string | null>(this.readSig());
+  private readSig(): string | null { try { return localStorage.getItem('cf-signature'); } catch { return null; } }
+  onSigClosed(): void { this.sigOpen.set(false); this.mySig.set(this.readSig()); }
+  removeSig(): void { try { localStorage.removeItem('cf-signature'); } catch { /* ignore */ } this.mySig.set(null); this.flash('Signature removed.'); }
   section = signal<string>('profile');
   navItems = [
     { key: 'profile', label: 'Profile', icon: 'person' },

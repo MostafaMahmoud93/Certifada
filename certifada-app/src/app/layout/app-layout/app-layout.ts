@@ -10,6 +10,7 @@ import { ThemeService } from '../../core/services/theme.service';
 import { LanguageService } from '../../core/services/language.service';
 import { LayoutService } from '../../core/services/layout.service';
 import { BrandService } from '../../core/services/brand.service';
+import { ApprovalService } from '../../core/services/approval.service';
 
 interface NavItem { label: string; icon: string; link: string; action: string; }
 interface NotifItem { id: number; icon: string; tone: 'brand' | 'success' | 'warn' | 'info'; title: string; body: string; time: string; read: boolean; }
@@ -83,6 +84,7 @@ interface NotifItem { id: number; icon: string; tone: 'brand' | 'success' | 'war
        [attr.title]="navTop() ? null : (item.label | transloco)" [attr.data-tip]="item.label | transloco" [attr.aria-label]="item.label | transloco"
        [appHasAction]="item.action" [tooltipMessage]="'🔒 ' + (item.label | transloco) + ' ' + ('shell.locked' | transloco)">
       <span class="material-icons">{{ item.icon }}</span><span class="lbl">{{ item.label | transloco }}</span>
+      @if (badgeFor(item) > 0) { <span class="nav-badge" [attr.data-count]="badgeFor(item)">{{ badgeFor(item) }}</span> }
     </a>
     <a class="navitem" routerLink="/app/support" routerLinkActive="active"
        [attr.title]="navTop() ? null : 'Support'" data-tip="Support" aria-label="Support">
@@ -290,6 +292,8 @@ interface NotifItem { id: number; icon: string; tone: 'brand' | 'success' | 'war
       .shell.postop .topbar .navitem:hover::after{opacity:1;transform:translate(-50%,0)}
     }
 
+    .nav-badge{margin-inline-start:auto;min-width:20px;height:20px;padding:0 6px;border-radius:999px;background:linear-gradient(135deg,#ef4444,#dc2626);color:#fff;font-size:11px;font-weight:800;line-height:1;display:inline-grid;place-items:center;flex:none;box-shadow:0 3px 9px -2px rgba(220,38,38,.65)}
+    .shell.collapsed .side .nav-badge,.shell.postop .nav-badge{position:absolute;top:5px;inset-inline-end:5px;margin:0;min-width:16px;height:16px;padding:0 3px;font-size:9px}
     @media(max-width:880px){.shell:not(.postop){grid-template-columns:1fr}.shell:not(.postop) .side{display:none}.hello .sub{display:none}}
   `],
 })
@@ -299,6 +303,7 @@ export class AppLayout {
   lang = inject(LanguageService);
   layout = inject(LayoutService);
   brand = inject(BrandService);
+  approvals = inject(ApprovalService);
   private router = inject(Router);
   readonly A = Actions;
 
@@ -343,6 +348,7 @@ export class AppLayout {
 
   markAllRead(): void { this.notifs.update((list) => list.map((n) => ({ ...n, read: true }))); }
   markRead(n: NotifItem): void { this.notifs.update((list) => list.map((x) => (x.id === n.id ? { ...x, read: true } : x))); }
+  badgeFor(item: NavItem): number { return /approval/i.test(item.link) ? this.approvals.pendingCount() : 0; }
 
   toggleSidebar(): void {
     const v = !this.collapsed();

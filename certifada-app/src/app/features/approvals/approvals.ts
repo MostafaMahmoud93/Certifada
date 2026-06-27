@@ -6,16 +6,21 @@ import { Actions } from '../../core/constants/actions';
 import { AlertService } from '../../core/services/alert.service';
 import { ApprovalService, Approval, ApprovalStatus, ApprovalType } from '../../core/services/approval.service';
 import { AuthService } from '../../core/services/auth.service';
+import { IssuedService } from '../../core/services/issued.service';
+import { TemplateService } from '../../core/services/template.service';
+import { SignaturePadComponent } from '../../shared/components/signature/signature-pad';
+import { mergeDataIntoJson, renderJsonToPng } from '../../core/utils/render.util';
+import { firstValueFrom } from 'rxjs';
 
 @Component({
   selector: 'app-approvals',
   standalone: true,
-  imports: [DatePipe, LowerCasePipe, FormsModule, HasActionDirective],
+  imports: [DatePipe, LowerCasePipe, FormsModule, HasActionDirective, SignaturePadComponent],
   template: `
   <div class="head">
     <div>
       <h1>Approvals</h1>
-      <p class="cf-muted">Review credentials and workflow steps that are waiting on your team.</p>
+      <p class="cf-muted">Credentials assigned to you for approval — sign off to release them with your signature.</p>
     </div>
     @if (tab() === 'Pending' && svc.pendingCount() > 1) {
       <button class="cf-btn cf-btn-primary" (click)="approveAll()"
@@ -73,8 +78,11 @@ import { AuthService } from '../../core/services/auth.service';
     @if (tab() === 'Pending') {
       <label class="selectall"><input type="checkbox" [checked]="allSel()" (change)="toggleAll()" /><span></span> Select all {{ filtered().length }}</label>
     }
-    <div class="rows">
-      @for (a of filtered(); track a.id) {
+    @for (g of groups(); track g.key) {
+      <div class="agroup">
+        <div class="agroup-head"><span class="material-icons">{{ g.icon }}</span> {{ g.label }}<span class="g-cnt">{{ g.items.length }}</span></div>
+        <div class="rows">
+      @for (a of g.items; track a.id) {
         <div class="card row" [class.sel]="isSel(a.id)" [class.urgent]="a.status === 'Pending' && ageDays(a) >= 7">
           @if (a.status === 'Pending') {
             <label class="cbx" (click)="$event.stopPropagation()"><input type="checkbox" [checked]="isSel(a.id)" (change)="toggleSel(a.id)" /><span></span></label>
@@ -103,7 +111,9 @@ import { AuthService } from '../../core/services/auth.service';
           </div>
         </div>
       }
-    </div>
+        </div>
+      </div>
+    }
   }
 
   @if (rejectTarget(); as a) {
@@ -127,6 +137,10 @@ import { AuthService } from '../../core/services/auth.service';
         <button class="close" (click)="closeView()"><span class="material-icons">close</span></button>
         <div class="vm-grid">
           <div class="vm-cert">
+            @if (viewImg()) {
+              <img class="vm-real" [src]="viewImg()!" alt="credential preview" />
+              @if (a.count) { <span class="vm-batchcap"><span class="material-icons">groups</span> {{ a.count }} recipients in this batch</span> }
+            } @else {
             <div class="cert-mock">
               <span class="cm-seal"><span class="material-icons">workspace_premium</span></span>
               <span class="cm-eyebrow">CERTIFICATE</span>
@@ -136,6 +150,7 @@ import { AuthService } from '../../core/services/auth.service';
               <span class="cm-rule"></span>
               @if (a.count) { <span class="cm-batch"><span class="material-icons">groups</span> {{ a.count }} recipients in this batch</span> }
             </div>
+            }
           </div>
           <div class="vm-body">
             <div class="vm-head">
@@ -153,10 +168,14 @@ import { AuthService } from '../../core/services/auth.service';
             @if (a.note) { <div class="note"><span class="material-icons">sticky_note_2</span> {{ a.note }}</div> }
             @if (a.status === 'Rejected' && a.reason) { <div class="note rej"><span class="material-icons">block</span> {{ a.reason }}</div> }
             @if (a.status === 'Pending') {
-              <div class="signbox">
-                <span class="sb-lbl">Sign as approver</span>
-                <span class="sb-sign">{{ approver() }}</span>
-                <span class="sb-name cf-muted">{{ approver() }} · {{ today() }}</span>
+              <div class="signbox" [class.nosig]="!hasSig()">
+                <span class="sb-lbl"><span class="material-icons">draw</span> Sign as approver</span>
+                @if (hasSig()) {
+                  <img class="sb-img" [src]="mySig()!" alt="Your signature" />
+                  <span class="sb-name cf-muted">{{ approver() }} · {{ today() }}</span>
+                } @else {
+                  <span class="sb-missing">No signature on file. <button class="sb-add" (click)="addSignatureNow()">Add your signature</button> to sign &amp; approve.</span>
+                }
               </div>
               <div class="vm-actions">
                 <button class="cf-btn cf-btn-secondary rejbtn" (click)="rejectFromView(a)" [appHasAction]="A.Credential_Approve" [tooltipMessage]="'🔒 Not in your plan.'"><span class="material-icons">close</span> Reject</button>
@@ -170,6 +189,22 @@ import { AuthService } from '../../core/services/auth.service';
       </div>
     </div>
   }
+
+  @if (noSigWarn()) {
+    <div class="overlay" (click)="dismissWarn()">
+      <div class="modal nosig-modal" (click)="$event.stopPropagation()">
+        <button class="close" (click)="dismissWarn()"><span class="material-icons">close</span></button>
+        <div class="ns-ic"><span class="material-icons">draw</span></div>
+        <h3>Add your signature to approve</h3>
+        <p class="cf-muted">You do not have a signature on file yet. Approving applies your signature to the credential — add one from your profile menu, or add it now.</p>
+        <div class="modal-actions">
+          <button class="cf-btn cf-btn-secondary" (click)="dismissWarn()">Cancel</button>
+          <button class="cf-btn cf-btn-primary" (click)="addSignatureNow()"><span class="material-icons">edit</span> Add signature now</button>
+        </div>
+      </div>
+    </div>
+  }
+  <app-signature-pad [open]="addSigOpen()" (closed)="onSigClosed()" />
   `,
   styles: [`
     :host{display:block}
@@ -297,6 +332,22 @@ import { AuthService } from '../../core/services/auth.service';
     .signbox{margin-top:15px;border:1px dashed color-mix(in srgb,var(--cf-brand-500) 40%,var(--cf-line));border-radius:12px;padding:11px 14px;background:var(--cf-brand-50);display:flex;flex-direction:column;gap:1px}
     .sb-lbl{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--cf-brand-700)}
     .sb-sign{font-family:'Brush Script MT','Segoe Script',cursive;font-size:30px;line-height:1.15;color:var(--cf-ink-900)}
+    .signbox .sb-lbl{display:inline-flex;align-items:center;gap:5px}.signbox .sb-lbl .material-icons{font-size:14px}
+    .sb-img{max-width:230px;max-height:74px;object-fit:contain;align-self:flex-start;margin:3px 0}
+    .vm-real{max-width:100%;max-height:440px;width:auto;object-fit:contain;border-radius:9px;box-shadow:0 16px 40px -16px rgba(15,23,42,.45),0 2px 8px rgba(15,23,42,.07)}
+    .vm-batchcap{display:inline-flex;align-items:center;gap:6px;margin-top:12px;font-size:12px;font-weight:600;color:var(--cf-ink-500)}.vm-batchcap .material-icons{font-size:15px;color:var(--cf-brand-600)}
+    .signbox.nosig{border-color:color-mix(in srgb,#d97706 45%,var(--cf-line));background:color-mix(in srgb,#d97706 8%,transparent)}
+    .sb-missing{font-size:12.5px;color:#b45309;line-height:1.5}
+    .sb-add{border:0;background:none;color:var(--cf-brand-600);font:inherit;font-size:12.5px;font-weight:700;text-decoration:underline;cursor:pointer;padding:0}
+    .agroup{margin-bottom:18px}
+    .agroup-head{display:flex;align-items:center;gap:7px;font-size:12px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:var(--cf-ink-500);margin:2px 2px 10px}
+    .agroup-head .material-icons{font-size:16px;color:var(--cf-brand-600)}
+    .agroup-head .g-cnt{margin-inline-start:4px;min-width:20px;height:18px;padding:0 6px;border-radius:999px;background:var(--cf-surface-2);border:1px solid var(--cf-line);display:inline-grid;place-items:center;font-size:11px;font-weight:700;color:var(--cf-ink-600)}
+    .nosig-modal{text-align:center}
+    .nosig-modal .ns-ic{width:56px;height:56px;border-radius:50%;display:grid;place-items:center;margin:6px auto 12px;background:color-mix(in srgb,#d97706 14%,transparent);color:#d97706}
+    .nosig-modal .ns-ic .material-icons{font-size:28px}
+    .nosig-modal h3{margin:0 0 6px}.nosig-modal p{margin:0 0 18px}
+    .nosig-modal .modal-actions{justify-content:center}
     .sb-name{font-size:11px}
     .vm-actions{display:flex;gap:10px;margin-top:auto;padding-top:16px}
     .vm-actions .cf-btn{flex:1;justify-content:center}
@@ -309,6 +360,16 @@ export class ApprovalsPage {
   private alerts = inject(AlertService);
   readonly svc = inject(ApprovalService);
   private auth = inject(AuthService);
+  private issued = inject(IssuedService);
+  private templates = inject(TemplateService);
+
+  mySig = signal<string | null>(this.readSig());
+  hasSig = computed(() => !!this.mySig());
+  noSigWarn = signal(false);
+  addSigOpen = signal(false);
+  private pendingApprove: (() => void) | null = null;
+  private readSig(): string | null { try { return localStorage.getItem('cf-signature'); } catch { return null; } }
+  refreshSig(): void { this.mySig.set(this.readSig()); }
 
   tabs: ApprovalStatus[] = ['Pending', 'Approved', 'Rejected'];
   typeFilters: ('All' | ApprovalType)[] = ['All', 'Credential', 'Batch', 'Template'];
@@ -340,20 +401,26 @@ export class ApprovalsPage {
   toggleSel(id: number): void { const s = new Set(this.selected()); s.has(id) ? s.delete(id) : s.add(id); this.selected.set(s); }
   toggleAll(): void { const f = this.filtered(); const s = new Set(this.selected()); const all = f.every((a) => s.has(a.id)); f.forEach((a) => (all ? s.delete(a.id) : s.add(a.id))); this.selected.set(s); }
   clearSel(): void { this.selected.set(new Set<number>()); }
-  approveSelected(): void { const ids = [...this.selected()]; if (!ids.length) return; this.svc.approveMany(ids); this.clearSel(); this.alerts.success(`${ids.length} approved.`); }
+  approveSelected(): void {
+    const ids = [...this.selected()]; if (!ids.length) return;
+    this.guard(() => { const items = this.svc.pending().filter((a) => ids.includes(a.id)); this.svc.approveMany(ids, this.approver()); items.forEach((a) => this.resign(a)); this.clearSel(); this.alerts.success(ids.length + ' approved & signed.'); });
+  }
 
   initials(n: string): string { return n.split(/[\s—-]+/).filter(Boolean).map((p) => p[0]).join('').slice(0, 2).toUpperCase(); }
   typeIcon(t: ApprovalType): string { return t === 'Batch' ? 'groups' : t === 'Template' ? 'dashboard_customize' : 'workspace_premium'; }
   ageDays(a: Approval): number { const d = +new Date(a.requestedAt); return d ? Math.floor((Date.now() - d) / 86400000) : 0; }
   ageLabel(a: Approval): string { const d = this.ageDays(a); return d <= 0 ? 'today' : d === 1 ? '1 day' : `${d} days`; }
 
-  approve(a: Approval): void { this.svc.approve(a.id); this.alerts.success('Approved — ' + a.recipient + '.'); }
+  approve(a: Approval): void { this.guard(() => { this.svc.approve(a.id, this.approver()); this.resign(a); this.alerts.success('Approved & signed — ' + a.recipient + '.'); }); }
   async approveAll(): Promise<void> {
+    if (!this.hasSig()) { this.guard(() => {}); return; }
     const n = this.svc.pendingCount();
-    const ok = await this.alerts.confirm({ title: 'Approve all', message: 'Approve all ' + n + ' pending item' + (n === 1 ? '' : 's') + '?', confirmText: 'Approve all' });
+    const ok = await this.alerts.confirm({ title: 'Approve all', message: 'Approve all ' + n + ' pending item' + (n === 1 ? '' : 's') + ' with your signature?', confirmText: 'Approve all' });
     if (!ok) return;
-    this.svc.approveAll();
-    this.alerts.success(n + ' approved.');
+    const items = this.svc.pending();
+    this.svc.approveAll(this.approver());
+    items.forEach((a) => this.resign(a));
+    this.alerts.success(n + ' approved & signed.');
   }
   openReject(a: Approval): void { this.rejectReason = ''; this.rejectTarget.set(a); }
   submitReject(): void {
@@ -363,10 +430,66 @@ export class ApprovalsPage {
     this.alerts.info('Rejected — ' + a.recipient + '.');
   }
   viewTarget = signal<Approval | null>(null);
-  openView(a: Approval): void { this.viewTarget.set(a); }
-  closeView(): void { this.viewTarget.set(null); }
+  viewImg = signal<string | null>(null);
+  openView(a: Approval): void { this.viewTarget.set(a); this.viewImg.set(null); this.loadViewImg(a); }
+  closeView(): void { this.viewTarget.set(null); this.viewImg.set(null); }
+  /** Render the real credential for the approval being viewed (signed preview, or pending stamp if no signature). */
+  private async loadViewImg(a: Approval): Promise<void> {
+    const rec = this.issued.records().find((r) =>
+      a.credentialId ? r.id === a.credentialId : (a.batchId ? r.batchId === a.batchId : (!!a.email && r.recipientEmail === a.email)));
+    if (!rec) return;
+    if (rec.fileDataUrl) this.viewImg.set(rec.fileDataUrl);
+    try {
+      const t = await firstValueFrom(this.templates.get(rec.templateId));
+      if (!t?.canvasJson || this.viewTarget()?.id !== a.id) return;
+      const data = { ...rec.data };
+      for (const k of Object.keys(data)) { if (/signature/i.test(k)) delete data[k]; }
+      const json = mergeDataIntoJson(t.canvasJson, data);
+      const img = await renderJsonToPng(json, t.width, t.height, 2, this.mySig(), !this.hasSig());
+      if (this.viewTarget()?.id === a.id) this.viewImg.set(img);
+    } catch { /* keep fallback mock */ }
+  }
   rejectFromView(a: Approval): void { this.closeView(); this.openReject(a); }
   approver = computed(() => { const n = (this.auth.userName || '').trim(); return n ? n.charAt(0).toUpperCase() + n.slice(1) : 'You'; });
   today(): string { return new Date().toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }); }
-  signApprove(a: Approval): void { this.svc.approve(a.id, this.approver()); this.closeView(); this.alerts.success('Signed & approved — ' + a.recipient + '.'); }
+  signApprove(a: Approval): void { this.guard(() => { this.svc.approve(a.id, this.approver()); this.resign(a); this.closeView(); this.alerts.success('Signed & approved — ' + a.recipient + '.'); }); }
+
+  private guard(run: () => void): void {
+    if (this.hasSig()) { run(); return; }
+    this.pendingApprove = run; this.noSigWarn.set(true);
+  }
+  addSignatureNow(): void { this.noSigWarn.set(false); this.addSigOpen.set(true); }
+  dismissWarn(): void { this.noSigWarn.set(false); this.pendingApprove = null; }
+  onSigClosed(): void {
+    this.addSigOpen.set(false); this.refreshSig();
+    const run = this.pendingApprove; this.pendingApprove = null;
+    if (this.hasSig() && run) run();
+  }
+  /** After approval, re-render the credential(s) with the approver's saved signature and persist the signed image. */
+  private async resign(a: Approval): Promise<void> {
+    const sig = this.mySig();
+    const recs = this.issued.records().filter((r) =>
+      a.batchId ? r.batchId === a.batchId : (a.credentialId ? r.id === a.credentialId : (!!a.email && r.recipientEmail === a.email)));
+    for (const r of recs) {
+      try {
+        const t = await firstValueFrom(this.templates.get(r.templateId));
+        if (!t?.canvasJson) continue;
+        const data = { ...r.data };
+        for (const k of Object.keys(data)) { if (/signature/i.test(k)) delete data[k]; }
+        const json = mergeDataIntoJson(t.canvasJson, data);
+        const file = await renderJsonToPng(json, t.width, t.height, 2, sig);
+        this.issued.update(r.id, { fileDataUrl: file });
+      } catch { /* keep existing image */ }
+    }
+  }
+  /** Pending items split into Bulk batches vs Individual credentials. */
+  groups = computed(() => {
+    const f = this.filtered();
+    const batch = f.filter((a) => a.type === 'Batch');
+    const indiv = f.filter((a) => a.type !== 'Batch');
+    const out: { key: string; label: string; icon: string; items: Approval[] }[] = [];
+    if (batch.length) out.push({ key: 'Batch', label: 'Bulk batches', icon: 'groups', items: batch });
+    if (indiv.length) out.push({ key: 'Individual', label: 'Individual credentials', icon: 'workspace_premium', items: indiv });
+    return out;
+  });
 }

@@ -14,6 +14,7 @@ import { IssuedService } from '../../core/services/issued.service';
 import { PlanService } from '../../core/services/plan.service';
 import { firstValueFrom } from 'rxjs';
 import { mergeDataIntoJson, renderJsonToPng } from '../../core/utils/render.util';
+import { SignaturePadComponent } from '../../shared/components/signature/signature-pad';
 
 interface MonthVal { label: string; v: number; }
 interface StatusSeg { label: string; value: number; color: string; }
@@ -23,7 +24,7 @@ interface CertRow { recipient: string; template: string; status: 'Active' | 'Pen
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, RouterLink, DatePipe, HasActionDirective, TranslocoModule, OnboardingDialogComponent],
+  imports: [CommonModule, RouterLink, DatePipe, HasActionDirective, TranslocoModule, OnboardingDialogComponent, SignaturePadComponent],
   template: `
   @if (showOnboarding()) { <app-onboarding (done)="showOnboarding.set(false)" /> }
 
@@ -311,6 +312,10 @@ interface CertRow { recipient: string; template: string; status: 'Active' | 'Pen
         <button class="close" (click)="closeDashView()"><span class="material-icons">close</span></button>
         <div class="vm-grid">
           <div class="vm-cert">
+            @if (dashViewImg()) {
+              <img class="vm-real" [src]="dashViewImg()!" alt="credential preview" />
+              @if (a.count) { <span class="vm-batchcap"><span class="material-icons">groups</span> {{ a.count }} recipients in this batch</span> }
+            } @else {
             <div class="cert-mock">
               <span class="cm-seal"><span class="material-icons">workspace_premium</span></span>
               <span class="cm-eyebrow">CERTIFICATE</span>
@@ -320,6 +325,7 @@ interface CertRow { recipient: string; template: string; status: 'Active' | 'Pen
               <span class="cm-rule"></span>
               @if (a.count) { <span class="cm-batch"><span class="material-icons">groups</span> {{ a.count }} recipients in this batch</span> }
             </div>
+            }
           </div>
           <div class="vm-body">
             <div class="vm-head"><span class="tchip">{{ a.type }}</span><span class="age"><span class="material-icons">schedule</span>{{ apAge(a) }} waiting</span></div>
@@ -330,10 +336,14 @@ interface CertRow { recipient: string; template: string; status: 'Active' | 'Pen
               <div><span class="material-icons">person</span> Requested by {{ a.requestedBy }}</div>
             </div>
             @if (a.note) { <div class="vm-note"><span class="material-icons">sticky_note_2</span> {{ a.note }}</div> }
-            <div class="signbox">
-              <span class="sb-lbl">Sign as approver</span>
-              <span class="sb-sign">{{ approver() }}</span>
-              <span class="sb-name cf-muted">{{ approver() }} · {{ today() }}</span>
+            <div class="signbox" [class.nosig]="!hasSig()">
+              <span class="sb-lbl"><span class="material-icons">draw</span> Sign as approver</span>
+              @if (hasSig()) {
+                <img class="sb-img" [src]="mySig()!" alt="Your signature" />
+                <span class="sb-name cf-muted">{{ approver() }} · {{ today() }}</span>
+              } @else {
+                <span class="sb-missing">No signature on file. <button class="sb-add" (click)="addSignatureNow()">Add your signature</button> to sign.</span>
+              }
             </div>
             <div class="vm-actions">
               <button class="cf-btn cf-btn-secondary" (click)="dashReject(a)"><span class="material-icons">close</span> Reject</button>
@@ -344,6 +354,22 @@ interface CertRow { recipient: string; template: string; status: 'Active' | 'Pen
       </div>
     </div>
   }
+
+  @if (noSigWarn()) {
+    <div class="overlay" (click)="dismissWarn()">
+      <div class="nsmodal" (click)="$event.stopPropagation()">
+        <button class="close" (click)="dismissWarn()"><span class="material-icons">close</span></button>
+        <div class="ns-ic"><span class="material-icons">draw</span></div>
+        <h3>Add your signature to approve</h3>
+        <p class="cf-muted">Approving applies your signature to the credential — add one from your profile menu, or add it now.</p>
+        <div class="ns-actions">
+          <button class="cf-btn cf-btn-secondary" (click)="dismissWarn()">Cancel</button>
+          <button class="cf-btn cf-btn-primary" (click)="addSignatureNow()"><span class="material-icons">edit</span> Add signature now</button>
+        </div>
+      </div>
+    </div>
+  }
+  <app-signature-pad [open]="addSigOpen()" (closed)="onSigClosed()" />
   `,
   styles: [`
     :host{display:block}
@@ -680,6 +706,18 @@ interface CertRow { recipient: string; template: string; status: 'Active' | 'Pen
     .signbox{margin-top:14px;border:1px dashed color-mix(in srgb,var(--cf-brand-500) 40%,var(--cf-line));border-radius:12px;padding:11px 14px;background:var(--cf-brand-50);display:flex;flex-direction:column;gap:1px}
     .sb-lbl{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--cf-brand-700)}
     .sb-sign{font-family:'Brush Script MT','Segoe Script',cursive;font-size:28px;line-height:1.2;color:var(--cf-ink-900)}
+    .signbox .sb-lbl{display:inline-flex;align-items:center;gap:5px}.signbox .sb-lbl .material-icons{font-size:14px}
+    .sb-img{max-width:220px;max-height:72px;object-fit:contain;align-self:flex-start;margin:3px 0}
+    .signbox.nosig{border-color:color-mix(in srgb,#d97706 45%,var(--cf-line));background:color-mix(in srgb,#d97706 8%,transparent)}
+    .sb-missing{font-size:12px;color:#b45309;line-height:1.5}
+    .sb-add{border:0;background:none;color:var(--cf-brand-600);font:inherit;font-size:12px;font-weight:700;text-decoration:underline;cursor:pointer;padding:0}
+    .vm-real{max-width:100%;max-height:300px;width:auto;object-fit:contain;border-radius:9px;box-shadow:0 16px 40px -18px rgba(2,6,23,.5)}
+    .vm-batchcap{display:inline-flex;align-items:center;gap:6px;margin-top:10px;font-size:11.5px;font-weight:600;color:var(--cf-ink-500)}.vm-batchcap .material-icons{font-size:14px;color:var(--cf-brand-600)}
+    .nsmodal{position:relative;background:var(--cf-surface);border:1px solid var(--cf-line);border-radius:16px;padding:24px;max-width:400px;width:92%;text-align:center;box-shadow:0 30px 80px -20px rgba(2,6,23,.55)}
+    .nsmodal .close{position:absolute;top:12px;right:12px;width:30px;height:30px;border-radius:8px;border:0;background:var(--cf-surface-2);cursor:pointer;display:grid;place-items:center;color:var(--cf-ink-500)}
+    .nsmodal .ns-ic{width:56px;height:56px;border-radius:50%;display:grid;place-items:center;margin:4px auto 12px;background:color-mix(in srgb,#d97706 14%,transparent);color:#d97706}.nsmodal .ns-ic .material-icons{font-size:28px}
+    .nsmodal h3{margin:0 0 6px;font-size:17px}.nsmodal p{margin:0 0 18px}
+    .ns-actions{display:flex;gap:10px;justify-content:center}
     .sb-name{font-size:11px}
     .vm-actions{display:flex;gap:10px;margin-top:auto;padding-top:15px}.vm-actions .cf-btn{flex:1;justify-content:center}
     /* ===== amazing polish ===== */
@@ -923,7 +961,7 @@ export class DashboardPage {
   dashToggle(id: number): void { const s = new Set(this.dashSel()); s.has(id) ? s.delete(id) : s.add(id); this.dashSel.set(s); }
   dashAllSel = computed(() => { const p = this.pendingItems(); return p.length > 0 && p.every((a) => this.dashSel().has(a.id)); });
   dashToggleAll(): void { const p = this.pendingItems(); const s = new Set(this.dashSel()); const all = p.every((a) => s.has(a.id)); p.forEach((a) => (all ? s.delete(a.id) : s.add(a.id))); this.dashSel.set(s); }
-  approveSelectedDash(): void { const ids = [...this.dashSel()]; if (!ids.length) return; const items = this.approvals.pending().filter((a) => ids.includes(a.id)); this.approvals.approveMany(ids); items.forEach((a) => this.resign(a)); this.dashSel.set(new Set<number>()); this.alerts.success(ids.length + ' approved & signed.'); }
+  approveSelectedDash(): void { const ids = [...this.dashSel()]; if (!ids.length) return; this.guard(() => { const items = this.approvals.pending().filter((a) => ids.includes(a.id)); this.approvals.approveMany(ids, this.approver()); items.forEach((a) => this.resign(a)); this.dashSel.set(new Set<number>()); this.alerts.success(ids.length + ' approved & signed.'); }); }
   apAge(a: Approval): string { const d = +new Date(a.requestedAt); const n = d ? Math.floor((Date.now() - d) / 86400000) : 0; return n <= 0 ? 'today' : n === 1 ? '1d' : n + 'd'; }
 
   // ---- live metrics ----
@@ -1018,12 +1056,40 @@ export class DashboardPage {
   approver = computed(() => { const n = (this.auth.userName || '').trim(); return n ? n.charAt(0).toUpperCase() + n.slice(1) : 'You'; });
   today(): string { return new Date().toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }); }
   greeting(): string { const h = new Date().getHours(); return h < 12 ? 'Good morning' : h < 18 ? 'Good afternoon' : 'Good evening'; }
+  mySig = signal<string | null>(this.readSig());
+  hasSig = computed(() => !!this.mySig());
+  noSigWarn = signal(false);
+  addSigOpen = signal(false);
+  private pendingApprove: (() => void) | null = null;
+  private readSig(): string | null { try { return localStorage.getItem('cf-signature'); } catch { return null; } }
+  refreshSig(): void { this.mySig.set(this.readSig()); }
+  private guard(run: () => void): void { if (this.hasSig()) { run(); return; } this.pendingApprove = run; this.noSigWarn.set(true); }
+  addSignatureNow(): void { this.noSigWarn.set(false); this.addSigOpen.set(true); }
+  dismissWarn(): void { this.noSigWarn.set(false); this.pendingApprove = null; }
+  onSigClosed(): void { this.addSigOpen.set(false); this.refreshSig(); const run = this.pendingApprove; this.pendingApprove = null; if (this.hasSig() && run) run(); }
+
   dashView = signal<Approval | null>(null);
-  openDashView(a: Approval): void { this.dashView.set(a); }
-  closeDashView(): void { this.dashView.set(null); }
-  approveRow(a: Approval): void { this.approvals.approve(a.id, this.approver()); this.resign(a); this.alerts.success('Approved & signed — ' + a.recipient + '.'); }
+  dashViewImg = signal<string | null>(null);
+  openDashView(a: Approval): void { this.dashView.set(a); this.dashViewImg.set(null); this.loadDashViewImg(a); }
+  closeDashView(): void { this.dashView.set(null); this.dashViewImg.set(null); }
+  private async loadDashViewImg(a: Approval): Promise<void> {
+    const rec = this.issuedSvc.records().find((r) =>
+      a.credentialId ? r.id === a.credentialId : (a.batchId ? r.batchId === a.batchId : (!!a.email && r.recipientEmail === a.email)));
+    if (!rec) return;
+    if (rec.fileDataUrl) this.dashViewImg.set(rec.fileDataUrl);
+    try {
+      const t = await firstValueFrom(this.templates.get(rec.templateId));
+      if (!t?.canvasJson || this.dashView()?.id !== a.id) return;
+      const data = { ...rec.data };
+      for (const k of Object.keys(data)) { if (/signature/i.test(k)) delete data[k]; }
+      const json = mergeDataIntoJson(t.canvasJson, data);
+      const img = await renderJsonToPng(json, t.width, t.height, 2, this.mySig(), !this.hasSig());
+      if (this.dashView()?.id === a.id) this.dashViewImg.set(img);
+    } catch { /* keep fallback mock */ }
+  }
+  approveRow(a: Approval): void { this.guard(() => { this.approvals.approve(a.id, this.approver()); this.resign(a); this.alerts.success('Approved & signed — ' + a.recipient + '.'); }); }
   dashReject(a: Approval): void { this.approvals.reject(a.id); this.closeDashView(); this.alerts.info('Rejected — ' + a.recipient + '.'); }
-  dashSign(a: Approval): void { this.approvals.approve(a.id, this.approver()); this.resign(a); this.closeDashView(); this.alerts.success('Signed & approved — ' + a.recipient + '.'); }
+  dashSign(a: Approval): void { this.guard(() => { this.approvals.approve(a.id, this.approver()); this.resign(a); this.closeDashView(); this.alerts.success('Signed & approved — ' + a.recipient + '.'); }); }
 
   /** After approval, re-render the credential(s) with the issuer's saved signature and persist the signed image. */
   private async resign(a: Approval): Promise<void> {
