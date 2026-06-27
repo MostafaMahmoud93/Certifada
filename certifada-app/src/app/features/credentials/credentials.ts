@@ -108,7 +108,9 @@ import { ExcelExportService, ExcelColumn } from '../../core/services/excel-expor
                 <td><div class="recip"><span class="av">{{ initials(c) }}</span><div class="rc"><strong>{{ c.recipientEmail || c.recipientName }}</strong>@if (c.recipientName && c.recipientName !== c.recipientEmail) { <small class="cf-muted">{{ c.recipientName }}</small> }</div></div></td>
                 <td><span class="tpl-chip"><span class="material-icons">workspace_premium</span>{{ tplName(c) }}</span></td>
                 @for (v of selectedVars(); track v) { <td class="varcell">{{ c.data[v] || '—' }}</td> }
-                <td><span class="cf-badge st" [ngClass]="badgeClass(c.status)">@if (c.status === 'Sending') { <span class="spin-dot"></span> } @else { <span class="dot"></span> }{{ statusLabel(c.status) }}</span></td>
+                <td><span class="cf-badge st" [ngClass]="badgeClass(c.status)">@if (c.status === 'Sending') { <span class="spin-dot"></span> } @else { <span class="dot"></span> }{{ statusLabel(c.status) }}</span>
+                  @if (c.signedBy) { <div class="sig signed" [title]="'Signed by ' + c.signedBy + (c.signedAt ? ' · ' + (c.signedAt | date: 'mediumDate') : '')"><span class="material-icons">draw</span><span class="sg-name">{{ c.signedBy }}</span></div> }
+                  @else if (c.status === 'Pending') { <div class="sig wait"><span class="material-icons">hourglass_top</span> Awaiting signature</div> }</td>
                 <td><div class="when"><span>{{ c.createdAt | date: 'mediumDate' }}</span><small class="cf-muted">{{ relativeTime(c.createdAt) }}</small></div></td>
                 <td>
                   @if (an(c).views) {
@@ -251,6 +253,12 @@ import { ExcelExportService, ExcelColumn } from '../../core/services/excel-expor
     @keyframes spin{to{transform:rotate(360deg)}}
     .st-sending{background:var(--cf-brand-50);color:var(--cf-brand-700);border:1px solid var(--cf-brand-100)}
     .st-revoked{background:var(--cf-surface-2);color:var(--cf-ink-500);border:1px solid var(--cf-line)}
+    .sig{display:inline-flex;align-items:center;gap:4px;font-size:11px;margin-top:5px}
+    .sig.signed{color:var(--cf-brand-700)}
+    .sig.signed .material-icons{font-size:13px}
+    .sig.signed .sg-name{font-family:'Brush Script MT','Segoe Script',cursive;font-size:16px;line-height:1}
+    .sig.wait{color:var(--cf-warning);font-weight:600}
+    .sig.wait .material-icons{font-size:13px}
 
     .actbar{display:inline-flex;align-items:center;gap:2px;padding:3px;border:1px solid var(--cf-line);border-radius:10px;background:var(--cf-surface);box-shadow:0 1px 2px rgba(15,23,42,.05);transition:box-shadow .16s,border-color .16s}
     .actbar:hover{box-shadow:0 6px 16px -10px rgba(15,23,42,.3);border-color:color-mix(in srgb,var(--cf-brand-500) 24%,var(--cf-line))}

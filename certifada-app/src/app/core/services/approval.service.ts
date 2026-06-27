@@ -1,4 +1,5 @@
-import { Injectable, computed, signal } from '@angular/core';
+import { Injectable, computed, inject, signal } from '@angular/core';
+import { IssuedService } from './issued.service';
 
 export type ApprovalStatus = 'Pending' | 'Approved' | 'Rejected';
 export type ApprovalType = 'Credential' | 'Batch' | 'Template';
@@ -16,6 +17,8 @@ export interface Approval {
   decidedBy?: string | null;
   decidedAt?: string | null;
   reason?: string | null;
+  credentialId?: string;
+  batchId?: string;
 }
 
 /**
@@ -27,6 +30,7 @@ export interface Approval {
 export class ApprovalService {
   private readonly KEY = 'cf-approvals';
   readonly items = signal<Approval[]>(this.load());
+  private issued = inject(IssuedService);
 
   pending = computed(() => this.items().filter((a) => a.status === 'Pending'));
   pendingCount = computed(() => this.pending().length);
@@ -38,18 +42,36 @@ export class ApprovalService {
     return ts.length ? Math.floor((Date.now() - Math.min(...ts)) / 86400000) : 0;
   });
 
-  approve(id: number, by = 'You'): void { this.decide(id, 'Approved', null, by); }
+  approve(id: number, by = 'You'): void { const a = this.items().find((x) => x.id === id); this.decide(id, 'Approved', null, by); this.stamp(a, by); }
   reject(id: number, reason: string | null = null, by = 'You'): void { this.decide(id, 'Rejected', reason, by); }
 
+  /** Queue a new approval request (used when a signed credential is issued and must be approved first). */
+  add(req: Omit<Approval, 'id' | 'status'> & { status?: ApprovalStatus }): Approval {
+    const id = Math.max(0, ...this.items().map((a) => a.id)) + 1;
+    const a: Approval = { ...req, id, status: req.status ?? 'Pending' };
+    this.items.update((l) => [a, ...l]);
+    this.persist();
+    return a;
+  }
+
+  /** Replace a credential's approval-signature with the approver's signature once approved. */
+  private stamp(a: Approval | undefined, by: string): void {
+    if (!a) return;
+    if (a.batchId) { this.issued.signBatch(a.batchId, by); return; }
+    if (a.credentialId) { this.issued.sign(a.credentialId, by); return; }
+    if (a.email) { const r = this.issued.findPendingByEmail(a.email); if (r) this.issued.sign(r.id, by); }
+  }
+
   approveAll(by = 'You'): number {
-    const now = new Date().toISOString(); let n = 0;
-    this.items.update((l) => l.map((a) => { if (a.status === 'Pending') { n++; return { ...a, status: 'Approved' as ApprovalStatus, decidedBy: by, decidedAt: now }; } return a; }));
-    this.persist(); return n;
+    const pend = this.pending(); const now = new Date().toISOString();
+    this.items.update((l) => l.map((a) => (a.status === 'Pending' ? { ...a, status: 'Approved' as ApprovalStatus, decidedBy: by, decidedAt: now } : a)));
+    this.persist(); pend.forEach((a) => this.stamp(a, by)); return pend.length;
   }
   approveMany(ids: number[], by = 'You'): void {
     const set = new Set(ids); const now = new Date().toISOString();
+    const toStamp = this.items().filter((a) => set.has(a.id) && a.status === 'Pending');
     this.items.update((l) => l.map((a) => (set.has(a.id) && a.status === 'Pending' ? { ...a, status: 'Approved' as ApprovalStatus, decidedBy: by, decidedAt: now } : a)));
-    this.persist();
+    this.persist(); toStamp.forEach((a) => this.stamp(a, by));
   }
 
   private decide(id: number, status: ApprovalStatus, reason: string | null, by: string): void {

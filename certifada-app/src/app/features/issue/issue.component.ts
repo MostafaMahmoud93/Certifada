@@ -7,9 +7,10 @@ import { TemplateDetail } from '../../core/models/models';
 import { IssuedService, IssuedRecord, DeliveryStatus } from '../../core/services/issued.service';
 import { PlanService } from '../../core/services/plan.service';
 import { AlertService } from '../../core/services/alert.service';
+import { ApprovalService } from '../../core/services/approval.service';
 import { HasActionDirective } from '../../shared/directives/has-action.directive';
 import { Actions } from '../../core/constants/actions';
-import { mergeDataIntoJson, applySignature, renderJsonToPng } from '../../core/utils/render.util';
+import { mergeDataIntoJson, renderJsonToPng } from '../../core/utils/render.util';
 import { PaginatorComponent } from '../../shared/components/paginator/paginator.component';
 
 interface BulkRow { email: string; data: Record<string, string>; }
@@ -61,8 +62,8 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
           <div class="success">
             <div class="confetti">@for (c of confetti; track $index) { <i [style.left.%]="c.left" [style.animation-delay.s]="c.delay" [style.animation-duration.s]="c.dur" [style.background]="c.color"></i> }</div>
             <div class="su-badge"><span class="material-icons">check</span></div>
-            <h2>Certificate issued! 🎉</h2>
-            <p>On its way to <strong>{{ r.recipientEmail }}</strong> — track delivery in the history below.</p>
+            <h2>@if (r.status === 'Pending') { Submitted for approval ⏳ } @else { Certificate issued! 🎉 }</h2>
+            <p>@if (r.status === 'Pending') { Waiting for an approver — <strong>{{ r.recipientEmail }}</strong> receives it once the signature is approved. } @else { On its way to <strong>{{ r.recipientEmail }}</strong> — track delivery in the history below. }</p>
             @if (r.fileDataUrl || template()?.thumbnailDataUrl) { <div class="su-cert"><img [src]="r.fileDataUrl || template()!.thumbnailDataUrl" alt="issued certificate" /></div> }
             <div class="su-actions">
               <button class="cf-btn cf-btn-primary" (click)="issueAnother()"><span class="material-icons">add</span> Issue another</button>
@@ -71,26 +72,35 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
           </div>
         } @else {
           <p class="lead"><span class="material-icons">tips_and_updates</span> Fill in the recipient, watch the live preview, and send — done in seconds.</p>
-          <div class="two-col">
+          <div class="two-col" [class.solo]="!showPreview()">
             <div class="form-side">
-              <div class="sec-row"><span class="sec-ic"><span class="material-icons">badge</span></span><h3 class="sec">Recipient details</h3></div>
+              <div class="sec-row"><span class="sec-ic"><span class="material-icons">badge</span></span><h3 class="sec">Recipient details</h3>@if (totalFields()) { <span class="fld-prog" [class.done]="filledFields() === totalFields()"><span class="material-icons">{{ filledFields() === totalFields() ? 'task_alt' : 'pending' }}</span>{{ filledFields() }}/{{ totalFields() }}</span> }</div>
               <div class="field">
                 <label>Recipient Email <span class="req">*</span></label>
                 <div class="inp" [class.bad]="email() && !emailOk()" [class.ok]="emailOk()"><span class="material-icons">mail</span><input type="email" [value]="email()" (input)="email.set($any($event.target).value)" placeholder="recipient@email.com" />@if (emailOk()) { <span class="material-icons tick">check_circle</span> }</div>
                 @if (email() && !emailOk()) { <small class="err">Enter a valid email address.</small> }
               </div>
-              @for (v of vars(); track v) {
-                <div class="field"><label>{{ pretty(v) }} <span class="req">*</span></label><div class="inp"><span class="material-icons">data_object</span><input [value]="form()[v] || ''" (input)="setField(v, $any($event.target).value)" [placeholder]="pretty(v)" /></div></div>
+              @if (vars().length) {
+                <div class="fields-grid">
+                  @for (v of vars(); track v) {
+                    <div class="field" [class.full]="longField(v)"><label>{{ pretty(v) }} <span class="req">*</span></label><div class="inp" [class.ok]="fieldFilled(v)"><span class="material-icons">data_object</span><input [value]="form()[v] || ''" (input)="setField(v, $any($event.target).value)" [placeholder]="pretty(v)" />@if (fieldFilled(v)) { <span class="material-icons tick">check_circle</span> }</div></div>
+                  }
+                </div>
               }
               @if (!vars().length) { <p class="cf-muted sm">This template has no variables — only the recipient email is needed.</p> }
+              @if (hasSignature()) {
+                <div class="sig-note"><span class="material-icons">draw</span><div class="sn-txt"><b>Signature handled for you</b><span>Your saved signature is applied automatically. This credential is sent for approval, and the signature appears once approved.</span></div></div>
+              }
               <div class="form-actions">
-                <button class="cf-btn cf-btn-secondary" (click)="updatePreview()" [disabled]="previewing()"><span class="material-icons">{{ previewing() ? 'progress_activity' : 'visibility' }}</span> {{ previewing() ? 'Rendering…' : 'Update preview' }}</button>
+                <button class="cf-btn cf-btn-secondary" (click)="updatePreview()" [disabled]="previewing()"><span class="material-icons">{{ previewing() ? 'progress_activity' : (showPreview() ? 'refresh' : 'visibility') }}</span> {{ previewing() ? 'Rendering…' : (showPreview() ? 'Update preview' : 'Show preview') }}</button>
                 <button class="cf-btn cf-btn-primary" (click)="issueOne()" [disabled]="!oneValid() || issuing()" [appHasAction]="A.Credential_Generate" [tooltipMessage]="'🔒 Issuing isn\\'t in your plan.'"><span class="material-icons">send</span> {{ issuing() ? 'Issuing…' : 'Issue & send' }}</button>
               </div>
               <div class="ready" [class.go]="oneValid()"><span class="material-icons">{{ oneValid() ? 'check_circle' : 'edit_note' }}</span>{{ oneValid() ? 'Ready to issue to ' + email() : 'Fill the email and all fields to issue.' }}</div>
             </div>
+            @if (showPreview()) {
             <div class="preview-side">
-              <div class="pv-head"><span class="sec">Preview design</span><div class="pv-tools"><span class="live"><span class="d"></span>Live</span>@if (previewUrl()) { <button class="ic sm" (click)="downloadPreview()" title="Download preview"><span class="material-icons">download</span></button> }</div></div>
+              <div class="pv-head"><span class="sec">Preview design</span><div class="pv-tools"><span class="live"><span class="d"></span>Live</span>@if (previewUrl()) { <button class="ic sm" (click)="downloadPreview()" title="Download preview"><span class="material-icons">download</span></button> }<button class="ic sm" (click)="showPreview.set(false)" title="Hide preview"><span class="material-icons">visibility_off</span></button></div></div>
+              @if (hasSignature()) { <div class="pv-pending"><span class="material-icons">verified_user</span> Has a signature — it is sent for approval; the signature appears once approved.</div> }
               <div class="preview-frame">
                 @if (previewUrl()) { <img [src]="previewUrl()" alt="preview" /> }
                 @else if (template()?.thumbnailDataUrl) { <img [src]="template()!.thumbnailDataUrl" alt="preview" /> }
@@ -98,6 +108,7 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
               </div>
               <small class="cf-muted sm">Your values are merged into the real design and rendered above.</small>
             </div>
+            }
           </div>
         }
       </div>
@@ -271,13 +282,24 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     .lead{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--cf-ink-600);background:var(--cf-surface-2);border:1px solid var(--cf-line);border-radius:11px;padding:10px 13px;margin-bottom:18px}
     .lead .material-icons{font-size:18px;color:var(--cf-brand-600)}
     .two-col{display:grid;grid-template-columns:1fr 1.05fr;gap:26px}
+    .two-col.solo{grid-template-columns:1fr}
     @media(max-width:820px){.two-col{grid-template-columns:1fr}}
+    .pv-pending{display:flex;align-items:center;gap:8px;margin-bottom:10px;padding:9px 12px;border-radius:10px;font-size:12px;font-weight:600;background:color-mix(in srgb,#d97706 12%,transparent);color:#b45309;border:1px solid color-mix(in srgb,#d97706 28%,transparent)}
+    .pv-pending .material-icons{font-size:16px}
     .sec-row{display:flex;align-items:center;gap:9px;margin-bottom:15px}
     .sec-ic{width:28px;height:28px;border-radius:8px;display:grid;place-items:center;background:color-mix(in srgb,var(--cf-brand-500) 12%,transparent);color:var(--cf-brand-600)}.sec-ic .material-icons{font-size:16px}
     .sec{font-size:13.5px;font-weight:700;color:var(--cf-ink-900)}
     .field{display:flex;flex-direction:column;gap:6px;margin-bottom:13px}
+    .fields-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(232px,1fr));gap:13px 16px;margin-bottom:2px}
+    .fields-grid .field{margin-bottom:0}
+    .field.full{grid-column:1 / -1}
+    .two-col:not(.solo) .fields-grid{grid-template-columns:1fr}
+    .fld-prog{display:inline-flex;align-items:center;gap:4px;margin-inline-start:auto;font-size:11px;font-weight:700;color:var(--cf-ink-500);background:var(--cf-surface-2);border:1px solid var(--cf-line);padding:3px 9px 3px 7px;border-radius:999px;transition:color .16s,background .16s,border-color .16s}
+    .fld-prog .material-icons{font-size:13px}
+    .fld-prog.done{color:#15803d;background:color-mix(in srgb,#16a34a 12%,transparent);border-color:color-mix(in srgb,#16a34a 30%,transparent)}
     .field label{font-size:12.5px;font-weight:600;color:var(--cf-ink-700)}.req{color:var(--cf-danger)}
     .inp{display:flex;align-items:center;gap:8px;height:42px;padding:0 12px;border:1px solid var(--cf-line);border-radius:10px;background:var(--cf-surface);transition:border-color .14s,box-shadow .14s}
+    .inp:hover{border-color:color-mix(in srgb,var(--cf-brand-500) 38%,var(--cf-line))}
     .inp:focus-within{border-color:var(--cf-brand-500);box-shadow:var(--cf-ring)}
     .inp.bad{border-color:var(--cf-danger)}.inp.ok{border-color:color-mix(in srgb,#16a34a 50%,var(--cf-line))}
     .inp>.material-icons{font-size:18px;color:var(--cf-ink-400)}.inp .tick{color:#16a34a;margin-inline-start:auto}
@@ -288,14 +310,21 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     .cf-btn:disabled{opacity:.5;cursor:not-allowed}
     .ready{display:flex;align-items:center;gap:7px;margin-top:13px;padding:10px 12px;border-radius:10px;font-size:12.5px;font-weight:600;background:var(--cf-surface-2);color:var(--cf-ink-500);border:1px solid var(--cf-line)}
     .ready .material-icons{font-size:17px}
+    .sig-note{display:flex;align-items:flex-start;gap:10px;margin:4px 0 8px;padding:11px 13px;border-radius:11px;background:color-mix(in srgb,var(--cf-brand-500) 7%,transparent);border:1px solid color-mix(in srgb,var(--cf-brand-500) 22%,transparent)}
+    .sig-note>.material-icons{font-size:18px;color:var(--cf-brand-600);margin-top:1px}
+    .sig-note .sn-txt{display:flex;flex-direction:column;gap:2px}
+    .sig-note .sn-txt b{font-size:12.5px;color:var(--cf-ink-900)}
+    .sig-note .sn-txt span{font-size:11.5px;color:var(--cf-ink-500);line-height:1.45}
     .ready.go{background:color-mix(in srgb,#16a34a 10%,transparent);color:#15803d;border-color:color-mix(in srgb,#16a34a 26%,transparent)}
+    .preview-side{position:sticky;top:14px;align-self:start}
+    @media(max-width:820px){.preview-side{position:static}}
     .pv-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
     .pv-tools{display:flex;align-items:center;gap:8px}
     .live{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;color:#16a34a}
     .live .d{width:7px;height:7px;border-radius:50%;background:#16a34a;animation:pulse 1.6s infinite}
     @keyframes pulse{0%{box-shadow:0 0 0 0 color-mix(in srgb,#16a34a 55%,transparent)}70%{box-shadow:0 0 0 6px transparent}100%{box-shadow:0 0 0 0 transparent}}
-    .preview-frame{border:1px solid var(--cf-line);border-radius:12px;overflow:hidden;background:linear-gradient(45deg,#eef1f6 25%,transparent 25%) -8px 0/16px 16px,linear-gradient(-45deg,#eef1f6 25%,transparent 25%) -8px 0/16px 16px,linear-gradient(45deg,transparent 75%,#eef1f6 75%) 0 0/16px 16px,linear-gradient(-45deg,transparent 75%,#eef1f6 75%) 0 0/16px 16px,var(--cf-surface-2);min-height:240px;display:grid;place-items:center}
-    .preview-frame img{width:100%;height:100%;object-fit:contain;display:block;filter:drop-shadow(0 8px 22px rgba(15,23,42,.18))}
+    .preview-frame{position:relative;border:1px solid var(--cf-line);border-radius:14px;overflow:hidden;padding:18px;background:radial-gradient(130% 90% at 50% -15%,color-mix(in srgb,var(--cf-brand-500) 7%,var(--cf-surface-2)),var(--cf-surface-2));min-height:240px;display:grid;place-items:center}
+    .preview-frame img{max-width:100%;max-height:540px;width:auto;height:auto;object-fit:contain;display:block;border-radius:7px;box-shadow:0 16px 38px -16px rgba(15,23,42,.36),0 2px 8px rgba(15,23,42,.06)}
     .pv-empty{display:flex;flex-direction:column;align-items:center;gap:8px;color:var(--cf-ink-400);padding:44px;text-align:center;font-size:12.5px}.pv-empty .material-icons{font-size:34px}
 
     .success{position:relative;display:flex;flex-direction:column;align-items:center;text-align:center;padding:26px 16px 8px;overflow:hidden}
@@ -411,6 +440,7 @@ export class IssueComponent {
   private alerts = inject(AlertService);
   readonly issued = inject(IssuedService);
   readonly plan = inject(PlanService);
+  private approvals = inject(ApprovalService);
   readonly A = Actions;
 
   id = this.route.snapshot.paramMap.get('id') || '';
@@ -424,6 +454,7 @@ export class IssueComponent {
   email = signal('');
   previewUrl = signal('');
   previewing = signal(false);
+  showPreview = signal(false);   // preview design is hidden by default
   issuing = signal(false);
   lastIssued = signal<IssuedRecord | null>(null);
 
@@ -454,11 +485,19 @@ export class IssueComponent {
     color: ['#4f46e5', '#16a34a', '#f59e0b', '#0ea5e9', '#db2777', '#10b981', '#8b5cf6'][i % 7],
   }));
 
-  vars = computed(() => {
+  rawVars = computed(() => {
     const t = this.template();
     if (!t) return [];
     try { const a = JSON.parse(t.placeholdersJson) as string[]; return Array.isArray(a) ? a : []; } catch { return []; }
   });
+  /** Fields shown in the form — signature variables are applied automatically, never typed. */
+  vars = computed(() => this.rawVars().filter((v) => !/signature/i.test(v)));
+  hasSignature = computed(() => {
+    const j = this.template()?.canvasJson || '';
+    if (/"objType"\s*:\s*"signature"/.test(j) || /\{\{\s*signature\d*\s*\}\}/i.test(j)) return true;
+    return this.rawVars().some((v) => /signature/i.test(v));
+  });
+  private sig(): string | null { try { return localStorage.getItem('cf-signature'); } catch { return null; } }
   history = computed(() => this.issued.forTemplate(this.id));
   stats = computed(() => this.issued.stats(this.id));
   successRate = computed(() => { const s = this.stats(); return s.total ? Math.round((s.sent / s.total) * 100) : 0; });
@@ -467,6 +506,8 @@ export class IssueComponent {
   quotaLabel(): string { const lim = this.plan.issueLimit(); return isFinite(lim) ? lim.toLocaleString() : '∞'; }
   emailOk = computed(() => EMAIL_RE.test(this.email().trim()));
   oneValid = computed(() => this.emailOk() && this.vars().every((v) => (this.form()[v] || '').trim().length > 0));
+  totalFields = computed(() => 1 + this.vars().length);
+  filledFields = computed(() => (this.emailOk() ? 1 : 0) + this.vars().filter((v) => (this.form()[v] || '').trim().length > 0).length);
   validRows = computed(() => this.rows().filter((r) => this.rowOk(r)));
   bulkErrors = computed(() => this.rows().filter((r) => !this.rowOk(r)));
   bulkPct = computed(() => this.bulkTotal() ? Math.round((this.bulkProgress() / this.bulkTotal()) * 100) : 0);
@@ -505,6 +546,8 @@ export class IssueComponent {
 
   pretty(key: string): string { return key.replace(/[_-]+/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()); }
   setField(k: string, v: string): void { this.form.update((f) => ({ ...f, [k]: v })); }
+  fieldFilled(v: string): boolean { return (this.form()[v] || '').trim().length > 0; }
+  longField(v: string): boolean { return /address|description|message|note|reason|achievement|details|paragraph|body/i.test(v); }
   emailValid(e: string): boolean { return EMAIL_RE.test((e || '').trim()); }
 
   private recipientName(data: Record<string, string>, email: string): string {
@@ -514,15 +557,20 @@ export class IssueComponent {
   private mergedJson(data: Record<string, string>): string | null {
     const t = this.template();
     if (!t || !t.canvasJson) return null;
-    return applySignature(mergeDataIntoJson(t.canvasJson, data), localStorage.getItem('cf-signature'));
+    return mergeDataIntoJson(t.canvasJson, data);
+  }
+  /** Render a credential — signature shows as a Pending Approval stamp until approved, then the signer's signature. */
+  private renderCert(json: string, w: number, h: number, signed: boolean): Promise<string> {
+    return renderJsonToPng(json, w, h, 2, signed ? this.sig() : null, this.hasSignature() && !signed);
   }
 
   async updatePreview(): Promise<void> {
     const t = this.template();
     const json = this.mergedJson(this.form());
     if (!t || !json) { this.alerts.info('Live preview needs the full design (API offline) — showing the saved thumbnail.'); return; }
+    this.showPreview.set(true);
     this.previewing.set(true);
-    try { this.previewUrl.set(await renderJsonToPng(json, t.width, t.height, 2)); }
+    try { this.previewUrl.set(await this.renderCert(json, t.width, t.height, false)); }
     catch { this.alerts.error('Could not render the preview.'); }
     finally { this.previewing.set(false); }
   }
@@ -537,18 +585,25 @@ export class IssueComponent {
     const t = this.template()!;
     const data = { ...this.form() };
     const email = this.email().trim();
+    const needsApproval = this.hasSignature();
     let file: string | null = null;
     const json = this.mergedJson(data);
-    if (json) { try { file = await renderJsonToPng(json, t.width, t.height, 2); } catch { /* ignore */ } }
+    if (json) { try { file = await this.renderCert(json, t.width, t.height, false); } catch { /* ignore */ } }
+    const id = this.issued.newId();
     const rec: IssuedRecord = {
-      id: this.issued.newId(), templateId: this.id, templateName: t.name || '',
+      id, templateId: this.id, templateName: t.name || '',
       recipientName: this.recipientName(data, email), recipientEmail: email, data,
-      status: 'Sending', format: 'png', fileDataUrl: file, batchId: null, createdAt: new Date().toISOString(),
+      status: needsApproval ? 'Pending' : 'Sending', format: 'png', fileDataUrl: file, batchId: null, createdAt: new Date().toISOString(),
     };
-    this.issued.add([rec]);
+    if (needsApproval) {
+      this.issued.addPending([rec]);
+      this.approvals.add({ recipient: rec.recipientName, email, item: t.name || 'Certificate', type: 'Credential', requestedBy: 'You', requestedAt: new Date().toISOString(), credentialId: id });
+    } else {
+      this.issued.add([rec]);
+    }
     this.issuing.set(false);
     this.lastIssued.set(rec);
-    this.alerts.success(`Sending certificate to ${email}…`, { title: 'Issued 🎉' });
+    this.alerts.success(needsApproval ? `Submitted for approval — ${email} receives it once approved.` : `Sending certificate to ${email}…`, { title: needsApproval ? 'Pending approval ⏳' : 'Issued 🎉' });
   }
   issueAnother(): void { this.lastIssued.set(null); this.form.set({}); this.email.set(''); this.previewUrl.set(''); }
 
@@ -610,25 +665,31 @@ export class IssueComponent {
     this.bulkTotal.set(valid.length); this.bulkProgress.set(0);
     this.issuingBulk.set(true);
     const t = this.template()!;
+    const needsApproval = this.hasSignature();
     const batchId = 'batch_' + Date.now().toString(36);
     const records: IssuedRecord[] = [];
     for (const r of valid) {
       let file: string | null = null;
       const json = this.mergedJson(r.data);
-      if (json) { try { file = await renderJsonToPng(json, t.width, t.height, 2); } catch { /* ignore */ } }
+      if (json) { try { file = await this.renderCert(json, t.width, t.height, false); } catch { /* ignore */ } }
       else { await new Promise((res) => setTimeout(res, 16)); }
       records.push({
         id: this.issued.newId(), templateId: this.id, templateName: t.name || '',
         recipientName: this.recipientName(r.data, r.email), recipientEmail: r.email, data: r.data,
-        status: 'Sending', format: 'png', fileDataUrl: file, batchId, createdAt: new Date().toISOString(),
+        status: needsApproval ? 'Pending' : 'Sending', format: 'png', fileDataUrl: file, batchId, createdAt: new Date().toISOString(),
       });
       this.bulkProgress.update((n) => n + 1);
     }
-    this.issued.add(records);
+    if (needsApproval) {
+      this.issued.addPending(records);
+      this.approvals.add({ recipient: `${t.name || 'Certificate'} — ${records.length} recipients`, email: '', item: t.name || 'Certificate', type: 'Batch', requestedBy: 'You', requestedAt: new Date().toISOString(), count: records.length, batchId });
+    } else {
+      this.issued.add(records);
+    }
     this.issuingBulk.set(false);
     this.clearRows();
     this.bulkResult.set({ count: records.length });
-    this.alerts.success(`Sending ${records.length} certificate${records.length === 1 ? '' : 's'}…`, { title: 'Bulk issue started 🎉' });
+    this.alerts.success(needsApproval ? `${records.length} certificate${records.length === 1 ? '' : 's'} submitted for approval.` : `Sending ${records.length} certificate${records.length === 1 ? '' : 's'}…`, { title: needsApproval ? 'Pending approval ⏳' : 'Bulk issue started 🎉' });
   }
 
   // ---- edit variables popup ----
@@ -644,7 +705,7 @@ export class IssueComponent {
     let file = r.fileDataUrl ?? null;
     const t = this.template();
     const json = this.mergedJson(data);
-    if (json && t) { try { file = await renderJsonToPng(json, t.width, t.height, 2); } catch { /* ignore */ } }
+    if (json && t) { try { file = await this.renderCert(json, t.width, t.height, !!r.signedBy); } catch { /* ignore */ } }
     this.issued.update(r.id, { data, recipientEmail: email, recipientName: this.recipientName(data, email), fileDataUrl: file });
     this.issued.resend(r.id);
     this.savingEdit.set(false);

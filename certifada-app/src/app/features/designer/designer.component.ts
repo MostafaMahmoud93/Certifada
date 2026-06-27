@@ -26,7 +26,7 @@ import { CertificateService } from '../../core/services/certificate.service';
 import { AssetService, UserAsset, AssetEntry } from '../../core/services/asset.service';
 import { BrandService } from '../../core/services/brand.service';
 import { SaveTemplateRequest } from '../../core/models/models';
-import { exportPdf, exportPng, exportSvg, renderJsonToPng, mergeDataIntoJson, applySignature } from '../../core/utils/render.util';
+import { exportPdf, exportPng, exportSvg, renderJsonToPng, mergeDataIntoJson } from '../../core/utils/render.util';
 
 interface SizePreset { label: string; w: number; h: number; }
 interface RailItem { id: PanelId; label: string; icon: string; }
@@ -2264,7 +2264,8 @@ export class DesignerComponent implements AfterViewInit, OnDestroy {
     const json = this.svc.toJSON();
     const dyn = this.detectDynTable(json);
     this.previewDyn.set(dyn);
-    const vars = this.svc.getPlaceholders().filter((k) => !/^cell_\d+_\d+$/.test(k));
+    const all = this.svc.getPlaceholders().filter((k) => !/^cell_\d+_\d+$/.test(k));
+    const vars = all.filter((k) => !/signature/i.test(k));   // signatures are not typed — they auto-fill from the user's signature
     this.previewVars.set(vars);
     for (const k of vars) if (!(k in this.previewValues)) this.previewValues[k] = '';
     this.previewOpen.set(true);
@@ -2371,8 +2372,7 @@ export class DesignerComponent implements AfterViewInit, OnDestroy {
       if (!sig && usesSig) sig = this.sampleSignature();
       this.previewHasSig.set(!!sig && usesSig);
       this.previewSigMine.set(!!mine && usesSig);
-      json = applySignature(json, sig);
-      this.previewUrl.set(await renderJsonToPng(json, this.width, this.height, 1.6));
+      this.previewUrl.set(await renderJsonToPng(json, this.width, this.height, 1.6, usesSig ? sig : null));
     } catch {
       this.flash('Could not build preview.', false);
     } finally {

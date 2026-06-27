@@ -6,7 +6,7 @@ import { TemplateService } from '../../core/services/template.service';
 import { IssuedService, IssuedRecord } from '../../core/services/issued.service';
 import { AlertService } from '../../core/services/alert.service';
 import { BrandService } from '../../core/services/brand.service';
-import { mergeDataIntoJson, applySignature, renderJsonToPng } from '../../core/utils/render.util';
+import { mergeDataIntoJson, renderJsonToPng } from '../../core/utils/render.util';
 
 @Component({
   selector: 'app-verify',
@@ -92,6 +92,7 @@ import { mergeDataIntoJson, applySignature, renderJsonToPng } from '../../core/u
             <div class="pp-item"><span class="pp-ic">@if (issuerLogo()) { <img [src]="issuerLogo()" alt="" /> } @else { <span class="material-icons">apartment</span> }</span><div><span class="pp-l">Issued by</span><span class="pp-v">{{ issuerOrg() }}</span></div></div>
             <div class="pp-item"><span class="pp-ic"><span class="material-icons">event_available</span></span><div><span class="pp-l">Issued date</span><span class="pp-v">{{ record()!.createdAt | date: 'longDate' }}</span></div></div>
             <div class="pp-item"><span class="pp-ic"><span class="material-icons">tag</span></span><div><span class="pp-l">Credential ID</span><span class="pp-v id"><code>{{ record()!.id }}</code><button class="mini-copy" (click)="copy(record()!.id, 'Credential ID')" title="Copy"><span class="material-icons">content_copy</span></button></span></div></div>
+            @if (record()!.signedBy) { <div class="pp-item"><span class="pp-ic"><span class="material-icons">draw</span></span><div><span class="pp-l">Signed by</span><span class="pp-v sig-script">{{ record()!.signedBy }}</span></div></div> }
             <div class="pp-status" [class.bad]="record()!.status === 'Revoked'"><span class="material-icons">{{ record()!.status === 'Revoked' ? 'block' : 'verified' }}</span>{{ record()!.status === 'Revoked' ? 'Revoked' : 'Verified & authentic' }}</div>
           </div>
 
@@ -230,6 +231,7 @@ import { mergeDataIntoJson, applySignature, renderJsonToPng } from '../../core/u
     .pp-l{display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--cf-ink-400)}
     .pp-v{display:block;font-size:13.5px;font-weight:700;color:var(--cf-ink-900);margin-top:1px}
     .pp-v.id{display:flex;align-items:center;gap:6px}
+    .pp-v.sig-script{font-family:'Brush Script MT','Segoe Script',cursive;font-size:19px;color:var(--cf-brand-700);font-weight:400}
     .pp-v.id code{font-family:'Courier New',monospace;font-size:11px;background:var(--cf-surface-2);border:1px solid var(--cf-line);border-radius:5px;padding:1px 6px;max-width:120px;overflow:hidden;text-overflow:ellipsis}
     .mini-copy{width:22px;height:22px;border:1px solid var(--cf-line);border-radius:6px;background:var(--cf-surface);color:var(--cf-ink-500);display:grid;place-items:center;cursor:pointer;flex:none}
     .mini-copy:hover{color:var(--cf-brand-700)}.mini-copy .material-icons{font-size:12px}
@@ -383,8 +385,9 @@ export class VerifyComponent {
       next: async (t) => {
         try {
           if (t?.canvasJson) {
-            const json = applySignature(mergeDataIntoJson(t.canvasJson, rec.data), localStorage.getItem('cf-signature'));
-            this.art.set(await renderJsonToPng(json, t.width, t.height, 2));
+            const json = mergeDataIntoJson(t.canvasJson, rec.data);
+            const pend = rec.status === 'Pending';   // awaiting approval -> show the Pending Approval stamp
+            this.art.set(await renderJsonToPng(json, t.width, t.height, 2, pend ? null : localStorage.getItem('cf-signature'), pend));
           } else if (t?.thumbnailDataUrl && !this.art()) { this.art.set(t.thumbnailDataUrl); }
         } catch { /* keep fallback */ }
       },

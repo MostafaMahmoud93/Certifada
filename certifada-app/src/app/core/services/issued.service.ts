@@ -16,6 +16,8 @@ export interface IssuedRecord {
   fileDataUrl?: string | null;       // in-memory for this session; not persisted (size)
   batchId?: string | null;
   createdAt: string;                 // ISO
+  signedBy?: string;                 // approver who signed (workflow approval)
+  signedAt?: string;                 // ISO
 }
 
 const KEY = 'cf-issued';
@@ -65,6 +67,12 @@ export class IssuedService {
     const sending = records.map((r) => ({ ...r, status: 'Sending' as DeliveryStatus }));
     this.persist([...sending, ...this.records()]);
     this.confirm(sending.map((r) => r.id), records[0].templateId, records[0].format, sending);
+  }
+
+  /** Add credentials that must be approved before delivery — they stay Pending (no auto-send). */
+  addPending(records: IssuedRecord[]): void {
+    if (!records.length) return;
+    this.persist([...records.map((r) => ({ ...r, status: 'Pending' as DeliveryStatus })), ...this.records()]);
   }
 
   /** Re-send one credential (e.g. after editing its variables, or retrying a failure). */
@@ -149,6 +157,33 @@ export class IssuedService {
     return { views, email, direct, qr, lastViewedIso };
   }
   private hashId(s: string): number { let h = 2166136261; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; }
+
+  /** Stamp an approver's signature onto a credential. Replaces any signature-like variable
+   *  value with the approver, records the signer, and dispatches it if it was Pending. */
+  sign(id: string, by: string): void {
+    const now = new Date().toISOString();
+    this.persist(this.records().map((r) => {
+      if (r.id !== id) return r;
+      const data = { ...r.data };
+      for (const k of Object.keys(data)) { if (/sign/i.test(k)) data[k] = by; }
+      return { ...r, data, signedBy: by, signedAt: now, status: r.status === 'Pending' ? ('Sent' as DeliveryStatus) : r.status };
+    }));
+  }
+  /** Stamp every pending credential in a batch with the approver's signature (bulk approval). */
+  signBatch(batchId: string, by: string): void {
+    const now = new Date().toISOString();
+    this.persist(this.records().map((r) => {
+      if (r.batchId !== batchId) return r;
+      const data = { ...r.data };
+      for (const k of Object.keys(data)) { if (/sign/i.test(k)) data[k] = by; }
+      return { ...r, data, signedBy: by, signedAt: now, status: r.status === 'Pending' ? ('Sent' as DeliveryStatus) : r.status };
+    }));
+  }
+  /** First unsigned, still-pending credential for a recipient email (links an approval to a credential). */
+  findPendingByEmail(email: string): IssuedRecord | undefined {
+    const e = (email || '').toLowerCase();
+    return this.records().find((r) => r.status === 'Pending' && !r.signedBy && (r.recipientEmail || '').toLowerCase() === e);
+  }
 
   newId(): string { return 'iss_' + Math.random().toString(36).slice(2, 9) + Date.now().toString(36); }
 }

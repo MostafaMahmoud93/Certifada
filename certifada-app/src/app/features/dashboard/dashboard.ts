@@ -12,6 +12,8 @@ import { ApprovalService, Approval } from '../../core/services/approval.service'
 import { AuthService } from '../../core/services/auth.service';
 import { IssuedService } from '../../core/services/issued.service';
 import { PlanService } from '../../core/services/plan.service';
+import { firstValueFrom } from 'rxjs';
+import { mergeDataIntoJson, renderJsonToPng } from '../../core/utils/render.util';
 
 interface MonthVal { label: string; v: number; }
 interface StatusSeg { label: string; value: number; color: string; }
@@ -921,7 +923,7 @@ export class DashboardPage {
   dashToggle(id: number): void { const s = new Set(this.dashSel()); s.has(id) ? s.delete(id) : s.add(id); this.dashSel.set(s); }
   dashAllSel = computed(() => { const p = this.pendingItems(); return p.length > 0 && p.every((a) => this.dashSel().has(a.id)); });
   dashToggleAll(): void { const p = this.pendingItems(); const s = new Set(this.dashSel()); const all = p.every((a) => s.has(a.id)); p.forEach((a) => (all ? s.delete(a.id) : s.add(a.id))); this.dashSel.set(s); }
-  approveSelectedDash(): void { const ids = [...this.dashSel()]; if (!ids.length) return; this.approvals.approveMany(ids); this.dashSel.set(new Set<number>()); this.alerts.success(ids.length + ' approved.'); }
+  approveSelectedDash(): void { const ids = [...this.dashSel()]; if (!ids.length) return; const items = this.approvals.pending().filter((a) => ids.includes(a.id)); this.approvals.approveMany(ids); items.forEach((a) => this.resign(a)); this.dashSel.set(new Set<number>()); this.alerts.success(ids.length + ' approved & signed.'); }
   apAge(a: Approval): string { const d = +new Date(a.requestedAt); const n = d ? Math.floor((Date.now() - d) / 86400000) : 0; return n <= 0 ? 'today' : n === 1 ? '1d' : n + 'd'; }
 
   // ---- live metrics ----
@@ -1019,9 +1021,28 @@ export class DashboardPage {
   dashView = signal<Approval | null>(null);
   openDashView(a: Approval): void { this.dashView.set(a); }
   closeDashView(): void { this.dashView.set(null); }
-  approveRow(a: Approval): void { this.approvals.approve(a.id, this.approver()); this.alerts.success('Approved — ' + a.recipient + '.'); }
+  approveRow(a: Approval): void { this.approvals.approve(a.id, this.approver()); this.resign(a); this.alerts.success('Approved & signed — ' + a.recipient + '.'); }
   dashReject(a: Approval): void { this.approvals.reject(a.id); this.closeDashView(); this.alerts.info('Rejected — ' + a.recipient + '.'); }
-  dashSign(a: Approval): void { this.approvals.approve(a.id, this.approver()); this.closeDashView(); this.alerts.success('Signed & approved — ' + a.recipient + '.'); }
+  dashSign(a: Approval): void { this.approvals.approve(a.id, this.approver()); this.resign(a); this.closeDashView(); this.alerts.success('Signed & approved — ' + a.recipient + '.'); }
+
+  /** After approval, re-render the credential(s) with the issuer's saved signature and persist the signed image. */
+  private async resign(a: Approval): Promise<void> {
+    let sig: string | null = null;
+    try { sig = localStorage.getItem('cf-signature'); } catch { sig = null; }
+    const recs = this.issuedSvc.records().filter((r) =>
+      a.batchId ? r.batchId === a.batchId : (a.credentialId ? r.id === a.credentialId : (!!a.email && r.recipientEmail === a.email)));
+    for (const r of recs) {
+      try {
+        const t = await firstValueFrom(this.templates.get(r.templateId));
+        if (!t?.canvasJson) continue;
+        const data = { ...r.data };
+        for (const k of Object.keys(data)) { if (/signature/i.test(k)) delete data[k]; }   // keep {{signatureN}} so the signature image is placed
+        const json = mergeDataIntoJson(t.canvasJson, data);
+        const file = await renderJsonToPng(json, t.width, t.height, 2, sig);
+        this.issuedSvc.update(r.id, { fileDataUrl: file });
+      } catch { /* keep existing image */ }
+    }
+  }
 
   certInitials(n: string): string { return n.split(/[\s—-]+/).filter(Boolean).map((x) => x[0]).join('').slice(0, 2).toUpperCase(); }
 

@@ -53,7 +53,7 @@ export const routes: Routes = [
   {
     path: 'canvas',
     component: CanvasLayout,
-    // canActivate: [authGuard],
+    canActivate: [authGuard],
     children: [
       { path: '', loadComponent: () => import('./features/designer/designer.component').then((m) => m.DesignerComponent), canActivate: [permissionGuard], data: { action: Actions.Template_Edit } },
       { path: ':id', loadComponent: () => import('./features/designer/designer.component').then((m) => m.DesignerComponent), canActivate: [permissionGuard], data: { action: Actions.Template_Edit } },
