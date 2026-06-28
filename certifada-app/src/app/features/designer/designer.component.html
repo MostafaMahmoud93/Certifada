@@ -24,7 +24,7 @@
     }
   </div>
 
-  <button class="btn btn-sm guide-btn" (click)="helpFor.set('start')"><span class="material-icons">auto_awesome</span><span class="gb-lbl">{{ helpUi().guide }}</span></button>
+  <button class="btn btn-sm guide-btn" (click)="openGuide()"><span class="material-icons">auto_awesome</span><span class="gb-lbl">{{ helpUi().guide }}</span></button>
 
   <div class="spacer"></div>
 
@@ -1860,11 +1860,11 @@
 
         @switch (h.hero) {
           @case ('start') {
-            <div class="cfp" aria-hidden="true">
-              <div class="cfp-top"><span class="cfp-spark material-icons">auto_awesome</span><b class="cfp-tour">{{ helpUi().tour }}</b><span class="cfp-dots"><i></i><i></i><i></i><i></i><i></i></span></div>
+            <div class="cfp ix" [attr.data-step]="tourStep()">
+              <div class="cfp-top"><span class="cfp-spark material-icons">auto_awesome</span><b class="cfp-tour">{{ helpUi().tour }}</b><span class="cfp-dots"><button type="button" [class.on]="tourStep()===0" (click)="tourGo(0)" aria-label="Step 1"></button><button type="button" [class.on]="tourStep()===1" (click)="tourGo(1)" aria-label="Step 2"></button><button type="button" [class.on]="tourStep()===2" (click)="tourGo(2)" aria-label="Step 3"></button><button type="button" [class.on]="tourStep()===3" (click)="tourGo(3)" aria-label="Step 4"></button><button type="button" [class.on]="tourStep()===4" (click)="tourGo(4)" aria-label="Step 5"></button></span></div>
               <div class="cfp-stage">
                 <div class="ui">
-                  <div class="ui-rail"><i class="rt rt1 material-icons">dashboard_customize</i><i class="rt rt2 material-icons">title</i><i class="rt rt3 material-icons">data_object</i><i class="rt rt4 material-icons">draw</i><i class="rt rt5 material-icons">visibility</i></div>
+                  <div class="ui-rail"><i class="rt rt1 material-icons" (click)="tourGo(0)">dashboard_customize</i><i class="rt rt2 material-icons" (click)="tourGo(1)">title</i><i class="rt rt3 material-icons" (click)="tourGo(2)">data_object</i><i class="rt rt4 material-icons" (click)="tourGo(3)">draw</i><i class="rt rt5 material-icons" (click)="tourGo(4)">visibility</i></div>
                   <div class="ui-panel">
                     <div class="pp pp1"><span class="th"></span><span class="th"></span><span class="th"></span><span class="th"></span></div>
                     <div class="pp pp2"><span class="tl tl-a"></span><span class="tl tl-b"></span><span class="tl tl-c"></span></div>
@@ -1877,8 +1877,7 @@
                   <span class="cfp-cursor material-icons">touch_app</span>
                 </div>
               </div>
-              <div class="cfp-cap"><span class="s1"><span class="material-icons">dashboard_customize</span>{{ helpUi().tourTpl }}</span><span class="s2"><span class="material-icons">title</span>{{ helpUi().tourText }}</span><span class="s3"><span class="material-icons">data_object</span>{{ helpUi().tourVar }}</span><span class="s4"><span class="material-icons">draw</span>{{ helpUi().tourSign }}</span><span class="s5"><span class="material-icons">visibility</span>{{ helpUi().tourPrev }}</span></div>
-              <div class="cfp-prog"><i></i></div>
+              <div class="cfp-foot"><div class="cfp-desc"><span class="s1"><span class="dic material-icons">dashboard_customize</span>{{ helpUi().tourTpl }}</span><span class="s2"><span class="dic material-icons">title</span>{{ helpUi().tourText }}</span><span class="s3"><span class="dic material-icons">data_object</span>{{ helpUi().tourVar }}</span><span class="s4"><span class="dic material-icons">draw</span>{{ helpUi().tourSign }}</span><span class="s5"><span class="dic material-icons">visibility</span>{{ helpUi().tourPrev }}</span></div><div class="cfp-ctrls"><button type="button" class="cfp-nav prev" (click)="tourPrev()" [attr.aria-label]="helpUi().ctlPrev"><span class="material-icons">chevron_left</span></button><button type="button" class="cfp-play" [class.playing]="tourPlaying()" (click)="toggleTour()" [attr.aria-label]="tourPlaying() ? helpUi().ctlPause : helpUi().ctlPlay"><svg class="ring" viewBox="0 0 38 38" aria-hidden="true"><circle class="track" cx="19" cy="19" r="15"></circle><circle class="bar" cx="19" cy="19" r="15" [style.stroke-dashoffset.px]="94.25*(1-(tourStep()+1)/5)"></circle></svg><span class="material-icons">{{ tourPlaying() ? 'pause' : 'play_arrow' }}</span></button><button type="button" class="cfp-nav next" (click)="tourNext()" [attr.aria-label]="helpUi().ctlNext"><span class="material-icons">chevron_right</span></button></div></div>
             </div>
           }
           @case ('size') { <div class="tg-hero"><span class="hz-size"></span><span class="vz-meta"><small>{{ helpUi().cap_size }}</small></span></div> }
@@ -1916,7 +1915,7 @@
           </div>
         }
 
-        @if (h.gallery; as gal) {
+        @if (h.hero !== 'start' && h.gallery; as gal) {
           <span class="tg-sec"><span class="material-icons">auto_awesome</span> {{ helpUi().gallery }}</span>
           <div class="tg-gallery">
             @for (g of gal; track $index) {

@@ -825,6 +825,18 @@ export class DesignerComponent implements AfterViewInit, OnDestroy {
   readonly helpMap = computed(() => this.langSvc.lang() === 'ar' ? DESIGNER_HELP_AR : DESIGNER_HELP);
   readonly helpUi = computed(() => this.langSvc.lang() === 'ar' ? HELP_UI.ar : HELP_UI.en);
   readonly tg = computed(() => this.langSvc.lang() === 'ar' ? TABLE_HELP.ar : TABLE_HELP.en);
+  tourStep = signal(0);
+  tourPlaying = signal(true);
+  private _tourFx = effect((onCleanup) => {
+    if (this.helpFor() !== 'start' || !this.tourPlaying()) return;
+    const id = setInterval(() => this.tourStep.update((s) => (s + 1) % 5), 3200);
+    onCleanup(() => clearInterval(id));
+  });
+  openGuide(): void { this.tourStep.set(0); this.tourPlaying.set(true); this.helpFor.set('start'); }
+  tourGo(i: number): void { this.tourStep.set(i); this.tourPlaying.set(false); }
+  tourNext(): void { this.tourStep.update((s) => (s + 1) % 5); this.tourPlaying.set(false); }
+  tourPrev(): void { this.tourStep.update((s) => (s + 4) % 5); this.tourPlaying.set(false); }
+  toggleTour(): void { this.tourPlaying.update((p) => !p); }
   gridR = 0;
   gridC = 0;
   readonly tGridRows = [1, 2, 3, 4, 5, 6];

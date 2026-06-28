@@ -510,9 +510,9 @@ export const DESIGNER_HELP_AR: Record<string, HelpEntry> = {
 
 /** Static labels for the help modal (per language). */
 export const HELP_UI = {
-  en: { how: 'How it works', steps: 'Step by step', feats: 'Every feature', detail: 'In detail', gallery: 'See it in action', close: 'Close', guide: 'Quick guide', tour: 'Guided tour', tourTpl: 'Open Templates', tourText: 'Add text', tourVar: 'Add variable', tourSign: 'Add signature', tourPrev: 'Preview', cap_start: 'template → text → variables → issue',
+  en: { how: 'How it works', steps: 'Step by step', feats: 'Every feature', detail: 'In detail', gallery: 'See it in action', close: 'Close', guide: 'Quick guide', tour: 'Guided tour', tourTpl: 'Open Templates', tourText: 'Add text', tourVar: 'Add variable', tourSign: 'Add signature', tourPrev: 'Preview', ctlPrev: 'Previous', ctlNext: 'Next', ctlPlay: 'Play', ctlPause: 'Pause', cap_start: 'template → text → variables → issue',
     cap_size: 'resize & orient', cap_text: 'type · font · style', cap_images: 'filters · tint · crop', cap_background: 'solid · gradient · pattern', cap_qr: 'verify · colours · eyes', cap_drawing: 'brush · colour · size', cap_addons: 'seal · signature · watermark' },
-  ar: { how: 'كيف تعمل', steps: 'خطوة بخطوة', feats: 'كل ميزة', detail: 'بالتفصيل', gallery: 'شاهدها أثناء العمل', close: 'إغلاق', guide: 'دليل سريع', tour: 'جولة إرشادية', tourTpl: 'افتح القوالب', tourText: 'أضِف نصًا', tourVar: 'أضِف متغيّرًا', tourSign: 'أضِف توقيعًا', tourPrev: 'معاينة', cap_start: 'قالب ← نص ← متغيّرات ← إصدار',
+  ar: { how: 'كيف تعمل', steps: 'خطوة بخطوة', feats: 'كل ميزة', detail: 'بالتفصيل', gallery: 'شاهدها أثناء العمل', close: 'إغلاق', guide: 'دليل سريع', tour: 'جولة إرشادية', tourTpl: 'افتح القوالب', tourText: 'أضِف نصًا', tourVar: 'أضِف متغيّرًا', tourSign: 'أضِف توقيعًا', tourPrev: 'معاينة', ctlPrev: 'السابق', ctlNext: 'التالي', ctlPlay: 'تشغيل', ctlPause: 'إيقاف', cap_start: 'قالب ← نص ← متغيّرات ← إصدار',
     cap_size: 'تغيير المقاس والاتجاه', cap_text: 'كتابة · خط · تنسيق', cap_images: 'مرشّحات · تلوين · قص', cap_background: 'صلب · تدرّج · نقش', cap_qr: 'تحقّق · ألوان · عيون', cap_drawing: 'فرشاة · لون · حجم', cap_addons: 'ختم · توقيع · علامة مائية' },
 };
 
