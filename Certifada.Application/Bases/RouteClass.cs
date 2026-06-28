@@ -14,6 +14,9 @@ public static class RouteClass
         public const string TestDB = "api/Auth/TestDB";
         public const string Login = "api/Auth/Login";
         public const string Test = "api/Auth/Test";
+        public const string Register = "api/Auth/Register";
+        public const string ForgotPassword = "api/Auth/ForgotPassword";
+        public const string ResetPassword = "api/Auth/ResetPassword";
     }
     public static class User
     {

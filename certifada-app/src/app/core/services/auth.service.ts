@@ -48,6 +48,15 @@ export class AuthService {
   login(email: string, password: string): Observable<ServiceResponse<TokenModel>> {
     return this.http.post<ServiceResponse<TokenModel>>(`${this.url}/api/auth/login`, { email, password });
   }
+  register(fullName: string, email: string, password: string): Observable<ServiceResponse<TokenModel>> {
+    return this.http.post<ServiceResponse<TokenModel>>(`${this.url}/api/Auth/Register`, { fullName, email, password });
+  }
+  forgotPassword(email: string): Observable<ServiceResponse<boolean>> {
+    return this.http.post<ServiceResponse<boolean>>(`${this.url}/api/Auth/ForgotPassword`, { email });
+  }
+  resetPassword(token: string, password: string): Observable<ServiceResponse<boolean>> {
+    return this.http.post<ServiceResponse<boolean>>(`${this.url}/api/Auth/ResetPassword`, { token, password });
+  }
 
   isTokenValid(t: TokenModel | null): boolean {
     return !!t?.token && !!t?.expiration && new Date(t.expiration) > new Date();

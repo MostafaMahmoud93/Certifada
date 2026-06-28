@@ -24,6 +24,21 @@ public class AuthController : ApiControllersBase
     public async Task<IActionResult> Login(LoginModel model) => Ok(await _authService.Token(model));
 
     [AllowAnonymous]
+    [HttpPost]
+    [Route(RouteClass.Auth.Register)]
+    public async Task<IActionResult> Register(RegisterModel model) => Ok(await _authService.Register(model));
+
+    [AllowAnonymous]
+    [HttpPost]
+    [Route(RouteClass.Auth.ForgotPassword)]
+    public async Task<IActionResult> ForgotPassword(ForgotPasswordModel model) => Ok(await _authService.ForgotPassword(model));
+
+    [AllowAnonymous]
+    [HttpPost]
+    [Route(RouteClass.Auth.ResetPassword)]
+    public async Task<IActionResult> ResetPassword(ResetPasswordModel model) => Ok(await _authService.ResetPassword(model));
+
+    [AllowAnonymous]
     [HttpGet]
     [Route(RouteClass.Auth.Test)]
     public async Task<IActionResult> Test() => Ok("Test Helloooooo");

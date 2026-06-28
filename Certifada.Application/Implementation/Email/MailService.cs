@@ -57,6 +57,26 @@ public class MailService : ServiceBase, IMailService
             return await LogErrorAsync(ex, false, new { templateId, certificateId, unitId, tenantId, content, toEmails, toCCEmails, toBCCEmails, isImportant, Attachments });
         }
     }
+    public async Task<ServiceResponse<bool>> SendTemplatedAsync(EmailTemplateEnum template, string toEmail, IDictionary<string, string> tokens)
+    {
+        try
+        {
+            var (subject, html) = EmailTemplates.Render(template, tokens);
+            var mailRequest = new MailRequestModel
+            {
+                ToEmails = new[] { toEmail },
+                Subject = subject,
+                Body = html,
+                IsImportant = false
+            };
+            return await CreateEmailSMTPAsync(mailRequest);
+        }
+        catch (Exception ex)
+        {
+            return await LogErrorAsync(ex, false, new { template, toEmail });
+        }
+    }
+
     #region private help function
     private static int CountPlaceholders(string input)
     {

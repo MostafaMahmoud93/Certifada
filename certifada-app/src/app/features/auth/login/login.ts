@@ -37,7 +37,7 @@ import { ServiceResponse, TokenModel } from '../../../core/models/models';
 
           <div class="row">
             <label class="chk"><input type="checkbox" formControlName="remember" /> {{ 'auth.remember' | transloco }}</label>
-            <a href="#">{{ 'auth.forgot' | transloco }}</a>
+            <a routerLink="/auth/forgot">{{ 'auth.forgot' | transloco }}</a>
           </div>
 
           @if (error()) { <div class="err">{{ error() }}</div> }
@@ -50,6 +50,7 @@ import { ServiceResponse, TokenModel } from '../../../core/models/models';
           <button class="soc" (click)="facebook()" aria-label="Facebook">f</button>
           <button class="soc" (click)="microsoft()" aria-label="Microsoft">⊞</button>
         </div>
+        <p class="alt">New to Certifada? <a routerLink="/auth/register">Create an account</a></p>
       </div>
     </div>
   </div>
@@ -86,6 +87,7 @@ import { ServiceResponse, TokenModel } from '../../../core/models/models';
     .socials{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
     .soc{height:44px;border:1px solid var(--cf-line);border-radius:var(--cf-radius-sm);background:var(--cf-surface);color:var(--cf-ink-700);font-weight:600;font-size:16px;cursor:pointer}
     .soc:hover{background:var(--cf-surface-2)}
+    .alt{margin-top:18px;text-align:center;font-size:13px;color:var(--cf-ink-500)}.alt a{color:var(--cf-brand-600);font-weight:600;text-decoration:none}
     @media(max-width:860px){.lg{grid-template-columns:1fr}.brand{display:none}}
   `],
 })

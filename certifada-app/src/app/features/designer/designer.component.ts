@@ -10,6 +10,8 @@ import {
   inject,
   signal,
 } from '@angular/core';
+import { DESIGNER_HELP, DESIGNER_HELP_AR, HELP_UI, TABLE_HELP } from './designer-help.data';
+import { LanguageService } from '../../core/services/language.service';
 import { DecimalPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { NgTemplateOutlet } from '@angular/common';
@@ -816,6 +818,13 @@ export class DesignerComponent implements AfterViewInit, OnDestroy {
   tHeaders = '';
   tablePaste = '';
   tAdvanced = false;
+  tableGuide = false;     // "how tables work" inline guidance
+  helpFor = signal<string | null>(null);   // data-driven per-tab help popup
+  readonly HELP = DESIGNER_HELP;
+  private langSvc = inject(LanguageService);
+  readonly helpMap = computed(() => this.langSvc.lang() === 'ar' ? DESIGNER_HELP_AR : DESIGNER_HELP);
+  readonly helpUi = computed(() => this.langSvc.lang() === 'ar' ? HELP_UI.ar : HELP_UI.en);
+  readonly tg = computed(() => this.langSvc.lang() === 'ar' ? TABLE_HELP.ar : TABLE_HELP.en);
   gridR = 0;
   gridC = 0;
   readonly tGridRows = [1, 2, 3, 4, 5, 6];

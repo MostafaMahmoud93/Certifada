@@ -11,9 +11,10 @@ import { ApprovalService } from '../../core/services/approval.service';
 import { HasActionDirective } from '../../shared/directives/has-action.directive';
 import { Actions } from '../../core/constants/actions';
 import { mergeDataIntoJson, renderJsonToPng } from '../../core/utils/render.util';
+import { expandDynamicTablesInJson } from '../designer/fabric-canvas.service';
 import { PaginatorComponent } from '../../shared/components/paginator/paginator.component';
 
-interface BulkRow { email: string; data: Record<string, string>; }
+interface BulkRow { email: string; data: Record<string, string>; tcells?: string[]; }
 interface Confetti { left: number; delay: number; dur: number; color: string; }
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -88,6 +89,25 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
                 </div>
               }
               @if (!vars().length) { <p class="cf-muted sm">This template has no variables — only the recipient email is needed.</p> }
+              @if (dynTable(); as dt) {
+                <div class="sec-row mt"><span class="sec-ic"><span class="material-icons">table_chart</span></span><h3 class="sec">Table rows</h3><button type="button" class="thelp" (click)="tableHelp.set(true)" title="How do table rows work?"><span class="material-icons">info</span></button><span class="fld-prog" [class.done]="tableValid()"><span class="material-icons">{{ tableValid() ? 'task_alt' : 'pending' }}</span>{{ cleanTableRows().length }} row{{ cleanTableRows().length === 1 ? '' : 's' }}</span></div>
+                <p class="cf-muted sm rhint">This template has a dynamic table — add one row per line item. They expand into the certificate automatically.</p>
+                <div class="rtablewrap">
+                  <table class="rtable">
+                    <thead><tr><th class="rn">#</th>@for (h of dt.headers; track $index) { <th>{{ h }}</th> }<th class="rx"></th></tr></thead>
+                    <tbody>
+                      @for (row of tableRows(); track $index; let ri = $index) {
+                        <tr>
+                          <td class="rn">{{ ri + 1 }}</td>
+                          @for (h of dt.headers; track $index; let ci = $index) { <td><input [value]="row[ci] || ''" (input)="setCell(ri, ci, $any($event.target).value)" [placeholder]="h" /></td> }
+                          <td class="rx"><button class="ic sm" (click)="removeTableRow(ri)" [disabled]="tableRows().length <= 1" title="Remove row"><span class="material-icons">close</span></button></td>
+                        </tr>
+                      }
+                    </tbody>
+                  </table>
+                </div>
+                <button class="addrow" (click)="addTableRow()"><span class="material-icons">add</span> Add row</button>
+              }
               @if (hasSignature()) {
                 <div class="sig-note"><span class="material-icons">draw</span><div class="sn-txt"><b>Signature handled for you</b><span>Your saved signature is applied automatically. This credential is sent for approval, and the signature appears once approved.</span></div></div>
               }
@@ -124,6 +144,7 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
           </div>
         } @else {
           <p class="lead"><span class="material-icons">tips_and_updates</span> Have many recipients? Grab the ready-made sheet, fill a row each, upload, and we'll issue them all.</p>
+          @if (dynTable(); as dt) { <div class="rinfo"><span class="material-icons">table_chart</span><div><b>This template has a dynamic table.</b><span>Table columns in the sheet are prefixed <b>Table —</b>. Put one table row per spreadsheet row, and repeat the same Recipient Email across rows to add several table rows to that recipient's certificate.</span></div><button type="button" class="thelp lg" (click)="tableHelp.set(true)"><span class="material-icons">help</span> How it works</button></div> }
           <div class="steps">
             <div class="step"><span class="step-n">1</span><div class="bi-txt"><strong>Download the tailored sheet</strong><span class="cf-muted">Exact columns — Recipient Email + {{ vars().length }} field{{ vars().length === 1 ? '' : 's' }}.</span></div><button class="cf-btn cf-btn-secondary" (click)="downloadCsvTemplate()"><span class="material-icons">download</span> Download CSV</button></div>
             <div class="step-line"></div>
@@ -138,19 +159,19 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
           @if (rows().length) {
             <div class="valgrid">
-              <div class="vstat ok"><span class="material-icons">check_circle</span><b>{{ validRows().length }}</b> ready</div>
-              <div class="vstat bad" [class.zero]="bulkErrors().length === 0"><span class="material-icons">error_outline</span><b>{{ bulkErrors().length }}</b> to fix</div>
+              <div class="vstat ok"><span class="material-icons">check_circle</span><b>{{ readyCount() }}</b> {{ dynTable() ? 'recipients ' : '' }}ready</div>
+              <div class="vstat bad" [class.zero]="badCount() === 0"><span class="material-icons">error_outline</span><b>{{ badCount() }}</b> to fix</div>
               <div class="vstat tot"><span class="material-icons">table_rows</span><b>{{ rows().length }}</b> rows</div>
             </div>
             <div class="tablewrap">
               <table class="cf-table b-table">
-                <thead><tr><th>#</th><th>Recipient Email</th>@for (v of vars(); track v) { <th>{{ pretty(v) }}</th> }<th>Status</th><th></th></tr></thead>
+                <thead><tr><th>#</th><th>Recipient Email</th>@for (v of vars(); track v) { <th>{{ pretty(v) }}</th> }@if (dynTable(); as dt) { @for (h of dt.headers; track $index) { <th>{{ h }}</th> } }<th>Status</th><th></th></tr></thead>
                 <tbody>
                   @for (r of rows(); track $index) {
                     <tr [class.row-bad]="!rowOk(r)">
                       <td class="cf-muted">{{ $index + 1 }}</td>
                       <td [class.cell-bad]="!emailValid(r.email)">{{ r.email || '—' }}</td>
-                      @for (v of vars(); track v) { <td>{{ r.data[v] || '—' }}</td> }
+                      @for (v of vars(); track v) { <td>{{ r.data[v] || '—' }}</td> }@if (dynTable(); as dt) { @for (h of dt.headers; track $index) { <td>{{ (r.tcells || [])[$index] || '—' }}</td> } }
                       <td>@if (rowOk(r)) { <span class="cf-badge cf-badge-success">Valid</span> } @else { <span class="cf-badge cf-badge-danger">{{ rowProblem(r) }}</span> }</td>
                       <td><button class="ic sm" (click)="removeRow($index)" title="Remove row"><span class="material-icons">close</span></button></td>
                     </tr>
@@ -163,7 +184,7 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
             } @else {
               <div class="form-actions end">
                 <button class="cf-btn cf-btn-secondary" (click)="clearRows()">Clear</button>
-                <button class="cf-btn cf-btn-primary" (click)="issueBulk()" [disabled]="!validRows().length" [appHasAction]="A.Credential_Bulk" [tooltipMessage]="'🔒 Bulk issuing isn\\'t in your plan.'"><span class="material-icons">send</span> Issue {{ validRows().length }} certificate{{ validRows().length === 1 ? '' : 's' }}</button>
+                <button class="cf-btn cf-btn-primary" (click)="issueBulk()" [disabled]="!readyCount()" [appHasAction]="A.Credential_Bulk" [tooltipMessage]="'🔒 Bulk issuing isn\\'t in your plan.'"><span class="material-icons">send</span> Issue {{ readyCount() }} certificate{{ readyCount() === 1 ? '' : 's' }}</button>
               </div>
             }
           }
@@ -231,6 +252,36 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
           @for (v of vars(); track v) { <div class="field"><label>{{ pretty(v) }} <span class="req">*</span></label><div class="inp"><span class="material-icons">data_object</span><input [value]="editForm()[v] || ''" (input)="setEditField(v, $any($event.target).value)" /></div></div> }
           @if (!vars().length) { <p class="cf-muted sm">This template has no variables — you can update the recipient email.</p> }
           <div class="modal-actions"><button class="cf-btn cf-btn-secondary" (click)="closeEdit()">Cancel</button><button class="cf-btn cf-btn-primary" (click)="saveEdit()" [disabled]="!editValid() || savingEdit()"><span class="material-icons">send</span> {{ savingEdit() ? 'Saving…' : 'Save & re-send' }}</button></div>
+        </div>
+      </div>
+    }
+    @if (tableHelp()) {
+      <div class="info-backdrop" (click)="tableHelp.set(false)">
+        <div class="info-pop" (click)="$event.stopPropagation()">
+          <button class="info-x" (click)="tableHelp.set(false)" title="Close"><span class="material-icons">close</span></button>
+          <div class="info-head"><span class="gicon"><span class="material-icons">auto_awesome</span></span><div class="info-ht"><h4>How dynamic tables work</h4><span class="info-area">Roster · line items</span></div></div>
+          <p class="info-desc">This certificate has a table that grows with your data — every row becomes one line on the credential. Here's how to fill the sheet for bulk issuing:</p>
+
+          <div class="csvdemo" aria-hidden="true">
+            <div class="cd-label">recipients.csv</div>
+            <div class="sheet">
+              <div class="srow head"><span>Recipient Email</span><span>Name</span><span class="t">Table — Course</span><span class="t">Table — Grade</span></div>
+              <div class="srow ga"><span class="em">alice&#64;uni.edu</span><span>Alice</span><span class="t">Calculus<i class="caret"></i></span><span class="t">A</span></div>
+              <div class="srow ga"><span class="em">alice&#64;uni.edu</span><span>Alice</span><span class="t">Physics</span><span class="t">A−</span></div>
+              <div class="srow gb"><span class="em">ben&#64;uni.edu</span><span>Ben</span><span class="t">Calculus</span><span class="t">B+</span></div>
+            </div>
+            <div class="merge"><span class="material-icons">subdirectory_arrow_right</span> same email merges into one certificate</div>
+            <div class="certs">
+              <div class="certcard ca"><span class="cc-ic"><span class="material-icons">workspace_premium</span></span><div><b>Alice</b><small>2 table rows</small></div></div>
+              <div class="certcard cb"><span class="cc-ic"><span class="material-icons">workspace_premium</span></span><div><b>Ben</b><small>1 table row</small></div></div>
+            </div>
+          </div>
+
+          <div class="tips">
+            <div class="tip"><span class="material-icons">edit_note</span><span>Type table values only in the <b>Table —</b> columns; your other fields fill the rest.</span></div>
+            <div class="tip"><span class="material-icons">content_copy</span><span><b>Repeat the same email</b> on a new row to add another line to that person's table.</span></div>
+            <div class="tip"><span class="material-icons">person_add</span><span>Issuing <b>one by one</b>? Skip the sheet — use <b>Add row</b> under Table rows.</span></div>
+          </div>
         </div>
       </div>
     }
@@ -432,6 +483,85 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     .m-head h3{font-size:17px;color:var(--cf-ink-900)}
     .modal-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:18px}
     .modal-actions .cf-btn{display:inline-flex;align-items:center;gap:6px}.modal-actions .material-icons{font-size:17px}
+    .mt{margin-top:18px}
+    .rhint{margin:-6px 0 10px}
+    .rtablewrap{border:1px solid var(--cf-line);border-radius:12px;overflow:auto;background:var(--cf-surface)}
+    .rtable{width:100%;border-collapse:collapse;font-size:13px}
+    .rtable th{background:var(--cf-surface-2);font-size:11px;font-weight:700;color:var(--cf-ink-600);text-align:start;padding:8px 10px;border-bottom:1px solid var(--cf-line);white-space:nowrap}
+    .rtable td{padding:5px 8px;border-bottom:1px solid var(--cf-line-soft);vertical-align:middle}
+    .rtable tr:last-child td{border-bottom:0}
+    .rtable .rn{width:30px;color:var(--cf-ink-400);text-align:center;font-variant-numeric:tabular-nums}
+    .rtable .rx{width:40px;text-align:center}
+    .rtable input{width:100%;min-width:118px;border:1px solid transparent;background:var(--cf-surface);color:var(--cf-ink-900);border-radius:7px;padding:7px 9px;font:inherit;font-size:13px;outline:none;transition:border-color .14s,box-shadow .14s}
+    .rtable input:hover{border-color:var(--cf-line)}
+    .rtable input:focus{border-color:var(--cf-brand-500);box-shadow:var(--cf-ring)}
+    .addrow{display:inline-flex;align-items:center;gap:6px;margin-top:10px;border:1px dashed var(--cf-line);background:var(--cf-surface);color:var(--cf-brand-600);font:inherit;font-weight:600;font-size:12.5px;padding:8px 13px;border-radius:10px;cursor:pointer;transition:border-color .14s,background .14s,color .14s}
+    .addrow:hover{border-color:var(--cf-brand-400);background:var(--cf-brand-50)}
+    .addrow .material-icons{font-size:16px}
+    .rinfo{display:flex;align-items:flex-start;gap:10px;margin-bottom:16px;padding:11px 13px;border-radius:11px;background:color-mix(in srgb,var(--cf-brand-500) 7%,transparent);border:1px solid color-mix(in srgb,var(--cf-brand-500) 22%,transparent)}
+    .rinfo>.material-icons{font-size:18px;color:var(--cf-brand-600);margin-top:1px}
+    .rinfo div{display:flex;flex-direction:column;gap:2px}
+    .rinfo b{font-size:12.5px;color:var(--cf-ink-900)}.rinfo span{font-size:11.5px;color:var(--cf-ink-500);line-height:1.45}
+    .thelp{display:inline-grid;place-items:center;width:24px;height:24px;border:0;background:none;color:var(--cf-ink-400);border-radius:7px;cursor:pointer;transition:background .14s,color .14s}
+    .thelp:hover{background:var(--cf-brand-50);color:var(--cf-brand-600)}
+    .thelp .material-icons{font-size:17px}
+    .thelp.lg{width:auto;display:inline-flex;align-items:center;gap:5px;padding:7px 11px;font:inherit;font-weight:600;font-size:12px;color:var(--cf-brand-600);border:1px solid color-mix(in srgb,var(--cf-brand-500) 30%,var(--cf-line));background:var(--cf-surface);flex:none;align-self:flex-start}
+    .thelp.lg .material-icons{font-size:15px}
+    .thelp.lg:hover{background:var(--cf-brand-50)}
+    .info-backdrop{position:fixed;inset:0;background:rgba(15,23,42,.45);-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px);display:grid;place-items:center;z-index:90;padding:20px;animation:fadeIn .12s ease}
+    @keyframes fadeIn{from{opacity:0}to{opacity:1}}
+    .info-pop{position:relative;width:min(540px,100%);max-height:88vh;overflow:auto;background:var(--cf-surface);border:1px solid var(--cf-line);border-top:4px solid var(--cf-brand-500);border-radius:16px;box-shadow:var(--cf-shadow-lg);padding:22px;animation:rise .25s ease both}
+    .info-x{position:absolute;top:12px;inset-inline-end:12px;width:30px;height:30px;display:grid;place-items:center;border:0;background:none;border-radius:8px;color:var(--cf-ink-500);cursor:pointer}
+    .info-x:hover{background:var(--cf-surface-2);color:var(--cf-ink-800)}.info-x .material-icons{font-size:19px}
+    .info-head{display:flex;align-items:center;gap:12px;margin-bottom:14px;padding-inline-end:30px}
+    .gicon{width:40px;height:40px;border-radius:11px;display:grid;place-items:center;background:color-mix(in srgb,var(--cf-brand-500) 14%,transparent);color:var(--cf-brand-600);flex:none}.gicon .material-icons{font-size:21px}
+    .info-ht h4{margin:0;font-size:16px;color:var(--cf-ink-900)}
+    .info-area{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--cf-brand-600)}
+    .info-desc{margin:0;font-size:13.5px;line-height:1.55;color:var(--cf-ink-700)}
+    .info-block{margin-top:14px;padding-top:13px;border-top:1px solid var(--cf-line)}
+    .ib-title{display:flex;align-items:center;gap:7px;font-size:13px;font-weight:700;color:var(--cf-ink-900)}.ib-title .material-icons{font-size:17px;color:var(--cf-brand-600)}
+    .ib-text{margin:5px 0 0;font-size:12.5px;line-height:1.55;color:var(--cf-ink-600)}
+    .csvdemo{margin:14px 0 2px;padding:14px;border:1px solid var(--cf-line);border-radius:13px;background:linear-gradient(180deg,var(--cf-surface-2),var(--cf-surface));overflow:hidden}
+    .cd-label{display:flex;align-items:center;gap:7px;font-size:10.5px;font-weight:700;color:var(--cf-ink-400);margin-bottom:9px;letter-spacing:.02em}
+    .cd-label::before{content:"";width:9px;height:9px;border-radius:2px;background:#16a34a;box-shadow:0 0 0 3px color-mix(in srgb,#16a34a 18%,transparent)}
+    .sheet{border:1px solid var(--cf-line);border-radius:9px;overflow:hidden;background:var(--cf-surface)}
+    .srow{display:grid;grid-template-columns:1.5fr 1fr 1.35fr .7fr;font-size:11px;position:relative}
+    .srow>span{padding:6px 9px;border-bottom:1px solid var(--cf-line-soft);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--cf-ink-700)}
+    .srow:last-child>span{border-bottom:0}
+    .srow.head>span{background:var(--cf-surface-2);font-weight:700;color:var(--cf-ink-500);font-size:9.5px;text-transform:uppercase;letter-spacing:.03em}
+    .srow .t{color:var(--cf-brand-700);background:color-mix(in srgb,var(--cf-brand-500) 5%,transparent)}
+    .srow.head .t{background:color-mix(in srgb,var(--cf-brand-500) 11%,transparent)}
+    .srow .em{font-weight:700;color:var(--cf-ink-900)}
+    .srow.ga,.srow.gb{padding-inline-start:3px}
+    .srow.ga::after,.srow.gb::after{content:"";position:absolute;inset-inline-start:0;top:0;bottom:0;width:3px;z-index:1}
+    .srow.ga::after{background:var(--cf-brand-500)}
+    .srow.gb::after{background:#0891b2}
+    .srow.ga{animation:glowA 6.5s ease-in-out infinite}
+    .srow.gb{animation:glowB 6.5s ease-in-out infinite}
+    @keyframes glowA{0%,4%{background:transparent}12%,44%{background:color-mix(in srgb,var(--cf-brand-500) 11%,transparent)}52%,100%{background:transparent}}
+    @keyframes glowB{0%,54%{background:transparent}62%,86%{background:color-mix(in srgb,#0891b2 12%,transparent)}94%,100%{background:transparent}}
+    .caret{display:inline-block;width:1.5px;height:11px;background:var(--cf-brand-600);margin-inline-start:1px;vertical-align:-1px;animation:cblink 1.05s step-end infinite}
+    @keyframes cblink{0%,55%{opacity:1}56%,100%{opacity:0}}
+    .merge{display:flex;align-items:center;justify-content:center;gap:6px;font-size:11px;font-weight:600;color:var(--cf-ink-500);margin:9px 0}
+    .merge .material-icons{font-size:17px;color:var(--cf-brand-500);animation:mbob 1.8s ease-in-out infinite}
+    @keyframes mbob{0%,100%{transform:translateY(-1px)}50%{transform:translateY(2px)}}
+    .certs{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+    .certcard{display:flex;align-items:center;gap:9px;padding:9px 11px;border:1px solid var(--cf-line);border-radius:10px;background:var(--cf-surface)}
+    .certcard .cc-ic{width:28px;height:28px;border-radius:8px;display:grid;place-items:center;flex:none;color:#fff}
+    .certcard .cc-ic .material-icons{font-size:16px}
+    .certcard b{font-size:12px;color:var(--cf-ink-900);display:block;line-height:1.2}
+    .certcard small{display:block;font-size:10.5px;color:var(--cf-ink-500);margin-top:1px}
+    .certcard.ca .cc-ic{background:var(--cf-brand-500)}
+    .certcard.cb .cc-ic{background:#0891b2}
+    .certcard.ca{animation:cardA 6.5s ease-in-out infinite}
+    .certcard.cb{animation:cardB 6.5s ease-in-out infinite}
+    @keyframes cardA{0%,6%{transform:scale(.99);box-shadow:none;border-color:var(--cf-line)}14%,44%{transform:translateY(-1px) scale(1);border-color:color-mix(in srgb,var(--cf-brand-500) 55%,var(--cf-line));box-shadow:0 8px 18px -12px color-mix(in srgb,var(--cf-brand-600) 80%,transparent)}52%,100%{transform:scale(.99);box-shadow:none;border-color:var(--cf-line)}}
+    @keyframes cardB{0%,54%{transform:scale(.99);box-shadow:none;border-color:var(--cf-line)}62%,86%{transform:translateY(-1px) scale(1);border-color:color-mix(in srgb,#0891b2 55%,var(--cf-line));box-shadow:0 8px 18px -12px color-mix(in srgb,#0891b2 80%,transparent)}94%,100%{transform:scale(.99);box-shadow:none;border-color:var(--cf-line)}}
+    .tips{margin-top:14px;display:flex;flex-direction:column;gap:9px}
+    .tip{display:flex;align-items:flex-start;gap:9px;font-size:12px;color:var(--cf-ink-600);line-height:1.45}
+    .tip .material-icons{font-size:16px;color:var(--cf-brand-600);margin-top:1px;flex:none}
+    .tip b{color:var(--cf-ink-900)}
+    @media(prefers-reduced-motion:reduce){.srow.ga,.srow.gb,.certcard.ca,.certcard.cb,.caret,.merge .material-icons{animation:none}.srow.ga,.srow.gb{background:transparent}}
   `],
 })
 export class IssueComponent {
@@ -455,6 +585,7 @@ export class IssueComponent {
   previewUrl = signal('');
   previewing = signal(false);
   showPreview = signal(false);   // preview design is hidden by default
+  tableHelp = signal(false);     // "how dynamic tables work" popup
   issuing = signal(false);
   lastIssued = signal<IssuedRecord | null>(null);
 
@@ -491,12 +622,52 @@ export class IssueComponent {
     try { const a = JSON.parse(t.placeholdersJson) as string[]; return Array.isArray(a) ? a : []; } catch { return []; }
   });
   /** Fields shown in the form — signature variables are applied automatically, never typed. */
-  vars = computed(() => this.rawVars().filter((v) => !/signature/i.test(v)));
+  vars = computed(() => this.rawVars().filter((v) => !/signature/i.test(v) && !/^cell_\d+_\d+$/.test(v)));
   hasSignature = computed(() => {
     const j = this.template()?.canvasJson || '';
     if (/"objType"\s*:\s*"signature"/.test(j) || /\{\{\s*signature\d*\s*\}\}/i.test(j)) return true;
     return this.rawVars().some((v) => /signature/i.test(v));
   });
+  // ---- dynamic (roster) table ----
+  dynTable = computed(() => this.detectDynTable(this.template()?.canvasJson || ''));
+  tableRows = signal<string[][]>([]);
+  cleanTableRows = computed(() => this.tableRows().filter((r) => r.some((c) => (c || '').trim().length > 0)));
+  tableValid = computed(() => { const dt = this.dynTable(); if (!dt) return true; const rows = this.cleanTableRows(); return rows.length > 0 && rows.every((r) => r.slice(0, dt.cols).every((c) => (c || '').trim().length > 0)); });
+  private emptyRow(n: number): string[] { return Array.from({ length: n }, () => ''); }
+  private seedTableRows(): void { const dt = this.dynTable(); if (dt && !this.tableRows().length) this.tableRows.set([this.emptyRow(dt.cols)]); else if (!dt) this.tableRows.set([]); }
+  addTableRow(): void { const dt = this.dynTable(); if (!dt) return; this.tableRows.update((l) => [...l, this.emptyRow(dt.cols)]); }
+  removeTableRow(i: number): void { this.tableRows.update((l) => l.length <= 1 ? l : l.filter((_, k) => k !== i)); }
+  setCell(r: number, c: number, v: string): void { this.tableRows.update((l) => l.map((row, ri) => ri === r ? row.map((cell, ci) => ci === c ? v : cell) : row)); }
+  private detectDynTable(json: string): { cols: number; colKeys: string[]; headers: string[] } | null {
+    if (!json || !json.includes('"dynamic":true')) return null;
+    let spec: any = null;
+    try {
+      const walk = (arr: any[]): any => { for (const o of arr ?? []) { if (o?.objType === 'table' && o.tableSpec?.dynamic) return o.tableSpec; if (Array.isArray(o?.objects)) { const f = walk(o.objects); if (f) return f; } } return null; };
+      spec = walk((JSON.parse(json)?.objects) || []);
+    } catch { return null; }
+    if (!spec) return null;
+    const cols: number = spec.cols ?? (spec.colKeys?.length || 0);
+    if (!cols) return null;
+    const colKeys: string[] = (spec.colKeys ?? Array.from({ length: cols }, (_, c) => `col_${c + 1}`)).slice(0, cols);
+    const fromOpts: string[] = (spec.opts?.headers && spec.opts.headers.length) ? spec.opts.headers : [];
+    const fromCells: string[] = (spec.opts?.showHeader && Array.isArray(spec.cells?.[0])) ? spec.cells[0] : [];
+    const base: string[] = fromOpts.length ? fromOpts : (fromCells.length ? fromCells : colKeys);
+    const headers: string[] = Array.from({ length: cols }, (_, i) => { const h = base[i]; return (h && String(h).trim()) || this.pretty(colKeys[i] || `Column ${i + 1}`); });
+    return { cols, colKeys, headers };
+  }
+  // ---- bulk roster grouping (only when a dynamic table exists) ----
+  bulkGroups = computed(() => {
+    if (!this.dynTable()) return [] as { email: string; rows: BulkRow[] }[];
+    const map = new Map<string, { email: string; rows: BulkRow[] }>();
+    for (const r of this.rows()) { const k = (r.email || '').trim().toLowerCase(); if (!k) continue; if (!map.has(k)) map.set(k, { email: (r.email || '').trim(), rows: [] }); map.get(k)!.rows.push(r); }
+    return [...map.values()];
+  });
+  private groupData(rows: BulkRow[]): Record<string, string> { const d: Record<string, string> = {}; for (const v of this.vars()) { for (const r of rows) { const val = (r.data[v] || '').trim(); if (val) { d[v] = val; break; } } } return d; }
+  private groupList(rows: BulkRow[]): string[][] { return rows.map((r) => r.tcells ?? []).filter((tc) => tc.some((c) => (c || '').trim().length > 0)); }
+  groupOk(g: { email: string; rows: BulkRow[] }): boolean { const d = this.groupData(g.rows); return this.emailValid(g.email) && this.vars().every((v) => (d[v] || '').trim().length > 0) && this.groupList(g.rows).length > 0; }
+  validGroups = computed(() => this.bulkGroups().filter((g) => this.groupOk(g)));
+  readyCount = computed(() => this.dynTable() ? this.validGroups().length : this.validRows().length);
+  badCount = computed(() => this.dynTable() ? (this.bulkGroups().length - this.validGroups().length) : this.bulkErrors().length);
   private sig(): string | null { try { return localStorage.getItem('cf-signature'); } catch { return null; } }
   history = computed(() => this.issued.forTemplate(this.id));
   stats = computed(() => this.issued.stats(this.id));
@@ -505,7 +676,7 @@ export class IssueComponent {
   quotaPct = computed(() => { const lim = this.plan.issueLimit(); return !isFinite(lim) || lim <= 0 ? 0 : Math.min(100, Math.round((this.issuesUsed() / lim) * 100)); });
   quotaLabel(): string { const lim = this.plan.issueLimit(); return isFinite(lim) ? lim.toLocaleString() : '∞'; }
   emailOk = computed(() => EMAIL_RE.test(this.email().trim()));
-  oneValid = computed(() => this.emailOk() && this.vars().every((v) => (this.form()[v] || '').trim().length > 0));
+  oneValid = computed(() => this.emailOk() && this.vars().every((v) => (this.form()[v] || '').trim().length > 0) && this.tableValid());
   totalFields = computed(() => 1 + this.vars().length);
   filledFields = computed(() => (this.emailOk() ? 1 : 0) + this.vars().filter((v) => (this.form()[v] || '').trim().length > 0).length);
   validRows = computed(() => this.rows().filter((r) => this.rowOk(r)));
@@ -531,7 +702,7 @@ export class IssueComponent {
   private load(): void {
     if (!this.id) { this.loading.set(false); this.error.set('No template selected.'); return; }
     this.templates.get(this.id).subscribe({
-      next: (t) => { this.template.set(t); this.loading.set(false); },
+      next: (t) => { this.template.set(t); this.loading.set(false); this.seedTableRows(); },
       error: () => {
         try {
           const cache = JSON.parse(localStorage.getItem('cf-tpl-cache') || '[]');
@@ -559,6 +730,14 @@ export class IssueComponent {
     if (!t || !t.canvasJson) return null;
     return mergeDataIntoJson(t.canvasJson, data);
   }
+  /** Build render-ready JSON: expand any dynamic (roster) table from `list`, then merge field values. */
+  private async composeJson(data: Record<string, string>, list?: string[][]): Promise<string | null> {
+    const t = this.template();
+    if (!t || !t.canvasJson) return null;
+    let json = t.canvasJson;
+    if (this.dynTable()) { try { json = await expandDynamicTablesInJson(json, list ?? this.cleanTableRows()); } catch { /* keep base json */ } }
+    return mergeDataIntoJson(json, data);
+  }
   /** Render a credential — signature shows as a Pending Approval stamp until approved, then the signer's signature. */
   private renderCert(json: string, w: number, h: number, signed: boolean): Promise<string> {
     return renderJsonToPng(json, w, h, 2, signed ? this.sig() : null, this.hasSignature() && !signed);
@@ -566,7 +745,7 @@ export class IssueComponent {
 
   async updatePreview(): Promise<void> {
     const t = this.template();
-    const json = this.mergedJson(this.form());
+    const json = await this.composeJson(this.form());
     if (!t || !json) { this.alerts.info('Live preview needs the full design (API offline) — showing the saved thumbnail.'); return; }
     this.showPreview.set(true);
     this.previewing.set(true);
@@ -587,7 +766,7 @@ export class IssueComponent {
     const email = this.email().trim();
     const needsApproval = this.hasSignature();
     let file: string | null = null;
-    const json = this.mergedJson(data);
+    const json = await this.composeJson(data);
     if (json) { try { file = await this.renderCert(json, t.width, t.height, false); } catch { /* ignore */ } }
     const id = this.issued.newId();
     const rec: IssuedRecord = {
@@ -605,13 +784,16 @@ export class IssueComponent {
     this.lastIssued.set(rec);
     this.alerts.success(needsApproval ? `Submitted for approval — ${email} receives it once approved.` : `Sending certificate to ${email}…`, { title: needsApproval ? 'Pending approval ⏳' : 'Issued 🎉' });
   }
-  issueAnother(): void { this.lastIssued.set(null); this.form.set({}); this.email.set(''); this.previewUrl.set(''); }
+  issueAnother(): void { this.lastIssued.set(null); this.form.set({}); this.email.set(''); this.previewUrl.set(''); this.tableRows.set([]); this.seedTableRows(); }
 
   private norm(s: string): string { return (s || '').toLowerCase().replace(/[^a-z0-9]/g, ''); }
   downloadCsvTemplate(): void {
-    const headers = ['Recipient Email', ...this.vars().map((v) => this.pretty(v))];
-    const example = ['recipient@email.com', ...this.vars().map((v) => 'Sample ' + this.pretty(v))];
-    const csv = [headers, example].map((r) => r.map((c) => /[",\n]/.test(c) ? `"${c.replace(/"/g, '""')}"` : c).join(',')).join('\r\n');
+    const dt = this.dynTable();
+    const tHead = dt ? dt.headers.map((h) => `Table — ${h}`) : [];
+    const headers = ['Recipient Email', ...this.vars().map((v) => this.pretty(v)), ...tHead];
+    const mk = (email: string, n: number) => [email, ...this.vars().map((v) => 'Sample ' + this.pretty(v)), ...(dt ? dt.headers.map((h) => `${h} ${n}`) : [])];
+    const rows = dt ? [headers, mk('recipient@email.com', 1), mk('recipient@email.com', 2)] : [headers, mk('recipient@email.com', 1)];
+    const csv = rows.map((r) => r.map((c) => /[",\n]/.test(c) ? `"${c.replace(/"/g, '""')}"` : c).join(',')).join('\r\n');
     const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
@@ -634,13 +816,16 @@ export class IssueComponent {
       const emailCol = cols.find((c) => ['recipientemail', 'email', 'mail'].includes(this.norm(c)));
       const varCol: Record<string, string> = {};
       for (const v of this.vars()) { const hit = cols.find((c) => this.norm(c) === this.norm(v) || this.norm(c) === this.norm(this.pretty(v))); if (hit) varCol[v] = hit; }
+      const dt = this.dynTable();
+      const tCol: string[] = dt ? dt.headers.map((h, i) => cols.find((c) => this.norm(c) === this.norm('table' + h)) || cols.find((c) => this.norm(c) === this.norm(dt.colKeys[i] || '')) || cols.find((c) => this.norm(c) === this.norm('table' + this.pretty(dt.colKeys[i] || ''))) || '') : [];
       const rows: BulkRow[] = [];
       for (const r of json) {
         const data: Record<string, string> = {};
         for (const v of this.vars()) data[v] = String(r[varCol[v]] ?? '').trim();
+        const tcells = dt ? tCol.map((col) => col ? String(r[col] ?? '').trim() : '') : undefined;
         const email = String((emailCol ? r[emailCol] : '') ?? '').trim();
-        if (!email && this.vars().every((v) => !data[v])) continue;
-        rows.push({ email, data });
+        if (!email && this.vars().every((v) => !data[v]) && (!tcells || tcells.every((c) => !c))) continue;
+        rows.push({ email, data, tcells });
       }
       this.rows.set(rows);
       if (!rows.length) this.alerts.warning('No data rows found in that file.');
@@ -660,22 +845,25 @@ export class IssueComponent {
   clearRows(): void { this.rows.set([]); this.fileName.set(''); }
 
   async issueBulk(): Promise<void> {
-    const valid = this.validRows();
-    if (!valid.length) { this.alerts.warning('No valid rows to issue. Every row needs a valid Recipient Email and all fields filled.'); return; }
-    this.bulkTotal.set(valid.length); this.bulkProgress.set(0);
+    const dt = this.dynTable();
+    const items: { email: string; data: Record<string, string>; list?: string[][] }[] = dt
+      ? this.validGroups().map((g) => ({ email: g.email, data: this.groupData(g.rows), list: this.groupList(g.rows) }))
+      : this.validRows().map((r) => ({ email: r.email, data: r.data, list: r.tcells ? [r.tcells] : undefined }));
+    if (!items.length) { this.alerts.warning(dt ? 'No valid recipients. Each needs a valid email, all fields, and at least one table row.' : 'No valid rows to issue. Every row needs a valid Recipient Email and all fields filled.'); return; }
+    this.bulkTotal.set(items.length); this.bulkProgress.set(0);
     this.issuingBulk.set(true);
     const t = this.template()!;
     const needsApproval = this.hasSignature();
     const batchId = 'batch_' + Date.now().toString(36);
     const records: IssuedRecord[] = [];
-    for (const r of valid) {
+    for (const it of items) {
       let file: string | null = null;
-      const json = this.mergedJson(r.data);
+      const json = await this.composeJson(it.data, it.list);
       if (json) { try { file = await this.renderCert(json, t.width, t.height, false); } catch { /* ignore */ } }
       else { await new Promise((res) => setTimeout(res, 16)); }
       records.push({
         id: this.issued.newId(), templateId: this.id, templateName: t.name || '',
-        recipientName: this.recipientName(r.data, r.email), recipientEmail: r.email, data: r.data,
+        recipientName: this.recipientName(it.data, it.email), recipientEmail: it.email, data: it.data,
         status: needsApproval ? 'Pending' : 'Sending', format: 'png', fileDataUrl: file, batchId, createdAt: new Date().toISOString(),
       });
       this.bulkProgress.update((n) => n + 1);

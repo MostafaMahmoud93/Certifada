@@ -31,7 +31,22 @@ interface NotifItem { id: number; icon: string; tone: 'brand' | 'success' | 'war
         <nav class="nav nav-h"><ng-container [ngTemplateOutlet]="navTpl"></ng-container></nav>
         <button class="new" routerLink="/canvas" [title]="'nav.newTemplate' | transloco"
                 [appHasAction]="A.Template_Edit" [tooltipMessage]="'🔒 Upgrade your plan to create templates.'">
-          <span class="material-icons">add</span> <span class="lbl">{{ 'nav.newTemplate' | transloco }}</span>
+          <span class="new-ic" aria-hidden="true">
+            <svg class="cert" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <rect class="c-page" x="4.5" y="3" width="15" height="18" rx="2.4"></rect>
+              <line class="c-l1" x1="7.5" y1="8" x2="16.5" y2="8"></line>
+              <line class="c-l2" x1="7.5" y1="11" x2="14" y2="11"></line>
+              <line class="c-l3" x1="7.5" y1="14" x2="15" y2="14"></line>
+              <circle class="c-seal" cx="15.3" cy="16.8" r="3.1"></circle>
+              <circle class="c-star" cx="15.3" cy="16.8" r="1.15"></circle>
+              <circle class="c-ring" cx="15.3" cy="16.8" r="3.1" fill="none"></circle>
+              <path class="c-spark s1" d="M5 1.2 L5.58 2.42 L6.8 3 L5.58 3.58 L5 4.8 L4.42 3.58 L3.2 3 L4.42 2.42 Z"></path>
+              <path class="c-spark s2" d="M20.5 2.4 L21.17 3.83 L22.6 4.5 L21.17 5.17 L20.5 6.6 L19.83 5.17 L18.4 4.5 L19.83 3.83 Z"></path>
+              <path class="c-spark s3" d="M21 17 L21.48 18.02 L22.5 18.5 L21.48 18.98 L21 20 L20.52 18.98 L19.5 18.5 L20.52 18.02 Z"></path>
+            </svg>
+          </span>
+          <span class="lbl">{{ 'nav.newTemplate' | transloco }}</span>
+          <span class="new-tw material-icons" aria-hidden="true">auto_awesome</span>
         </button>
         <ng-container [ngTemplateOutlet]="controlsTpl"></ng-container>
       </header>
@@ -43,7 +58,22 @@ interface NotifItem { id: number; icon: string; tone: 'brand' | 'success' | 'war
         <ng-container [ngTemplateOutlet]="brandTpl"></ng-container>
         <button class="new" routerLink="/canvas" [title]="'nav.newTemplate' | transloco"
                 [appHasAction]="A.Template_Edit" [tooltipMessage]="'🔒 Upgrade your plan to create templates.'">
-          <span class="material-icons">add</span> <span class="lbl">{{ 'nav.newTemplate' | transloco }}</span>
+          <span class="new-ic" aria-hidden="true">
+            <svg class="cert" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <rect class="c-page" x="4.5" y="3" width="15" height="18" rx="2.4"></rect>
+              <line class="c-l1" x1="7.5" y1="8" x2="16.5" y2="8"></line>
+              <line class="c-l2" x1="7.5" y1="11" x2="14" y2="11"></line>
+              <line class="c-l3" x1="7.5" y1="14" x2="15" y2="14"></line>
+              <circle class="c-seal" cx="15.3" cy="16.8" r="3.1"></circle>
+              <circle class="c-star" cx="15.3" cy="16.8" r="1.15"></circle>
+              <circle class="c-ring" cx="15.3" cy="16.8" r="3.1" fill="none"></circle>
+              <path class="c-spark s1" d="M5 1.2 L5.58 2.42 L6.8 3 L5.58 3.58 L5 4.8 L4.42 3.58 L3.2 3 L4.42 2.42 Z"></path>
+              <path class="c-spark s2" d="M20.5 2.4 L21.17 3.83 L22.6 4.5 L21.17 5.17 L20.5 6.6 L19.83 5.17 L18.4 4.5 L19.83 3.83 Z"></path>
+              <path class="c-spark s3" d="M21 17 L21.48 18.02 L22.5 18.5 L21.48 18.98 L21 20 L20.52 18.98 L19.5 18.5 L20.52 18.02 Z"></path>
+            </svg>
+          </span>
+          <span class="lbl">{{ 'nav.newTemplate' | transloco }}</span>
+          <span class="new-tw material-icons" aria-hidden="true">auto_awesome</span>
         </button>
         <nav class="nav"><ng-container [ngTemplateOutlet]="navTpl"></ng-container></nav>
         <button class="logout" (click)="logout()" [title]="'common.signOut' | transloco"><span class="material-icons">logout</span> <span class="lbl">{{ 'common.signOut' | transloco }}</span></button>
@@ -159,6 +189,7 @@ interface NotifItem { id: number; icon: string; tone: 'brand' | 'success' | 'war
     .shell.collapsed .name,
     .shell.collapsed .navitem .lbl,
     .shell.collapsed .new .lbl,
+    .shell.collapsed .new .new-spark,
     .shell.collapsed .logout .lbl{display:none}
     .shell.collapsed .brand,
     .shell.collapsed .new,
@@ -180,9 +211,46 @@ interface NotifItem { id: number; icon: string; tone: 'brand' | 'success' | 'war
     .shell.collapsed .cobrand{justify-content:center;padding:7px 0;margin-inline:0}
     .topbar .cobrand{margin:0 6px 0 0;padding:5px 11px 5px 6px;border-radius:999px;flex:0 0 auto}
     @media(max-width:880px){.topbar .co-name{display:none}}
-    .new{display:flex;align-items:center;justify-content:center;gap:8px;height:40px;border:0;border-radius:var(--cf-radius-sm);background:var(--cf-brand-600);color:#fff;font:inherit;font-weight:500;font-size:13.5px;cursor:pointer;margin-bottom:8px}
-    .new:hover{background:var(--cf-brand-700)}
-    .new .material-icons{font-size:19px}
+    .new{position:relative;overflow:hidden;display:flex;align-items:center;gap:7px;height:32px;padding:0 10px;border:0;border-radius:9px;background:linear-gradient(120deg,var(--cf-brand-500),var(--cf-brand-700),var(--cf-brand-500));background-size:220% 220%;animation:newgrad 7s ease-in-out infinite;color:#fff;font:inherit;font-weight:700;font-size:12.5px;letter-spacing:-.01em;cursor:pointer;margin-bottom:8px;box-shadow:0 7px 15px -8px color-mix(in srgb,var(--cf-brand-600) 80%,transparent);transition:transform .16s,box-shadow .2s,filter .16s}
+    .new:hover{transform:translateY(-2px);filter:brightness(1.04);box-shadow:0 13px 26px -10px color-mix(in srgb,var(--cf-brand-600) 92%,transparent)}
+    .new:active{transform:translateY(0)}
+    .new::after{content:"";position:absolute;top:0;inset-inline-start:-60%;width:40%;height:100%;background:linear-gradient(100deg,transparent,rgba(255,255,255,.5),transparent);transform:skewX(-18deg);transition:inset-inline-start .6s ease;pointer-events:none}
+    .new:hover::after{inset-inline-start:130%}
+    @keyframes newgrad{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
+    .new-tw{position:absolute;top:3px;inset-inline-end:7px;font-size:12px;color:#f7d774;opacity:.85;pointer-events:none;filter:drop-shadow(0 0 4px rgba(247,215,116,.6));animation:newtw 2.8s ease-in-out infinite}
+    .new:hover .new-tw{animation-duration:1.1s}
+    @keyframes newtw{0%,100%{opacity:.35;transform:scale(.75) rotate(0deg)}50%{opacity:1;transform:scale(1.2) rotate(18deg)}}
+    .shell.collapsed .new .new-tw{display:none}
+    .new .new-ic{flex:none;width:18px;height:18px;display:grid;place-items:center}
+    .new .cert{width:18px;height:18px;overflow:visible}
+    .new .c-page{fill:#ffffff;opacity:.96;transform-box:fill-box;transform-origin:center}
+    .new:hover .c-page{animation:cpage .5s ease}
+    @keyframes cpage{0%{transform:scale(.92) rotate(-3deg)}55%{transform:scale(1.06)}100%{transform:scale(1) rotate(0deg)}}
+    .new .c-l1,.new .c-l2,.new .c-l3{stroke:#6f6ae0;stroke-width:1.6;stroke-linecap:round;transform-box:fill-box;transform-origin:left center}
+    .new:hover .c-l1{animation:cwrite .36s ease .04s both}
+    .new:hover .c-l2{animation:cwrite .36s ease .14s both}
+    .new:hover .c-l3{animation:cwrite .36s ease .24s both}
+    @keyframes cwrite{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+    .new .c-seal{fill:#e6bd49;transform-box:fill-box;transform-origin:center;animation:cglint 3.8s ease-in-out infinite}
+    .new .c-star{fill:#ffffff;transform-box:fill-box;transform-origin:center}
+    .new:hover .c-seal{animation:cseal .5s cubic-bezier(.2,1.5,.4,1) .32s both}
+    .new:hover .c-star{animation:cseal .5s cubic-bezier(.2,1.5,.4,1) .34s both}
+    @keyframes cseal{0%{transform:scale(0) rotate(-30deg)}70%{transform:scale(1.25)}100%{transform:scale(1) rotate(0deg)}}
+    .new .c-ring{stroke:#e6bd49;stroke-width:1.3;opacity:0;transform-box:fill-box;transform-origin:center}
+    .new:hover .c-ring{animation:cring .5s ease-out .5s}
+    @keyframes cring{0%{opacity:.85;transform:scale(.55)}100%{opacity:0;transform:scale(2.5)}}
+    .new .c-spark{fill:#f7d774;opacity:0;transform-box:fill-box;transform-origin:center;transition:opacity .2s ease}
+    .new:hover .c-spark{animation:cspark .6s ease both}
+    .new:hover .s1{animation-delay:.48s}
+    .new:hover .s2{animation-delay:.6s}
+    .new:hover .s3{animation-delay:.72s}
+    @keyframes cspark{0%{opacity:0;transform:scale(0) rotate(-40deg)}45%{opacity:1;transform:scale(1.35) rotate(12deg)}100%{opacity:.92;transform:scale(1) rotate(0deg)}}
+    @keyframes cglint{0%,90%,100%{filter:none}95%{filter:brightness(1.6)}}
+    .new .lbl{flex:1;text-align:start;position:relative}
+    .new .lbl::after{content:"";position:absolute;left:0;bottom:-4px;width:100%;height:1.5px;border-radius:2px;background:linear-gradient(90deg,#f3d57c,rgba(255,255,255,.9));transform:scaleX(0);transform-origin:left;transition:transform .45s cubic-bezier(.2,.85,.25,1) .42s;opacity:.95;pointer-events:none}
+    .new:hover .lbl::after{transform:scaleX(1)}
+    .shell.collapsed .new{padding:0;gap:0}
+    @media(prefers-reduced-motion:reduce){.new .c-seal,.new:hover .c-l1,.new:hover .c-l2,.new:hover .c-l3,.new:hover .c-seal,.new:hover .c-star,.new:hover .c-page,.new:hover .c-ring,.new:hover .c-spark{animation:none}.new,.new-tw{animation:none}.new::after{display:none}.new .lbl::after{display:none}}
     .nav{display:flex;flex-direction:column;gap:2px}
     .navitem{display:flex;align-items:center;gap:11px;padding:9px 11px;border-radius:var(--cf-radius-sm);color:var(--cf-ink-600);text-decoration:none;font-size:13.5px;font-weight:500}
     .navitem .material-icons{font-size:20px;color:var(--cf-ink-400)}
@@ -290,7 +358,7 @@ interface NotifItem { id: number; icon: string; tone: 'brand' | 'success' | 'war
     }
     @media(max-width:880px){
       .shell.postop .topbar{gap:6px;padding:0 8px}
-      .shell.postop .topbar .new .lbl{display:none}
+      .shell.postop .topbar .new .lbl,.shell.postop .topbar .new .new-spark{display:none}
       .shell.postop .topbar .new{padding:0 12px}
       .shell.postop .topbar .lang{padding:0 9px}
       /* too tight for labels — go icon-only and surface the name as a tooltip instead */

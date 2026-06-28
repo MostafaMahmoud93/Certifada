@@ -23,6 +23,9 @@ export const routes: Routes = [
     component: PublicLayout,
     children: [
       { path: 'login', loadComponent: () => import('./features/auth/login/login').then((m) => m.LoginPage) },
+      { path: 'register', loadComponent: () => import('./features/auth/register/register').then((m) => m.RegisterPage) },
+      { path: 'forgot', loadComponent: () => import('./features/auth/forgot/forgot').then((m) => m.ForgotPage) },
+      { path: 'reset', loadComponent: () => import('./features/auth/reset/reset').then((m) => m.ResetPage) },
       { path: '', pathMatch: 'full', redirectTo: 'login' },
     ],
   },

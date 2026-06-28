@@ -24,6 +24,8 @@
     }
   </div>
 
+  <button class="btn btn-sm guide-btn" (click)="helpFor.set('start')"><span class="material-icons">auto_awesome</span><span class="gb-lbl">{{ helpUi().guide }}</span></button>
+
   <div class="spacer"></div>
 
   <div class="seg">
@@ -344,7 +346,7 @@
       </button>
       @switch (p) {
         @case ('design') {
-          <h3 class="flyout-title">{{ 'canvas.title.design' | transloco }}</h3>
+          <h3 class="flyout-title">{{ 'canvas.title.design' | transloco }}<button type="button" class="tg-help" [class.on]="helpFor()==='design'" (click)="helpFor.set(helpFor()==='design' ? null : 'design')" [title]="helpUi().how"><span class="material-icons">help_outline</span></button></h3>
           <div class="panel-search"><span class="material-icons">search</span><input [value]="search()" (input)="search.set($any($event.target).value)" [placeholder]="'canvas.ds.searchPh' | transloco" /></div>
           <div class="row orient">
             <button class="btn btn-sm" (click)="setOrientation('landscape')" [title]="'canvas.ds.landscape' | transloco"><span class="material-icons">crop_landscape</span> {{ 'canvas.ds.landscape' | transloco }}</button>
@@ -372,7 +374,7 @@
         }
 
         @case ('templates') {
-          <h3 class="flyout-title">{{ 'canvas.title.templates' | transloco }}</h3>
+          <h3 class="flyout-title">{{ 'canvas.title.templates' | transloco }}<button type="button" class="tg-help" [class.on]="helpFor()==='templates'" (click)="helpFor.set(helpFor()==='templates' ? null : 'templates')" [title]="helpUi().how"><span class="material-icons">help_outline</span></button></h3>
           <div class="panel-search"><span class="material-icons">search</span><input [value]="search()" (input)="search.set($any($event.target).value)" [placeholder]="'canvas.tpl.searchPh' | transloco" /></div>
           <div class="tpl-cats">
             @for (c of tplCategories; track c.id) {
@@ -447,7 +449,7 @@
         }
 
         @case ('text') {
-          <h3 class="flyout-title">{{ 'canvas.title.text' | transloco }}</h3>
+          <h3 class="flyout-title">{{ 'canvas.title.text' | transloco }}<button type="button" class="tg-help" [class.on]="helpFor()==='text'" (click)="helpFor.set(helpFor()==='text' ? null : 'text')" [title]="helpUi().how"><span class="material-icons">help_outline</span></button></h3>
 
           <div class="txt-add">
             <button class="add-tile head" (click)="svc.addHeading()">Add a heading</button>
@@ -560,7 +562,7 @@
         }
 
         @case ('elements') {
-          <h3 class="flyout-title">{{ 'canvas.title.elements' | transloco }}</h3>
+          <h3 class="flyout-title">{{ 'canvas.title.elements' | transloco }}<button type="button" class="tg-help" [class.on]="helpFor()==='elements'" (click)="helpFor.set(helpFor()==='elements' ? null : 'elements')" [title]="helpUi().how"><span class="material-icons">help_outline</span></button></h3>
           <div class="panel-search"><span class="material-icons">search</span><input [value]="search()" (input)="search.set($any($event.target).value)" placeholder="Search icons & badges…" /></div>
           <div class="tabs">
             <button [class.on]="elementsTab() === 'shapes'" (click)="elementsTab.set('shapes')">Shapes</button>
@@ -644,7 +646,7 @@
         }
 
         @case ('images') {
-          <h3 class="flyout-title">{{ 'canvas.title.images' | transloco }}</h3>
+          <h3 class="flyout-title">{{ 'canvas.title.images' | transloco }}<button type="button" class="tg-help" [class.on]="helpFor()==='images'" (click)="helpFor.set(helpFor()==='images' ? null : 'images')" [title]="helpUi().how"><span class="material-icons">help_outline</span></button></h3>
           <div class="img-actions">
             <label class="img-upload"><span class="material-icons">add_photo_alternate</span> Upload image
               <input type="file" accept="image/*" hidden (change)="onImageFile($event)" /></label>
@@ -720,7 +722,7 @@
         }
 
         @case ('backgrounds') {
-          <h3 class="flyout-title">{{ 'canvas.title.backgrounds' | transloco }}</h3>
+          <h3 class="flyout-title">{{ 'canvas.title.backgrounds' | transloco }}<button type="button" class="tg-help" [class.on]="helpFor()==='background'" (click)="helpFor.set(helpFor()==='background' ? null : 'background')" [title]="helpUi().how"><span class="material-icons">help_outline</span></button></h3>
 
           <div class="bg-tabs">
             <button [class.on]="bgTab() === 'bg'" (click)="bgTab.set('bg')"><span class="material-icons">wallpaper</span> Background</button>
@@ -852,7 +854,7 @@
         }
 
         @case ('variables') {
-          <h3 class="flyout-title">{{ 'canvas.title.variables' | transloco }}</h3>
+          <h3 class="flyout-title">{{ 'canvas.title.variables' | transloco }}<button type="button" class="tg-help" [class.on]="helpFor()==='variables'" (click)="helpFor.set(helpFor()==='variables' ? null : 'variables')" [title]="helpUi().how"><span class="material-icons">help_outline</span></button></h3>
           <p class="hint">Add dynamic fields like <b>{{ '{{' }}Name{{ '}}' }}</b> — each is filled per row when you generate certificates.</p>
           <div class="panel-search"><span class="material-icons">search</span><input [value]="search()" (input)="search.set($any($event.target).value)" placeholder="Search variables…" /></div>
 
@@ -982,7 +984,7 @@
         }
 
         @case ('qr') {
-          <h3 class="flyout-title">{{ 'canvas.title.qr' | transloco }}</h3>
+          <h3 class="flyout-title">{{ 'canvas.title.qr' | transloco }}<button type="button" class="tg-help" [class.on]="helpFor()==='qr'" (click)="helpFor.set(helpFor()==='qr' ? null : 'qr')" [title]="helpUi().how"><span class="material-icons">help_outline</span></button></h3>
 
           <div class="qr-stage">
             <div class="qr-preview-wrap">
@@ -1133,7 +1135,7 @@
         }
 
         @case ('drawing') {
-          <h3 class="flyout-title">{{ 'canvas.title.drawing' | transloco }}</h3>
+          <h3 class="flyout-title">{{ 'canvas.title.drawing' | transloco }}<button type="button" class="tg-help" [class.on]="helpFor()==='drawing'" (click)="helpFor.set(helpFor()==='drawing' ? null : 'drawing')" [title]="helpUi().how"><span class="material-icons">help_outline</span></button></h3>
 
           <button class="draw-toggle" [class.on]="svc.drawing()" (click)="toggleDraw()">
             <span class="material-icons">{{ svc.drawing() ? 'edit_off' : 'draw' }}</span>
@@ -1181,7 +1183,7 @@
         }
 
         @case ('addons') {
-          <h3 class="flyout-title">{{ 'canvas.title.addons' | transloco }}</h3>
+          <h3 class="flyout-title">{{ 'canvas.title.addons' | transloco }}<button type="button" class="tg-help" [class.on]="helpFor()==='addons'" (click)="helpFor.set(helpFor()==='addons' ? null : 'addons')" [title]="helpUi().how"><span class="material-icons">help_outline</span></button></h3>
 
           <span class="grp-label gl"><span class="material-icons">verified_user</span> Verification fingerprint</span>
           <p class="hint-sm">A unique <b>SHA-256</b> hash generated from the document's content — proves the certificate is authentic and unaltered.</p>
@@ -1214,7 +1216,7 @@
         }
 
         @case ('assets') {
-          <h3 class="flyout-title">{{ 'canvas.title.assets' | transloco }}</h3>
+          <h3 class="flyout-title">{{ 'canvas.title.assets' | transloco }}<button type="button" class="tg-help" [class.on]="helpFor()==='assets'" (click)="helpFor.set(helpFor()==='assets' ? null : 'assets')" [title]="helpUi().how"><span class="material-icons">help_outline</span></button></h3>
           <div class="as2" [class.drag]="assetDrag()"
                (dragover)="onAssetDragOver($event)" (dragenter)="onAssetDragOver($event)"
                (dragleave)="onAssetDragLeave($event)" (drop)="onAssetDrop($event)">
@@ -1281,7 +1283,7 @@
         }
 
         @case ('table') {
-          <h3 class="flyout-title">{{ 'canvas.title.table' | transloco }}</h3>
+          <h3 class="flyout-title">{{ 'canvas.title.table' | transloco }}<button type="button" class="tg-help" [class.on]="tableGuide" (click)="tableGuide = !tableGuide" [title]="tableGuide ? 'Hide guide' : 'How tables work'"><span class="material-icons">{{ tableGuide ? 'help' : 'help_outline' }}</span></button></h3>
 
           @if (isTableSelected()) {
             <div class="tbl-edit">
@@ -1745,4 +1747,207 @@
     <button (click)="mAct('selectAll')"><span>▦</span> Select all <kbd>Ctrl+A</kbd></button>
     <button class="danger" (click)="mAct('delete')" [disabled]="!hasSel()"><span>🗑</span> Delete <kbd>Del</kbd></button>
   </div>
+}
+
+
+@if (tableGuide) {
+  <div class="tg-backdrop" (click)="tableGuide = false">
+    <div class="tbl-guide" (click)="$event.stopPropagation()">
+      <button type="button" class="tg-x" (click)="tableGuide = false" title="Close"><span class="material-icons">close</span></button>
+      <div class="tg-head"><span class="material-icons">auto_awesome</span><div><b>{{ tg().title }}</b><span>{{ tg().sub }}</span></div></div>
+
+      <span class="tg-sec"><span class="material-icons">format_list_numbered</span> {{ tg().secSteps }}</span>
+      <div class="tg-steps">
+
+        <div class="tg-step"><span class="tg-n">1</span><div>
+          <b>{{ tg().steps[0][0] }}</b>
+          <span>{{ tg().steps[0][1] }}</span>
+          <div class="tg-viz">
+            <div class="vz-grid"><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+            <span class="vz-meta"><b>3 × 2</b><small>hover &amp; click</small></span>
+          </div>
+        </div></div>
+
+        <div class="tg-step"><span class="tg-n">2</span><div>
+          <b>{{ tg().steps[1][0] }}</b>
+          <span>{{ tg().steps[1][1] }}</span>
+          <div class="tg-viz">
+            <span class="vz-chip">Name, Role, Score</span>
+            <span class="vz-arr material-icons">arrow_forward</span>
+            <div class="vz-head"><span>Name</span><span>Role</span><span>Score</span></div>
+          </div>
+        </div></div>
+
+        <div class="tg-step"><span class="tg-n">3</span><div>
+          <b>{{ tg().steps[2][0] }}</b>
+          <span>{{ tg().steps[2][1] }}</span>
+          <div class="tg-viz">
+            <div class="vz-cellbox"><span class="vz-lab">Variables</span><span class="vz-cell var">{{ '{{' }}name{{ '}}' }}</span></div>
+            <span class="vz-arr material-icons">swap_horiz</span>
+            <div class="vz-cellbox"><span class="vz-lab">Empty</span><span class="vz-cell emp">Sara<span class="vz-caret"></span></span></div>
+          </div>
+        </div></div>
+
+        <div class="tg-step"><span class="tg-n">4</span><div>
+          <b>{{ tg().steps[3][0] }}</b>
+          <span>{{ tg().steps[3][1] }}</span>
+          <div class="tg-viz">
+            <span class="vz-sw on"><i></i><i></i><i></i></span>
+            <span class="vz-sw alt"><i></i><i></i><i></i></span>
+            <span class="vz-sw alt2"><i></i><i></i><i></i></span>
+            <span class="vz-meta"><small>click a preset</small></span>
+          </div>
+        </div></div>
+
+        <div class="tg-step"><span class="tg-n">5</span><div>
+          <b>{{ tg().steps[4][0] }}</b>
+          <span>{{ tg().steps[4][1] }}</span>
+          <div class="tg-viz">
+            <span class="vz-canvas"><b></b><b></b><b></b><b></b><span class="vz-tbl"><span class="vz-hd"></span><span class="vz-ln"></span><span class="vz-ln"></span></span></span>
+            <span class="vz-meta"><small>moves &amp; resizes as one group</small></span>
+          </div>
+        </div></div>
+
+        <div class="tg-step"><span class="tg-n">6</span><div>
+          <b>{{ tg().steps[5][0] }}</b>
+          <span>{{ tg().steps[5][1] }}</span>
+          <div class="tg-viz">
+            <span class="vz-editcell">Sara<span class="vz-caret"></span></span>
+            <span class="vz-meta"><small>double-click a cell to edit in place</small></span>
+          </div>
+        </div></div>
+
+        <div class="tg-step"><span class="tg-n">7</span><div>
+          <b>{{ tg().steps[6][0] }}</b>
+          <span>{{ tg().steps[6][1] }}</span>
+          <div class="tg-demo" aria-hidden="true">
+            <div class="tg-d-col">
+              <span class="tg-d-cap">{{ tg().capDyn }}</span>
+              <div class="tg-mini tpl">
+                <span class="r h">Name</span><span class="r h">Score</span>
+                <span class="r v">{{ '{{' }}name{{ '}}' }}</span><span class="r v">{{ '{{' }}score{{ '}}' }}</span>
+              </div>
+            </div>
+            <span class="tg-arrow"><span class="material-icons">arrow_forward</span><small>{{ tg().capAuto }}</small></span>
+            <div class="tg-d-col">
+              <span class="tg-d-cap">{{ tg().capPer }}</span>
+              <div class="tg-mini out">
+                <span class="r h">Name</span><span class="r h">Score</span>
+                <span class="r e1">Sara</span><span class="r e1">98</span>
+                <span class="r e2">Omar</span><span class="r e2">95</span>
+                <span class="r e3">Lina</span><span class="r e3">92</span>
+              </div>
+            </div>
+          </div>
+        </div></div>
+
+      </div>
+
+      <span class="tg-sec"><span class="material-icons">tips_and_updates</span> {{ tg().secFeats }}</span>
+      <div class="tg-list">
+        @for (f of tg().feats; track $index) { <div class="tg-item" [class.hot]="$last"><span class="material-icons">{{ f[0] }}</span><div><b>{{ f[1] }}</b><span>{{ f[2] }}</span></div></div> }
+      </div>
+    </div>
+  </div>
+}
+
+@if (helpFor(); as hk) {
+  @if (helpMap()[hk]; as h) {
+    <div class="tg-backdrop" (click)="helpFor.set(null)">
+      <div class="tbl-guide" (click)="$event.stopPropagation()">
+        <button type="button" class="tg-x" (click)="helpFor.set(null)" [title]="helpUi().close"><span class="material-icons">close</span></button>
+        <div class="tg-head"><span class="material-icons">{{ h.icon }}</span><div><b>{{ h.title }}</b><span>{{ h.sub }}</span></div></div>
+
+        @switch (h.hero) {
+          @case ('start') {
+            <div class="cfp" aria-hidden="true">
+              <div class="cfp-top"><span class="cfp-spark material-icons">auto_awesome</span><b class="cfp-tour">{{ helpUi().tour }}</b><span class="cfp-dots"><i></i><i></i><i></i><i></i><i></i></span></div>
+              <div class="cfp-stage">
+                <div class="ui">
+                  <div class="ui-rail"><i class="rt rt1 material-icons">dashboard_customize</i><i class="rt rt2 material-icons">title</i><i class="rt rt3 material-icons">data_object</i><i class="rt rt4 material-icons">draw</i><i class="rt rt5 material-icons">visibility</i></div>
+                  <div class="ui-panel">
+                    <div class="pp pp1"><span class="th"></span><span class="th"></span><span class="th"></span><span class="th"></span></div>
+                    <div class="pp pp2"><span class="tl tl-a"></span><span class="tl tl-b"></span><span class="tl tl-c"></span></div>
+                    <div class="pp pp3"><span class="vchip vchip-on">{{ '{{' }}name{{ '}}' }}</span><span class="vchip">{{ '{{' }}date{{ '}}' }}</span><span class="vchip">{{ '{{' }}course{{ '}}' }}</span></div>
+                    <div class="pp pp4"><svg class="sigsvg" viewBox="0 0 96 50"><path d="M6 34 C 16 8, 26 44, 38 24 S 60 8, 72 30 86 34 92 16"></path></svg></div>
+                  </div>
+                  <div class="ui-canvas">
+                    <div class="ui-cert"><span class="uc-bg"></span><span class="uc-title"></span><span class="uc-sub"></span><span class="uc-name"><b class="tok">{{ '{{' }}name{{ '}}' }}</b><b class="val">Sara</b></span><span class="uc-sign material-icons">gesture</span><span class="uc-prev"><span class="material-icons">check</span></span></div>
+                  </div>
+                  <span class="cfp-cursor material-icons">touch_app</span>
+                </div>
+              </div>
+              <div class="cfp-cap"><span class="s1"><span class="material-icons">dashboard_customize</span>{{ helpUi().tourTpl }}</span><span class="s2"><span class="material-icons">title</span>{{ helpUi().tourText }}</span><span class="s3"><span class="material-icons">data_object</span>{{ helpUi().tourVar }}</span><span class="s4"><span class="material-icons">draw</span>{{ helpUi().tourSign }}</span><span class="s5"><span class="material-icons">visibility</span>{{ helpUi().tourPrev }}</span></div>
+              <div class="cfp-prog"><i></i></div>
+            </div>
+          }
+          @case ('size') { <div class="tg-hero"><span class="hz-size"></span><span class="vz-meta"><small>{{ helpUi().cap_size }}</small></span></div> }
+          @case ('templates') { <div class="tg-hero"><span class="hz-card"></span><span class="hz-card"></span><span class="hz-card"></span></div> }
+          @case ('text') { <div class="tg-hero"><span class="hz-aa">Aa<span class="vz-caret"></span></span><span class="vz-meta"><small>{{ helpUi().cap_text }}</small></span></div> }
+          @case ('elements') { <div class="tg-hero"><span class="hz-el"><i class="sq"></i><i class="ci"></i><i class="tr"></i></span></div> }
+          @case ('images') { <div class="tg-hero"><span class="hz-img"><span class="material-icons">image</span></span><span class="vz-meta"><small>{{ helpUi().cap_images }}</small></span></div> }
+          @case ('background') { <div class="tg-hero"><span class="hz-bg"></span><span class="vz-meta"><small>{{ helpUi().cap_background }}</small></span></div> }
+          @case ('variables') { <div class="tg-hero"><span class="hz-tok">{{ '{{' }}name{{ '}}' }}</span><span class="vz-arr material-icons">arrow_forward</span><span class="hz-val">Sara</span></div> }
+          @case ('qr') { <div class="tg-hero"><span class="hz-qr"><i class="on"></i><i class="on"></i><i></i><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i><i></i><i class="on"></i><i></i><i></i><i class="on"></i><i></i><i></i><i class="on"></i><i></i><i></i><i></i><i></i><i class="on"></i><i class="on"></i><i></i><i></i><i class="on"></i><span class="hz-scan"></span></span><span class="vz-meta"><small>{{ helpUi().cap_qr }}</small></span></div> }
+          @case ('drawing') { <div class="tg-hero"><svg class="hz-draw" viewBox="0 0 84 40"><path d="M5 30 C 18 4, 30 4, 40 24 S 66 44, 80 10"></path></svg><span class="vz-meta"><small>{{ helpUi().cap_drawing }}</small></span></div> }
+          @case ('addons') { <div class="tg-hero"><span class="hz-stamp material-icons">verified</span><span class="vz-meta"><small>{{ helpUi().cap_addons }}</small></span></div> }
+          @case ('assets') { <div class="tg-hero"><span class="hz-assets"><i></i><i></i><i></i><i></i><i></i><i></i></span></div> }
+        }
+
+        <span class="tg-sec"><span class="material-icons">format_list_numbered</span> {{ helpUi().steps }}</span>
+        <div class="tg-steps">
+          @for (s of h.steps; track $index) { <div class="tg-step"><span class="tg-n">{{ $index + 1 }}</span><div><b>{{ s[0] }}</b><span>{{ s[1] }}</span></div></div> }
+        </div>
+
+        <span class="tg-sec"><span class="material-icons">tips_and_updates</span> {{ helpUi().feats }}</span>
+        <div class="tg-list">
+          @for (f of h.feats; track $index) { <div class="tg-item"><span class="material-icons">{{ f[0] }}</span><div><b>{{ f[1] }}</b><span>{{ f[2] }}</span></div></div> }
+        </div>
+
+        @if (h.details; as dts) {
+          <span class="tg-sec"><span class="material-icons">menu_book</span> {{ helpUi().detail }}</span>
+          <div class="tg-deep">
+            @for (d of dts; track $index) {
+              <div class="tg-deep-card">
+                <div class="tg-deep-h"><span class="material-icons">{{ d.icon }}</span> {{ d.title }}</div>
+                <ul class="tg-deep-b">@for (line of d.body; track $index) { <li>{{ line }}</li> }</ul>
+              </div>
+            }
+          </div>
+        }
+
+        @if (h.gallery; as gal) {
+          <span class="tg-sec"><span class="material-icons">auto_awesome</span> {{ helpUi().gallery }}</span>
+          <div class="tg-gallery">
+            @for (g of gal; track $index) {
+              <div class="tg-gcard">
+                <div class="tg-gviz">
+                  @switch (g.viz) {
+                    @case ('gTpl') { <span class="hz-cards"><span class="hz-card"></span><span class="hz-card"></span><span class="hz-card"></span></span> }
+                    @case ('presets') { <div class="txp"><span class="l1">Heading</span><span class="l2">Subheading</span><span class="l3">Body text</span></div> }
+                    @case ('font') { <div class="txf"><span style="font-family:Georgia,'Times New Roman',serif">Aa</span><span style="font-family:Arial,Helvetica,sans-serif">Aa</span><span style="font-family:'Comic Sans MS','Segoe Script',cursive">Aa</span></div> }
+                    @case ('weight') { <div class="txw"><b>Bold</b><i>Italic</i><u>Under</u></div> }
+                    @case ('color') { <div class="txc"><span class="big">Aa</span><i class="s1"></i><i class="s2"></i><i class="s3"></i></div> }
+                    @case ('align') { <div class="txa"><i></i><i></i><i></i></div> }
+                    @case ('spacing') { <div class="txs">TEXT</div> }
+                    @case ('variables') { <div class="txv"><span class="hz-tok">{{ '{{' }}name{{ '}}' }}</span><span class="vz-arr material-icons">arrow_forward</span><span class="hz-val">Sara</span></div> }
+                    @case ('bgSolid') { <div class="bgs solid"></div> }
+                    @case ('bgGrad') { <div class="bgs grad"></div> }
+                    @case ('bgRadial') { <div class="bgs radial"></div> }
+                    @case ('bgPattern') { <div class="bgs pattern"></div> }
+                    @case ('bgImage') { <div class="bgs image"><span class="material-icons">image</span></div> }
+                    @case ('bgLib') { <div class="bglib"><i></i><i></i><i></i><i></i></div> }
+                    @case ('frLine') { <div class="fr line"></div> }
+                    @case ('frCorner') { <div class="fr corner"></div> }
+                    @case ('frDeco') { <div class="fr deco"></div> }
+                  }
+                </div>
+                <div class="tg-glabel"><b>{{ g.label }}</b><small>{{ g.note }}</small></div>
+              </div>
+            }
+          </div>
+        }
+      </div>
+    </div>
+  }
 }
