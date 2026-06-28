@@ -5,7 +5,7 @@
     <input class="name-input" [(ngModel)]="name" [placeholder]="'canvas.namePh' | transloco" />
   </div>
 
-  <div class="size-field" [class.open]="sizeMenu()" (click)="$event.stopPropagation()">
+  <div class="size-field" data-tour="size" [class.open]="sizeMenu()" (click)="$event.stopPropagation()">
     <span class="material-icons">aspect_ratio</span>
     <button class="size-btn" [attr.data-tip]="width + ' × ' + height + ' px'" (click)="sizeMenu.set(!sizeMenu())">
       <span class="size-lbl">{{ currentSizeLabel() }}</span>
@@ -25,6 +25,8 @@
   </div>
 
   <button class="btn btn-sm guide-btn" (click)="openGuide()"><span class="material-icons">auto_awesome</span><span class="gb-lbl">{{ helpUi().guide }}</span></button>
+
+  <button class="btn btn-sm tour-btn" (click)="startTour()" [attr.data-tip]="tourUi().start" [attr.aria-label]="tourUi().start"><span class="material-icons">explore</span><span class="gb-lbl">{{ tourUi().start }}</span></button>
 
   <div class="spacer"></div>
 
@@ -180,7 +182,7 @@
     <button class="btn act-btn brand-apply" (click)="applyBrandKit()" data-tip="Apply your brand kit — logo, colors & fonts"><span class="material-icons">auto_awesome</span> Brand</button>
   }
 
-  <button class="btn act-btn" (click)="openPreview()" [attr.data-tip]="'canvas.previewTip' | transloco"><span class="material-icons">visibility</span> {{ 'canvas.preview' | transloco }}</button>
+  <button class="btn act-btn" data-tour="preview" (click)="openPreview()" [attr.data-tip]="'canvas.previewTip' | transloco"><span class="material-icons">visibility</span> {{ 'canvas.preview' | transloco }}</button>
 
   <button class="btn act-btn" (click)="goBulk()" [attr.data-tip]="'canvas.bulkTip' | transloco"><span class="material-icons">dynamic_feed</span> {{ 'canvas.bulk' | transloco }}</button>
 
@@ -196,7 +198,7 @@
     }
   </div>
 
-  <button class="btn btn-primary save-btn" [disabled]="saving()" (click)="save()" [attr.data-tip]="'canvas.saveTip' | transloco">
+  <button class="btn btn-primary save-btn" data-tour="save" [disabled]="saving()" (click)="save()" [attr.data-tip]="'canvas.saveTip' | transloco">
     <span class="material-icons">{{ saving() ? 'hourglass_top' : 'save' }}</span>
     {{ saving() ? ('canvas.saving' | transloco) : ('canvas.save' | transloco) }}
   </button>
@@ -328,7 +330,7 @@
 }
 <div class="workspace" [class.prop-left]="propPos() === 'left'">
   <!-- Icon rail -->
-  <nav class="rail">
+  <nav class="rail" data-tour="rail">
     @for (item of rail; track item.id) {
       <button class="rail-btn" [class.on]="activePanel() === item.id" [class.locked]="railLocked(item.id)" (click)="selectPanel(item.id)" (mouseenter)="onRailHover(item.id)" [title]="railLocked(item.id) ? ('Upgrade to unlock') : (('canvas.rail.' + item.id) | transloco)">
         <span class="material-icons">{{ item.icon }}</span>
@@ -340,7 +342,7 @@
 
   <!-- Flyout panel -->
   @if (activePanel(); as p) {
-    <aside class="flyout" [class.auto]="!flyoutPinned()">
+    <aside class="flyout" data-tour="panel" [class.auto]="!flyoutPinned()">
       <button class="flyout-pin" [class.on]="flyoutPinned()" (click)="toggleFlyoutPin()" [title]="(flyoutPinned() ? 'canvas.pinAuto' : 'canvas.pinOpen') | transloco">
         <span class="material-icons">push_pin</span>
       </button>
@@ -1429,7 +1431,7 @@
         <div class="corner"></div>
         <canvas #rulerTop class="ruler-top"></canvas>
         <canvas #rulerLeft class="ruler-left"></canvas>
-        <div class="canvas-shadow" (contextmenu)="onCanvasContext($event)">
+        <div class="canvas-shadow" data-tour="canvas" (contextmenu)="onCanvasContext($event)">
           <canvas #canvasEl></canvas>
           @if (showGrid()) {
             <div class="grid-overlay" [class.dots]="gridDots()"
@@ -1950,3 +1952,6 @@
     </div>
   }
 }
+
+<!-- App-wide interactive Application Tour: spotlight + coach-marks over real UI -->
+<app-tour-overlay />

@@ -352,6 +352,10 @@ a:hover{color:var(--cf-brand-700)}
 .guide-btn:hover{filter:brightness(1.06)}
 .guide-btn .material-icons{font-size:15px}
 @media(max-width:640px){.guide-btn .gb-lbl{display:none}}
+.tour-btn{display:inline-flex;align-items:center;gap:6px;height:30px;padding:0 11px;border:1px solid color-mix(in srgb,var(--cf-brand-500) 45%,var(--cf-line));border-radius:8px;background:color-mix(in srgb,var(--cf-brand-500) 8%,var(--cf-surface,#fff));color:var(--cf-brand-700);font:inherit;font-weight:600;font-size:12px;cursor:pointer;transition:background .15s,border-color .15s,box-shadow .15s}
+.tour-btn:hover{background:color-mix(in srgb,var(--cf-brand-500) 16%,var(--cf-surface,#fff));border-color:color-mix(in srgb,var(--cf-brand-500) 70%,transparent);box-shadow:0 4px 12px -8px color-mix(in srgb,var(--cf-brand-600) 80%,transparent)}
+.tour-btn .material-icons{font-size:15px}
+@media(max-width:640px){.tour-btn .gb-lbl{display:none}}
 @media(prefers-reduced-motion:reduce){.hz-cert i{animation:none;opacity:1}}
 
 /* Designer help — interactive guided tour · amazing */

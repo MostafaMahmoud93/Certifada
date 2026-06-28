@@ -11,7 +11,10 @@ import {
   signal,
 } from '@angular/core';
 import { DESIGNER_HELP, DESIGNER_HELP_AR, HELP_UI, TABLE_HELP } from './designer-help.data';
+import { CANVAS_TOUR, CANVAS_TOUR_UI } from './canvas-tour.data';
 import { LanguageService } from '../../core/services/language.service';
+import { TourService, TourStep } from '../../core/services/tour.service';
+import { TourOverlayComponent } from '../../shared/components/tour/tour-overlay.component';
 import { DecimalPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { NgTemplateOutlet } from '@angular/common';
@@ -52,7 +55,7 @@ type CtxAction =
 @Component({
   selector: 'app-designer',
   standalone: true,
-  imports: [FormsModule, NgTemplateOutlet, DecimalPipe, PropertiesPanelComponent, TranslocoModule],
+  imports: [FormsModule, NgTemplateOutlet, DecimalPipe, PropertiesPanelComponent, TranslocoModule, TourOverlayComponent],
   providers: [FabricCanvasService],
   animations: [
     trigger('panelToggle', [
@@ -837,6 +840,42 @@ export class DesignerComponent implements AfterViewInit, OnDestroy {
   tourNext(): void { this.tourStep.update((s) => (s + 1) % 5); this.tourPlaying.set(false); }
   tourPrev(): void { this.tourStep.update((s) => (s + 4) % 5); this.tourPlaying.set(false); }
   toggleTour(): void { this.tourPlaying.update((p) => !p); }
+
+  // ===================== Interactive Application Tour =====================
+  // Spotlight-driven walkthrough over the REAL designer UI (distinct from the
+  // in-popup demo player above). Modular: this method just maps bilingual copy
+  // to real selectors + panel-opening hooks and hands it to the TourService.
+  readonly tour = inject(TourService);
+  readonly tourUi = computed(() => (this.langSvc.lang() === 'ar' ? CANVAS_TOUR_UI.ar : CANVAS_TOUR_UI.en));
+
+  startTour(): void {
+    const ar = this.langSvc.lang() === 'ar';
+    const copy = ar ? CANVAS_TOUR.ar : CANVAS_TOUR.en;
+    const c = (id: string) => copy.find((x) => x.id === id)!;
+    const prevPin = this.flyoutPinned();
+    // open a rail panel and keep the flyout pinned so the spotlight lands on a visible element
+    const openPanel = (id: PanelId) => () => { this.flyoutPinned.set(true); this.activePanel.set(id); this.search.set(''); };
+
+    const step = (id: string, target?: string, before?: () => void, finale = false): TourStep => {
+      const k = c(id);
+      return { title: k.title, body: k.body, icon: k.icon, target, before, finale };
+    };
+
+    const steps: TourStep[] = [
+      step('welcome'),
+      step('rail', '[data-tour="rail"]'),
+      step('templates', '[data-tour="panel"]', openPanel('templates')),
+      step('text', '[data-tour="panel"]', openPanel('text')),
+      step('variables', '[data-tour="panel"]', openPanel('variables')),
+      step('canvas', '[data-tour="canvas"]'),
+      step('size', '[data-tour="size"]'),
+      step('preview', '[data-tour="preview"]'),
+      step('save', '[data-tour="save"]'),
+      step('finish', undefined, undefined, true),
+    ];
+    void this.tour.start('canvas', steps, () => this.flyoutPinned.set(prevPin));
+  }
+
   gridR = 0;
   gridC = 0;
   readonly tGridRows = [1, 2, 3, 4, 5, 6];
@@ -1162,6 +1201,11 @@ export class DesignerComponent implements AfterViewInit, OnDestroy {
     this.svc.onCellEdit((hit) => this.openCellEditor(hit));
     this.svc.setDistanceIndicators(this.showDist());
     this.versions.set(this.loadVersions());
+    // First-run: gently offer the Application Tour (once — never nags again).
+    setTimeout(() => {
+      const u = this.tourUi();
+      this.tour.maybeOffer('canvas', { title: u.autoTitle, body: u.autoBody, yes: u.autoYes, no: u.autoNo, icon: 'explore' }, () => this.startTour());
+    }, 1100);
   }
 
   // -------------------- inline table-cell editor (double-click on canvas) --------------------
