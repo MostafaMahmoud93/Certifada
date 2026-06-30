@@ -1,6 +1,7 @@
 @if (obj) {
   <!-- element header -->
   <div class="pp-head" [class.locked]="isLocked()">
+    <div class="pp-top">
     <span class="pp-thumb">
       @if (thumb()) { <img [src]="thumb()" alt="" /> }
       @else { <span class="material-icons">{{ meta().icon }}</span> }
@@ -10,8 +11,10 @@
       <b>{{ meta().label }}</b>
       <small>{{ meta().sub }}</small>
     </span>
+    </div>
     <span class="pp-quick">
-      <button class="ppq" [class.on]="isLocked()" (click)="lock()" [title]="isLocked() ? 'Unlock' : 'Lock position'"><span class="material-icons">{{ isLocked() ? 'lock' : 'lock_open' }}</span></button>
+      <button class="ppq" [class.on]="isLocked()" (click)="lock()" [title]="isLocked() ? 'Unlock movement' : 'Lock movement'"><span class="material-icons">{{ isLocked() ? 'lock' : 'lock_open' }}</span></button>
+      <button class="ppq" [class.on]="posLocked()" (click)="lockPos()" [title]="posLocked() ? 'Unlock position' : 'Lock as background — not selectable'"><span class="material-icons">{{ posLocked() ? 'wallpaper' : 'push_pin' }}</span></button>
       <button class="ppq" (click)="dupe()" title="Duplicate"><span class="material-icons">content_copy</span></button>
       <button class="ppq danger" (click)="del()" title="Delete"><span class="material-icons">delete</span></button>
     </span>
@@ -86,6 +89,8 @@
             <button class="btn btn-sm" [class.on]="val('fontStyle') === 'italic'" (click)="toggleFontStyle()" title="Italic"><i>I</i></button>
             <button class="btn btn-sm" [class.on]="val('underline')" (click)="toggle('underline')" title="Underline"><u>U</u></button>
             <button class="btn btn-sm" [class.on]="val('linethrough')" (click)="toggle('linethrough')" title="Strikethrough"><s>S</s></button>
+            <button class="btn btn-sm" (click)="sup()" title="Superscript — raise the selected text"><span class="material-icons">superscript</span></button>
+            <button class="btn btn-sm" (click)="sub()" title="Subscript — lower the selected text"><span class="material-icons">subscript</span></button>
           </div>
           @if (isEditableText()) {
             <div class="btn-group">

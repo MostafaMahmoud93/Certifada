@@ -122,21 +122,27 @@ async function applySignatureFields(sc: StaticCanvas, rawUrl: string | null, pen
       } else if (isGroupBlock) {
         const inner = o.getObjects().find((c: any) => c.objType === 'signature' || /image/i.test(c.type || ''));
         if (inner) { await swapAndFit(inner, url); o.dirty = true; o.set?.('dirty', true); }
+        else { await dropSignature(sc, o, url); }                  // dashed placeholder group -> drop in the signature
       } else if (isField) {
-        const c = o.getCenterPoint();
-        const fieldW = typeof o.getScaledWidth === 'function' ? o.getScaledWidth() : (o.width || 240);
-        const img = await FabricImage.fromURL(url, { crossOrigin: 'anonymous' });
-        const targetW = Math.max(120, Math.min(fieldW || 240, 280));
-        let s = targetW / (img.width || targetW);
-        const maxH = 120;                                          // keep it from overrunning the line/caption
-        if ((img.height || 0) * s > maxH) s = maxH / (img.height || maxH);
-        const idx = sc.getObjects().indexOf(o);
-        img.set({ originX: 'center', originY: 'center', left: c.x, top: c.y, scaleX: s, scaleY: s, angle: o.angle || 0 });
-        sc.remove(o);
-        if (idx >= 0) sc.insertAt(idx, img); else sc.add(img);     // keep original stacking so the line stays visible
+        await dropSignature(sc, o, url);
       }
     } catch { /* leave this placeholder as-is on failure */ }
   }
+}
+
+/** Replace a signature field/placeholder object with the issuer's signature image, fitted to its box. */
+async function dropSignature(sc: StaticCanvas, o: any, url: string): Promise<void> {
+  const c = o.getCenterPoint();
+  const fieldW = typeof o.getScaledWidth === 'function' ? o.getScaledWidth() : (o.width || 240);
+  const img = await FabricImage.fromURL(url, { crossOrigin: 'anonymous' });
+  const targetW = Math.max(120, Math.min(fieldW || 240, 280));
+  let s = targetW / (img.width || targetW);
+  const maxH = 120;
+  if ((img.height || 0) * s > maxH) s = maxH / (img.height || maxH);
+  const idx = sc.getObjects().indexOf(o);
+  img.set({ originX: 'center', originY: 'center', left: c.x, top: c.y, scaleX: s, scaleY: s, angle: o.angle || 0 });
+  sc.remove(o);
+  if (idx >= 0) sc.insertAt(idx, img); else sc.add(img);
 }
 
 /** Swap an image object's source to the signature and rescale it to fit its current box (preserving aspect). */

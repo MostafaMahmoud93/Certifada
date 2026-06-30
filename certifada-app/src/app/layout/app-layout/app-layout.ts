@@ -1,7 +1,9 @@
 import { Component, HostListener, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { NavigationStart, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { HasActionDirective } from '../../shared/directives/has-action.directive';
+import { TourService } from '../../core/services/tour.service';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { SignaturePadComponent } from '../../shared/components/signature/signature-pad';
 import { TranslocoModule } from '@ngneat/transloco';
 import { Actions } from '../../core/constants/actions';
@@ -112,7 +114,7 @@ interface NotifItem { id: number; icon: string; tone: 'brand' | 'success' | 'war
   </ng-template>
 
   <ng-template #navTpl>
-    <a *ngFor="let item of nav" class="navitem" [routerLink]="item.link" routerLinkActive="active"
+    <a *ngFor="let item of nav" class="navitem" [routerLink]="item.link" routerLinkActive="active" [attr.data-tour]="'nav-' + navKey(item.link)"
        [attr.title]="navTop() ? null : (item.label | transloco)" [attr.data-tip]="item.label | transloco" [attr.aria-label]="item.label | transloco"
        [appHasAction]="item.action" [tooltipMessage]="'🔒 ' + (item.label | transloco) + ' ' + ('shell.locked' | transloco)">
       <span class="material-icons">{{ item.icon }}</span><span class="lbl">{{ item.label | transloco }}</span>
@@ -125,6 +127,9 @@ interface NotifItem { id: number; icon: string; tone: 'brand' | 'success' | 'war
   </ng-template>
 
   <ng-template #controlsTpl>
+    @if (tour.launcher()) {
+      <button type="button" class="ico tour-ico" (click)="tour.launch()" [attr.aria-label]="tourLabel()"><span class="material-icons">explore</span><span class="tour-tip"><span class="material-icons">auto_awesome</span>{{ tourLabel() }}</span></button>
+    }
     <button class="lang" (click)="lang.toggle($event)" [attr.aria-label]="'Switch language'">
       {{ lang.lang() === 'en' ? 'ع' : 'EN' }}<span class="material-icons">language</span>
     </button>
@@ -370,6 +375,12 @@ interface NotifItem { id: number; icon: string; tone: 'brand' | 'success' | 'war
     .nav-badge{margin-inline-start:auto;min-width:20px;height:20px;padding:0 6px;border-radius:999px;background:linear-gradient(135deg,#ef4444,#dc2626);color:#fff;font-size:11px;font-weight:800;line-height:1;display:inline-grid;place-items:center;flex:none;box-shadow:0 3px 9px -2px rgba(220,38,38,.65)}
     .shell.collapsed .side .nav-badge,.shell.postop .nav-badge{position:absolute;top:5px;inset-inline-end:5px;margin:0;min-width:16px;height:16px;padding:0 3px;font-size:9px}
     @media(max-width:880px){.shell:not(.postop){grid-template-columns:1fr}.shell:not(.postop) .side{display:none}.hello .sub{display:none}}
+
+    /* top-docked nav: compact stacked New button (icon over text) */
+    .topbar .new{flex-direction:column;gap:1px;height:auto;min-height:0;padding:4px 12px;margin-bottom:0;border-radius:11px}
+    .topbar .new .lbl{font-size:9.5px;font-weight:700;line-height:1.05;letter-spacing:.01em}
+    .topbar .new .new-ic,.topbar .new .cert{width:20px;height:20px}
+    .topbar .new .new-tw{top:1px;inset-inline-end:3px;font-size:10px}
   `],
 })
 export class AppLayout {
@@ -382,6 +393,13 @@ export class AppLayout {
   msgs = inject(MessageService);
   private router = inject(Router);
   readonly A = Actions;
+  navKey(link: string): string { return link.split('/').pop() || ''; }
+  readonly tour = inject(TourService);
+  readonly tourLabel = computed(() => (this.lang.lang() === 'ar' ? 'جولة تعريفية' : 'Take a tour'));
+  constructor() {
+    // A page registers its tour launcher; clear it whenever we navigate so the header button only shows where a tour exists.
+    this.router.events.pipe(takeUntilDestroyed()).subscribe((e) => { if (e instanceof NavigationStart) { this.tour.unregister(); } });
+  }
 
   collapsed = signal(localStorage.getItem('sidebar-collapsed') === '1');
   navTop = this.layout.navTop;

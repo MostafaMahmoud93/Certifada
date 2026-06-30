@@ -73,6 +73,8 @@ interface Confetti { l: number; bg: string; dx: number; rot: number; delay: numb
             </div>
           }
 
+          @for (k of [tour.index()]; track k) {
+          <div class="tov-reveal">
           <div class="tov-head">
             <span class="tov-chip" [class.party]="step.finale" [class.big]="!rect() || step.finale">
               @if (step.finale) { <i class="tov-ring" aria-hidden="true"></i><i class="tov-ring d" aria-hidden="true"></i> }
@@ -88,18 +90,12 @@ interface Confetti { l: number; bg: string; dx: number; rot: number; delay: numb
           </div>
 
           <p id="tov-body" class="tov-body" aria-live="polite">{{ step.body }}</p>
+          </div>
+          }
 
           <div class="tov-foot">
             <div class="tov-prog">
-              <div class="tov-dots" role="tablist" [attr.aria-label]="ui().step">
-                @for (s of tour.steps(); track $index) {
-                  <button type="button" class="tov-dot" [class.on]="$index === tour.index()" [class.past]="$index < tour.index()"
-                          (click)="tour.goTo($index)"
-                          [attr.aria-label]="ui().step + ' ' + ($index + 1) + ' ' + ui().of + ' ' + tour.total()"
-                          [attr.aria-selected]="$index === tour.index()"></button>
-                }
-              </div>
-              <span class="tov-count">{{ ui().step }} {{ tour.index() + 1 }} {{ ui().of }} {{ tour.total() }}</span>
+              <span class="tov-count">{{ ui().step }} <b>{{ tour.index() + 1 }}</b> {{ ui().of }} {{ tour.total() }}</span>
             </div>
 
             <div class="tov-ctrls">
@@ -140,6 +136,9 @@ interface Confetti { l: number; bg: string; dx: number; rot: number; delay: numb
     .tov-catch { position: absolute; inset: 0; background: transparent; }
     .tov-dim { position: absolute; inset: 0; background: rgba(15, 23, 42, .58); animation: tov-fade .28s ease both; }
     .tov-dim.soft { background: radial-gradient(130% 130% at 50% 42%, rgba(15, 23, 42, .44), rgba(15, 23, 42, .66)); }
+    /* First-run invitation: center the card (it does not run through JS positioning). */
+    .tov-offer { display: grid; place-items: center; }
+    .tov-offer .tov-card { position: relative; top: auto; left: auto; }
 
     /* Spotlight cut-out: the box-shadow paints the dim everywhere except the hole. */
     .tov-hole {
@@ -162,7 +161,7 @@ interface Confetti { l: number; bg: string; dx: number; rot: number; delay: numb
       background: linear-gradient(180deg, var(--surf), color-mix(in srgb, var(--acc) 3%, var(--surf)));
       color: var(--ink); border: 1px solid color-mix(in srgb, var(--acc) 13%, var(--line)); border-radius: 20px;
       box-shadow: 0 28px 72px -22px rgba(15, 23, 42, .55), 0 12px 34px -16px color-mix(in srgb, var(--acc) 42%, transparent), inset 0 1px 0 rgba(255, 255, 255, .55);
-      padding: 17px 17px 15px; outline: none;
+      padding: 17px 17px 19px; outline: none;
       animation: tov-pop-b .42s cubic-bezier(.16,.84,.44,1) both;
     }
     .tov-card[data-side="top"] { animation-name: tov-pop-t; }
@@ -230,7 +229,8 @@ interface Confetti { l: number; bg: string; dx: number; rot: number; delay: numb
     .tov-dot.on { width: 20px; border-radius: 5px; background: linear-gradient(90deg, var(--acc2), var(--acc)); }
     .tov-dot:hover { transform: scale(1.3); }
     .tov-dot.on:hover { transform: none; }
-    .tov-count { font-size: 11px; font-weight: 700; color: var(--ink2); letter-spacing: .01em; }
+    .tov-count { font-size: 12px; font-weight: 600; color: var(--ink2); letter-spacing: .01em; }
+    .tov-count b { color: var(--acc); font-weight: 800; }
 
     .tov-ctrls { display: flex; align-items: center; gap: 8px; }
     .tov-btn {
@@ -250,9 +250,9 @@ interface Confetti { l: number; bg: string; dx: number; rot: number; delay: numb
     .tov-btn.solid:hover::after { animation: tov-sheen .75s ease; }
     .tov-btn.wide { padding: 11px 22px; font-size: 14px; }
 
-    .tov-bar { position: absolute; left: 0; right: 0; bottom: 0; height: 3px; border-radius: 0 0 20px 20px; overflow: hidden; background: color-mix(in srgb, var(--line) 55%, transparent); }
+    .tov-bar { position: absolute; left: 16px; right: 16px; bottom: 9px; height: 5px; border-radius: 999px; overflow: hidden; background: color-mix(in srgb, var(--ink2) 15%, transparent); }
     .tov-card.center .tov-bar, .tov-card.finale .tov-bar { display: none; }
-    .tov-bar i { display: block; height: 100%; background: linear-gradient(90deg, var(--acc2), var(--acc)); box-shadow: 0 0 8px color-mix(in srgb, var(--acc) 50%, transparent); transition: width .44s cubic-bezier(.22,.7,.2,1); }
+    .tov-bar i { display: block; height: 100%; min-width: 6px; border-radius: 999px; background: linear-gradient(90deg, var(--acc2), var(--acc)); box-shadow: 0 0 10px color-mix(in srgb, var(--acc) 55%, transparent); transition: width .44s cubic-bezier(.22,.7,.2,1); }
 
     /* confetti */
     .tov-burst { position: absolute; inset: 0; overflow: visible; pointer-events: none; }
@@ -291,6 +291,22 @@ interface Confetti { l: number; bg: string; dx: number; rot: number; delay: numb
       .tov-card { width: calc(100vw - 20px); }
       .tov-count { display: none; }
     }
+
+    /* — amazement pass: staggered reveal, depth & organization — */
+    .tov-reveal { display: contents; }
+    .tov-card .tov-head { animation: tovRise .44s cubic-bezier(.22,.9,.3,1) .04s both; }
+    .tov-card .tov-body { animation: tovRise .46s cubic-bezier(.22,.9,.3,1) .12s both; }
+    @keyframes tovRise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+    .tov-card { box-shadow: 0 30px 78px -24px rgba(15,23,42,.6), 0 14px 36px -16px color-mix(in srgb, var(--acc) 46%, transparent), inset 0 1px 0 rgba(255,255,255,.6); }
+    .tov-card.finale { box-shadow: 0 30px 78px -24px rgba(15,23,42,.6), 0 16px 44px -14px color-mix(in srgb, #f59e0b 48%, transparent), inset 0 1px 0 rgba(255,255,255,.6); }
+    .tov-title { font-size: 17px; }
+    .tov-body { font-size: 13.7px; line-height: 1.62; }
+    .tov-chip { box-shadow: 0 9px 20px -8px color-mix(in srgb, var(--acc) 70%, transparent), inset 0 1px 0 rgba(255,255,255,.4), 0 0 0 5px color-mix(in srgb, var(--acc) 8%, transparent); }
+    .tov-card:not(.center) .tov-foot { margin-top: 13px; padding-top: 12px; border-top: 1px solid color-mix(in srgb, var(--line) 65%, transparent); }
+    .tov-bar i { position: relative; overflow: hidden; }
+    .tov-bar i::after { content: ''; position: absolute; inset-inline-end: 0; top: 0; bottom: 0; width: 12px; background: linear-gradient(90deg, transparent, rgba(255,255,255,.6)); }
+    @media (prefers-reduced-motion: reduce) { .tov-card .tov-head, .tov-card .tov-body { animation: none; } }
+    .tov.reduce .tov-card .tov-head, .tov.reduce .tov-card .tov-body { animation: none; }
   `],
 })
 export class TourOverlayComponent {
@@ -348,7 +364,7 @@ export class TourOverlayComponent {
       return;
     }
     const el = document.querySelector(step.target) as HTMLElement | null;
-    if (!el) { this.reposition(); return; }
+    if (!el) { if (this.rect() !== null) this.rect.set(null); this.reposition(); return; }   // target gone → center the card
     const r = el.getBoundingClientRect();
     const pad = 8;
     const nr: Rect = { x: r.left - pad, y: r.top - pad, w: r.width + pad * 2, h: r.height + pad * 2 };

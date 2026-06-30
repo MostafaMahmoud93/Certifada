@@ -26,7 +26,6 @@
 
   <button class="btn btn-sm guide-btn" (click)="openGuide()"><span class="material-icons">auto_awesome</span><span class="gb-lbl">{{ helpUi().guide }}</span></button>
 
-  <button class="btn btn-sm tour-btn" (click)="startTour()" [attr.data-tip]="tourUi().start" [attr.aria-label]="tourUi().start"><span class="material-icons">explore</span><span class="gb-lbl">{{ tourUi().start }}</span></button>
 
   <div class="spacer"></div>
 
@@ -64,6 +63,10 @@
         <label class="vm-toggle"><span class="vt-label"><span class="material-icons">space_bar</span> {{ 'canvas.vm.taskbar' | transloco }}</span><span class="vt-switch"><input type="checkbox" [checked]="dockOn()" (change)="toggleDock()" /><i></i></span></label>
         <label class="vm-toggle"><span class="vt-label"><span class="material-icons">layers</span> {{ 'canvas.vm.layers' | transloco }}</span><span class="vt-switch"><input type="checkbox" [checked]="layersOn()" (change)="toggleLayersUI()" /><i></i></span></label>
         <div class="pm-label"><span class="material-icons">straighten</span> {{ 'canvas.vm.rulerGuides' | transloco }}</div>
+        <div class="vm-seg">
+          <button [class.on]="rulerOrigin() === 'corner'" (click)="setRulerOrigin('corner')"><span class="material-icons">north_west</span> Corner</button>
+          <button [class.on]="rulerOrigin() === 'center'" (click)="setRulerOrigin('center')"><span class="material-icons">filter_center_focus</span> Center</button>
+        </div>
         <div class="vm-acts">
           <button (click)="addCenterGuides()">{{ 'canvas.vm.center' | transloco }}</button>
           <button (click)="addMarginGuides()">{{ 'canvas.vm.marginsBtn' | transloco }}</button>
@@ -877,6 +880,18 @@
             <button class="bg-save" (click)="autofillSample()"><span class="material-icons">auto_fix_high</span> Auto-fill &amp; preview sample data</button>
           }
 
+          @if (sigOnCanvas().length) {
+            <div class="var-head"><span class="grp-label">Signatures on canvas ({{ sigOnCanvas().length }})</span></div>
+            <div class="var-sample">
+              @for (k of sigOnCanvas(); track k) {
+                <div class="vs-row">
+                  <button class="vs-key" (click)="svc.selectSignature(k)" title="Select signature on canvas"><span class="material-icons" style="font-size:14px;vertical-align:-3px;margin-inline-end:4px">draw</span>Signature</button>
+                  <span class="vs-val" style="opacity:.65;display:flex;align-items:center;padding:0 8px">{{ k }}</span>
+                </div>
+              }
+            </div>
+          }
+
           <div class="ds-card">
             <div class="ds-head">
               <span class="ds-title"><span class="material-icons">table_rows</span> Sample dataset</span>
@@ -1596,6 +1611,8 @@
               <span class="material-icons">{{ svc.isVisible(o) ? 'visibility' : 'visibility_off' }}</span></button>
             <button class="lyr-ic" (click)="svc.toggleObjLock(o); $event.stopPropagation()" [title]="svc.isObjLocked(o) ? 'Unlock' : 'Lock'">
               <span class="material-icons">{{ svc.isObjLocked(o) ? 'lock' : 'lock_open' }}</span></button>
+            <button class="lyr-ic" (click)="svc.togglePositionLock(o); $event.stopPropagation()" [title]="svc.isPositionLocked(o) ? 'Unlock position' : 'Lock position (background)'">
+              <span class="material-icons">{{ svc.isPositionLocked(o) ? 'wallpaper' : 'push_pin' }}</span></button>
             <button class="lyr-ic" [class.on]="expandedLayer() === o" (click)="toggleLayerExpand(o); $event.stopPropagation()" title="More">
               <span class="material-icons">{{ expandedLayer() === o ? 'expand_less' : 'more_horiz' }}</span></button>
           </div>
@@ -1733,6 +1750,7 @@
     <button (click)="mAct('back')" [disabled]="!hasSel()"><span>⤓</span> Send to back</button>
     <div class="sep"></div>
     <button (click)="mAct('lock')" [disabled]="!hasSel()"><span>{{ svc.isLocked() ? '🔓' : '🔒' }}</span> {{ svc.isLocked() ? 'Unlock' : 'Lock' }}</button>
+    <button (click)="mAct('lockPos')" [disabled]="!hasSel()"><span>📌</span> Lock position</button>
     <div class="ctx-arrange">
       <button (click)="mAct('alignLeft')" title="Align left" [disabled]="!hasSel()"><span class="material-icons">align_horizontal_left</span></button>
       <button (click)="mAct('centerH')" title="Align center" [disabled]="!hasSel()"><span class="material-icons">align_horizontal_center</span></button>
@@ -1951,6 +1969,105 @@
       </div>
     </div>
   }
+}
+
+<!-- ===== Template style chooser: keep original vs apply brand ===== -->
+@if (styleChoice(); as tpl) {
+  <div class="tsc-back" (click)="keepOriginal()">
+    <div class="tsc" role="dialog" aria-modal="true" aria-labelledby="tsc-title" (click)="$event.stopPropagation()">
+      <button type="button" class="tsc-x" (click)="keepOriginal()" [attr.aria-label]="styleUi().close"><span class="material-icons">close</span></button>
+
+      <div class="tsc-head">
+        <span class="tsc-spark"><span class="material-icons">palette</span></span>
+        <h2 id="tsc-title">{{ styleUi().title }}</h2>
+        <p>{{ styleUi().sub }}</p>
+      </div>
+
+      <div class="tsc-cards">
+        <button type="button" class="tsc-card" (click)="keepOriginal()">
+          <div class="tsc-prev" [style.background]="tpl.bg || '#ffffff'">
+            <span class="tsc-pv-bar" [style.background]="tpl.accent"></span>
+            <span class="tsc-pv-l1"></span>
+            <span class="tsc-pv-l2"></span>
+            <span class="tsc-pv-seal" [style.border-color]="tpl.accent"></span>
+          </div>
+          <div class="tsc-meta">
+            <b>{{ styleUi().origTitle }}</b>
+            <small>{{ styleUi().origDesc }}</small>
+            <span class="tsc-sw"><i [style.background]="tpl.accent"></i><i [style.background]="tpl.bg || '#ffffff'"></i><i style="background:#0f172a"></i></span>
+          </div>
+          <span class="tsc-pick">{{ styleUi().origPick }}<span class="material-icons">arrow_forward</span></span>
+        </button>
+
+        <span class="tsc-vs">{{ styleUi().or }}</span>
+
+        <button type="button" class="tsc-card brand" (click)="applyBrandStyle()">
+          <span class="tsc-badge">{{ styleUi().brandTag }}</span>
+          <div class="tsc-prev" style="background:#ffffff">
+            <span class="tsc-pv-bar" [style.background]="brand.kit().primary"></span>
+            @if (brand.kit().logo) { <img class="tsc-pv-logo" [src]="brand.kit().logo" alt="" /> }
+            <span class="tsc-pv-l1 on" [style.background]="brand.kit().primary"></span>
+            <span class="tsc-pv-l2"></span>
+            <span class="tsc-pv-seal" [style.border-color]="brand.kit().primary"></span>
+          </div>
+          <div class="tsc-meta">
+            <b>{{ styleUi().brandTitle }}</b>
+            <small>{{ styleUi().brandDesc }}</small>
+            <span class="tsc-sw">@for (c of brandSwatches(); track $index) { <i [style.background]="c"></i> }</span>
+          </div>
+          <span class="tsc-pick brand" [style.background]="'linear-gradient(135deg,' + brand.kit().primary + ', color-mix(in srgb,' + brand.kit().primary + ' 72%, #000))'">{{ styleUi().brandPick }}<span class="material-icons">auto_awesome</span></span>
+        </button>
+      </div>
+
+      <div class="tsc-foot">
+        <label class="tsc-remember">
+          <input type="checkbox" [(ngModel)]="rememberStyle" />
+          <span class="tsc-check" aria-hidden="true"><span class="material-icons">check</span></span>
+          <span class="tsc-rlabel">{{ styleUi().remember }}</span>
+        </label>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- ===== Post-save "what next?" dialog ===== -->
+@if (savedDialog()) {
+  <div class="svd-back" (click)="continueEditing()">
+    <div class="svd" role="dialog" aria-modal="true" aria-labelledby="svd-title" (click)="$event.stopPropagation()">
+      <button type="button" class="svd-x" (click)="continueEditing()" [attr.aria-label]="savedUi().close"><span class="material-icons">close</span></button>
+
+      <div class="svd-burst" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+
+      <div class="svd-seal" aria-hidden="true">
+        <svg viewBox="0 0 92 92" fill="none">
+          <circle class="svd-ring" cx="46" cy="46" r="40"></circle>
+          <path class="svd-tick" d="M28 47 l12 12 l24 -28"></path>
+        </svg>
+      </div>
+
+      <h2 id="svd-title" class="svd-title">{{ savedUi().title }}</h2>
+      <p class="svd-sub">{{ savedUi().sub }}</p>
+
+      <div class="svd-opts">
+        <button type="button" class="svd-opt" (click)="continueEditing()">
+          <span class="svd-ic edit"><span class="material-icons">edit</span></span>
+          <span class="svd-tx"><b>{{ savedUi().edit }}</b><small>{{ savedUi().editD }}</small></span>
+          <span class="material-icons svd-go">chevron_right</span>
+        </button>
+        <button type="button" class="svd-opt" (click)="goDashboard()">
+          <span class="svd-ic dash"><span class="material-icons">space_dashboard</span></span>
+          <span class="svd-tx"><b>{{ savedUi().dash }}</b><small>{{ savedUi().dashD }}</small></span>
+          <span class="material-icons svd-go">chevron_right</span>
+        </button>
+        <button type="button" class="svd-opt primary" (click)="issueCredentials()">
+          <span class="svd-tag">{{ savedUi().tag }}</span>
+          <span class="svd-ic issue"><span class="material-icons">workspace_premium</span></span>
+          <span class="svd-tx"><b>{{ savedUi().issue }}</b><small>{{ savedUi().issueD }}</small></span>
+          <span class="material-icons svd-go">arrow_forward</span>
+        </button>
+      </div>
+    </div>
+  </div>
 }
 
 <!-- App-wide interactive Application Tour: spotlight + coach-marks over real UI -->

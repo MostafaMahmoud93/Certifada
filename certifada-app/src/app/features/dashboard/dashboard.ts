@@ -15,6 +15,11 @@ import { PlanService } from '../../core/services/plan.service';
 import { firstValueFrom } from 'rxjs';
 import { mergeDataIntoJson, renderJsonToPng } from '../../core/utils/render.util';
 import { SignaturePadComponent } from '../../shared/components/signature/signature-pad';
+import { TourService, TourStep } from '../../core/services/tour.service';
+import { TourOverlayComponent } from '../../shared/components/tour/tour-overlay.component';
+import { PermissionService } from '../../core/services/permission.service';
+import { LanguageService } from '../../core/services/language.service';
+import { DASH_TOUR, DASH_TOUR_UI, DashRole } from './dashboard-tour.data';
 
 interface MonthVal { label: string; v: number; }
 interface StatusSeg { label: string; value: number; color: string; }
@@ -24,7 +29,7 @@ interface CertRow { recipient: string; template: string; status: 'Active' | 'Pen
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, RouterLink, DatePipe, HasActionDirective, TranslocoModule, OnboardingDialogComponent, SignaturePadComponent],
+  imports: [CommonModule, RouterLink, DatePipe, HasActionDirective, TranslocoModule, OnboardingDialogComponent, SignaturePadComponent, TourOverlayComponent],
   template: `
   @if (showOnboarding()) { <app-onboarding (done)="showOnboarding.set(false)" /> }
 
@@ -38,13 +43,13 @@ interface CertRow { recipient: string; template: string; status: 'Active' | 'Pen
         </div>
       </div>
       <div class="th-r">
-        <a class="th-chip" routerLink="/app/templates" [appHasAction]="A.Credential_Generate" [tooltipMessage]="'🔒 Not in your plan.'"><span class="material-icons">send</span> Issue</a>
-        <a class="th-chip" routerLink="/app/branding" [appHasAction]="A.Branding_Manage" [tooltipMessage]="'🔒 Not in your plan.'"><span class="material-icons">palette</span> Branding</a>
-        <a class="th-chip" routerLink="/app/approvals" [appHasAction]="A.Credential_Approve" [tooltipMessage]="'🔒 Not in your plan.'"><span class="material-icons">fact_check</span> Approvals</a>
-        <a class="cf-btn cf-btn-primary" routerLink="/canvas" [appHasAction]="A.Template_Edit" [tooltipMessage]="'🔒 Upgrade your plan to create templates.'"><span class="material-icons">add</span> {{ 'dash.newCertificate' | transloco }}</a>
+        <a class="th-chip" data-tour="dash-issue" routerLink="/app/templates" [appHasAction]="A.Credential_Generate" [tooltipMessage]="'🔒 Not in your plan.'"><span class="material-icons">send</span> Issue</a>
+        <a class="th-chip" data-tour="dash-branding" routerLink="/app/branding" [appHasAction]="A.Branding_Manage" [tooltipMessage]="'🔒 Not in your plan.'"><span class="material-icons">palette</span> Branding</a>
+        <a class="th-chip" data-tour="dash-approvals" routerLink="/app/approvals" [appHasAction]="A.Credential_Approve" [tooltipMessage]="'🔒 Not in your plan.'"><span class="material-icons">fact_check</span> Approvals</a>
+        <a class="cf-btn cf-btn-primary" data-tour="dash-create" routerLink="/canvas" [appHasAction]="A.Template_Edit" [tooltipMessage]="'🔒 Upgrade your plan to create templates.'"><span class="material-icons">add</span> {{ 'dash.newCertificate' | transloco }}</a>
       </div>
     </div>
-    <div class="hero-kpis">
+    <div class="hero-kpis" data-tour="dash-kpis">
       <a class="hkpi" routerLink="/app/credentials">
         <span class="hk-ic brand"><span class="material-icons">verified</span></span>
         <div class="hk-tx"><span class="hk-v">{{ aIssued().toLocaleString() }}</span><span class="hk-l">Certificates issued</span></div>
@@ -101,7 +106,7 @@ interface CertRow { recipient: string; template: string; status: 'Active' | 'Pen
   </div>
 
   <!-- traffic trend + verification (compact 2-col) -->
-  <div class="row analytics">
+  <div class="row analytics" data-tour="dash-analytics">
     <div class="cf-card cf-card-pad chart-card">
       <div class="card-head">
         <h3><span class="material-icons ch-ic">show_chart</span> Traffic &amp; Issuance Trend</h3>
@@ -204,7 +209,7 @@ interface CertRow { recipient: string; template: string; status: 'Active' | 'Pen
   }
 
   <!-- plan quotas & storage -->
-  <div class="cf-card quotas">
+  <div class="cf-card quotas" data-tour="dash-quotas">
     <div class="qz-head">
       <div class="qz-h-tx">
         <span class="qz-badge"><span class="material-icons">workspace_premium</span> {{ plan.current().name }}</span>
@@ -264,7 +269,7 @@ interface CertRow { recipient: string; template: string; status: 'Active' | 'Pen
   </div>
 
   <!-- recent certificates -->
-  <div class="cf-card cf-card-pad certs-card" style="margin-top:14px">
+  <div class="cf-card cf-card-pad certs-card" data-tour="dash-credentials" style="margin-top:14px">
     <div class="card-head"><h3><span class="material-icons sec-ic">workspace_premium</span> Recent certificates</h3><a class="link" routerLink="/app/credentials">View all <span class="material-icons">arrow_forward</span></a></div>
     <div class="tablewrap">
       <table class="cf-table pro">
@@ -370,6 +375,8 @@ interface CertRow { recipient: string; template: string; status: 'Active' | 'Pen
     </div>
   }
   <app-signature-pad [open]="addSigOpen()" (closed)="onSigClosed()" />
+
+  <app-tour-overlay />
   `,
   styles: [`
     :host{display:block}
@@ -868,6 +875,10 @@ export class DashboardPage {
   private router = inject(Router);
   readonly plan = inject(PlanService);
   private auth = inject(AuthService);
+  private tour = inject(TourService);
+  private perm = inject(PermissionService);
+  private langSvc = inject(LanguageService);
+  readonly tourUi = computed(() => (this.langSvc.lang() === 'ar' ? DASH_TOUR_UI.ar : DASH_TOUR_UI.en));
   readonly A = Actions;
 
   showOnboarding = signal(localStorage.getItem('cf-onboarding-done') !== '1');
@@ -1126,5 +1137,55 @@ export class DashboardPage {
       next: (items) => { this.items.set(items ?? []); this.loading.set(false); },
       error: () => this.loading.set(false),
     });
+    this.tour.register(() => this.startDashTour());
+    this.maybeOfferTour();
+  }
+
+  // ===================== Role-aware Dashboard tour =====================
+  private dashRole(): DashRole {
+    const p = this.perm;
+    const admin = p.hasAny([Actions.User_View, Actions.User_Manage, Actions.Role_Manage, Actions.Role_View, Actions.Settings_Manage]);
+    const create = p.hasAny([Actions.Template_Edit, Actions.Template_Create, Actions.Canvas_Save]);
+    const issue = p.hasAny([Actions.Credential_Generate, Actions.Credential_Bulk]);
+    const approve = p.hasAny([Actions.Credential_Approve, Actions.Approval_View]);
+    if (admin) return 'admin';
+    if (approve && !create && !issue) return 'approver';
+    if (create) return 'creator';
+    if (issue) return 'issuer';
+    return 'viewer';
+  }
+
+  startDashTour(): void {
+    const t = this.langSvc.lang() === 'ar' ? DASH_TOUR.ar : DASH_TOUR.en;
+    const role = this.dashRole();
+    const has = (l: string[]) => this.perm.hasAny(l);
+    const cand: { id: string; on: boolean; target: string }[] = [
+      { id: 'create', on: has([Actions.Template_Edit, Actions.Template_Create, Actions.Canvas_Save]), target: '[data-tour="dash-create"]' },
+      { id: 'issue', on: has([Actions.Credential_Generate, Actions.Credential_Bulk]), target: '[data-tour="dash-issue"]' },
+      { id: 'approvals', on: has([Actions.Credential_Approve, Actions.Approval_View]), target: '[data-tour="dash-approvals"]' },
+      { id: 'team', on: has([Actions.User_View, Actions.User_Manage]), target: '[data-tour="nav-users"]' },
+      { id: 'roles', on: has([Actions.Role_View, Actions.Role_Manage]), target: '[data-tour="nav-roles"]' },
+      { id: 'branding', on: has([Actions.Branding_Manage]), target: '[data-tour="dash-branding"]' },
+      { id: 'settings', on: has([Actions.Settings_Manage]), target: '[data-tour="nav-settings"]' },
+      { id: 'analytics', on: has([Actions.Analytics_View]), target: '[data-tour="dash-analytics"]' },
+      { id: 'credentials', on: has([Actions.Credential_View]), target: '[data-tour="dash-credentials"]' },
+      { id: 'quotas', on: has([Actions.Billing_View, Actions.Billing_Manage, Actions.Plan_Change, Actions.Settings_Manage]), target: '[data-tour="dash-quotas"]' },
+      { id: 'kpis', on: true, target: '[data-tour="dash-kpis"]' },
+    ];
+    const active = cand.filter((c) => c.on);
+    const primary: Record<DashRole, string> = { admin: 'team', approver: 'approvals', creator: 'create', issuer: 'issue', viewer: 'kpis' };
+    const pi = active.findIndex((c) => c.id === primary[role]);
+    if (pi > 0) { const [pc] = active.splice(pi, 1); active.unshift(pc); }
+    const steps: TourStep[] = [{ title: t.welcomeTitle, body: t.welcomeByRole[role], icon: 'explore' }];
+    for (const c of active) { const cp = t.steps[c.id]; steps.push({ target: c.target, title: cp.title, body: cp.body, icon: cp.icon }); }
+    steps.push({ title: t.finishTitle, body: t.finishByRole[role], icon: 'celebration', finale: true });
+    void this.tour.start('dashboard', steps);
+  }
+
+  private maybeOfferTour(): void {
+    setTimeout(() => {
+      const u = this.tourUi();
+      this.tour.maybeOffer('dashboard', { title: u.autoTitle, body: u.autoBody, yes: u.autoYes, no: u.autoNo, icon: 'explore' }, () => this.startDashTour());
+    }, 1200);
   }
 }

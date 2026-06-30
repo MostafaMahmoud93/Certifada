@@ -4,6 +4,7 @@ import {
   Canvas,
   Circle,
   CircleBrush,
+  controlsUtils,
   Ellipse,
   config,
   FabricImage,
@@ -26,7 +27,7 @@ import {
 } from 'fabric';
 
 /** Extra (non-standard) properties we persist on objects. */
-const CUSTOM_PROPS = ['objType', 'fieldKey', 'tableId', 'imgFx', 'cellRC', 'layerName', 'frameKind', 'tableSpec'] as const;
+const CUSTOM_PROPS = ['objType', 'fieldKey', 'tableId', 'imgFx', 'cellRC', 'layerName', 'frameKind', 'tableSpec', 'cfLockPos'] as const;
 
 /** Editable description of a table so it can be rebuilt after insertion. */
 export interface TableSpec {
@@ -399,6 +400,9 @@ export class FabricCanvasService {
     FabricObject.prototype.cornerStyle = 'circle';
     FabricObject.prototype.borderColor = '#4f46e5';
     FabricObject.prototype.cornerSize = 9;
+    (Textbox.prototype as any).cursorWidth = 2;
+    (Textbox.prototype as any).cursorColor = '#4f46e5';
+    (Textbox.prototype as any).selectionColor = 'rgba(79, 70, 229, 0.22)';
 
     this.canvas.on('selection:created', () => this.syncSelection());
     this.canvas.on('selection:updated', () => this.syncSelection());
@@ -424,6 +428,10 @@ export class FabricCanvasService {
     this.canvas.on('after:render', () => this.drawGuides());
     this.canvas.on('after:render', () => this.drawDistances());
     this.canvas.on('mouse:dblclick', (opt) => this.onTableDblClick(opt));
+    this.canvas.on('text:editing:entered', (e) => { const o: any = (e as any).target; if (o && typeof o.initDimensions === 'function') { o.initDimensions(); o.set('dirty', true); this.canvas.requestRenderAll(); } });
+    this.canvas.on('object:added', (e) => { const o: any = e.target; if (o && o.cfLockPos) { o.selectable = false; o.evented = false; o.hasControls = false; } });
+    this.canvas.on('selection:updated', () => { if (this.editingPoly && this.canvas.getActiveObject() !== this.editingPoly) this.exitPolygonEdit(); });
+    this.canvas.on('selection:cleared', () => this.exitPolygonEdit());
 
     this.snapshot();
 
@@ -550,6 +558,31 @@ export class FabricCanvasService {
     const tb = new Textbox(text, options);
     (tb as any).objType = 'text';
     this.place(tb);
+  }
+
+  /** Superscript / subscript the current text selection (or the whole text if nothing is selected). Click again to clear. */
+  applyScript(kind: 'super' | 'sub'): void {
+    const o = this.canvas.getActiveObject() as any;
+    if (!o || typeof o.setSuperscript !== 'function' || !/text/i.test(o.type || '')) return;
+    const len = ((o.text as string) || '').length;
+    let start = o.selectionStart as number, end = o.selectionEnd as number;
+    if (start == null || end == null || start === end) { start = 0; end = len; }
+    if (end <= start) return;
+    const styles = (o.getSelectionStyles(start, end) || []) as any[];
+    const isSuper = styles.length > 0 && styles.every((st: any) => (st?.deltaY || 0) < 0);
+    const isSub = styles.length > 0 && styles.every((st: any) => (st?.deltaY || 0) > 0);
+    if ((kind === 'super' && isSuper) || (kind === 'sub' && isSub)) {
+      o.setSelectionStyles({ deltaY: 0, fontSize: o.fontSize }, start, end);   // toggle off
+    } else if (kind === 'super') {
+      o.setSuperscript(start, end);
+    } else {
+      o.setSubscript(start, end);
+    }
+    o.set('dirty', true);
+    o.initDimensions?.();
+    this.canvas.requestRenderAll();
+    this.revision.update((v) => v + 1);
+    this.snapshot();
   }
 
   /** Add a Textbox from a full style spec (Text-tab style gallery / phrases). */
@@ -1174,6 +1207,7 @@ export class FabricCanvasService {
 
   private onTableDblClick(opt: any): void {
     const g = opt?.target as any;
+    if (g && g instanceof Polygon) { this.togglePolygonEdit(g); return; }
     if (!g || g.objType !== 'table' || !g.tableId) return;
     const pt = opt.scenePoint ?? (this.canvas as any).getScenePoint?.(opt.e) ?? this.canvas.getPointer(opt.e);
     const hit = this.tableCellAtScene(g, { x: pt.x, y: pt.y });
@@ -2096,6 +2130,63 @@ export class FabricCanvasService {
     this.snapshot();
   }
   isObjLocked(o: FabricObject): boolean { return !!(o as any).lockMovementX; }
+
+  // ---- Lock position: make an object unselectable like the background (unlock from the Layers panel) ----
+  togglePositionLock(o?: FabricObject): void {
+    const obj = (o ?? this.canvas.getActiveObject()) as any;
+    if (!obj) return;
+    if (obj.cfLockPos) {
+      obj.cfLockPos = false;
+      obj.set({ selectable: true, evented: true, hasControls: true, lockMovementX: false, lockMovementY: false });
+    } else {
+      if (this.canvas.getActiveObject() === obj) this.canvas.discardActiveObject();
+      obj.cfLockPos = true;
+      obj.set({ selectable: false, evented: false, hasControls: false, lockMovementX: true, lockMovementY: true });
+    }
+    obj.setCoords();
+    this.canvas.requestRenderAll();
+    this.revision.update((v) => v + 1);
+    this.syncSelection();
+    this.snapshot();
+  }
+  isPositionLocked(o: FabricObject): boolean { return !!(o as any).cfLockPos; }
+
+  // ---- Polygon point editing (double-click a polygon to drag its vertices) ----
+  private editingPoly: any = null;
+  isEditingPolygon(o?: FabricObject): boolean { return !!this.editingPoly && (!o || o === this.editingPoly); }
+
+  togglePolygonEdit(poly: any): void {
+    if (!poly || !(poly instanceof Polygon)) return;
+    if (this.editingPoly === poly) { this.exitPolygonEdit(); return; }
+    if (this.editingPoly) this.exitPolygonEdit();
+    this.editingPoly = poly;
+    poly.objectCaching = false;
+    poly.controls = controlsUtils.createPolyControls(poly);
+    poly.cornerStyle = 'circle';
+    poly.cornerColor = '#ffffff';
+    poly.cornerStrokeColor = '#4f46e5';
+    poly.cornerSize = 11;
+    poly.hasBorders = true;
+    this.canvas.setActiveObject(poly);
+    this.canvas.requestRenderAll();
+    this.revision.update((v) => v + 1);
+  }
+
+  exitPolygonEdit(): void {
+    const poly = this.editingPoly;
+    if (!poly) return;
+    this.editingPoly = null;
+    try {
+      poly.controls = controlsUtils.createObjectDefaultControls();
+      poly.cornerColor = '#4f46e5';
+      poly.cornerStrokeColor = '';
+      poly.objectCaching = true;
+      poly.setCoords();
+    } catch { /* ignore */ }
+    this.canvas.requestRenderAll();
+    this.revision.update((v) => v + 1);
+    this.snapshot();
+  }
   raiseObj(o: FabricObject): void { this.canvas.bringObjectForward(o); this.canvas.requestRenderAll(); this.snapshot(); }
   lowerObj(o: FabricObject): void { this.canvas.sendObjectBackwards(o); this.canvas.requestRenderAll(); this.snapshot(); }
   removeObj(o: FabricObject): void {
@@ -2435,6 +2526,7 @@ export class FabricCanvasService {
     this.isRestoring = false;
     this.seedHistory('Document opened', 'flag');
     this.syncSelection();
+    this.scheduleTextMetricsRefresh();
   }
 
   clear(): void {
@@ -2457,6 +2549,7 @@ export class FabricCanvasService {
     this.seedHistory('Template applied', 'grid_view');
     this.syncSelection();
     this.revision.update((v) => v + 1);
+    this.scheduleTextMetricsRefresh();
   }
 
   /** Render a template's layout to a small PNG thumbnail (for the Templates gallery). */
@@ -2478,7 +2571,15 @@ export class FabricCanvasService {
     const out: FabricObject[] = [];
     for (const it of items) {
       let obj: any;
-      if (it.kind === 'text' || it.kind === 'field') {
+      if (it.kind === 'field' && /^signature\d*$/i.test(it.key || '')) {
+        const sw = it.w ?? 240, shh = 64;
+        const box = new Rect({ left: 0, top: 0, width: sw, height: shh, rx: 10, ry: 10, fill: 'rgba(148,163,184,0.06)', stroke: '#cbd5e1', strokeWidth: 1.5, strokeDashArray: [6, 5], originX: 'center', originY: 'center' });
+        const label = new Textbox('✎  Signature', { left: 0, top: 0, width: sw, fontSize: 16, fill: '#94a3b8', fontFamily: 'Inter', fontWeight: '600', textAlign: 'center', originX: 'center', originY: 'center', editable: false });
+        const sg = new Group([box, label], { left: it.x, top: it.y, originX: 'center', originY: 'center' });
+        (sg as any).objType = 'signature';
+        (sg as any).fieldKey = it.key;
+        obj = sg;
+      } else if (it.kind === 'text' || it.kind === 'field') {
         const tb = new Textbox(it.kind === 'field' ? `{{${it.key}}}` : (it.text ?? ''), {
           left: it.x, top: it.y, width: it.w ?? 420,
           fontSize: it.fontSize ?? 24, fill: it.fill ?? '#0f172a',
@@ -2628,6 +2729,24 @@ export class FabricCanvasService {
     }
     this.canvas.requestRenderAll();
     this.revision.update((x) => x + 1);
+  }
+
+  /** Re-measure every text object. Fixes caret/selection offset when a web font (e.g. Playfair) loads after first render. */
+  private refreshTextMetrics(): void {
+    if (!this.canvas) return;
+    const walk = (objs: any[]): void => {
+      for (const o of objs) {
+        if (o && typeof o.initDimensions === 'function' && /text/i.test(o.type || '')) { o.initDimensions(); o.set('dirty', true); }
+        if (Array.isArray(o?._objects)) walk(o._objects);
+      }
+    };
+    walk(this.canvas.getObjects());
+    this.canvas.requestRenderAll();
+  }
+  private scheduleTextMetricsRefresh(): void {
+    const fonts: any = (document as any).fonts;
+    if (fonts?.ready?.then) { fonts.ready.then(() => { try { this.refreshTextMetrics(); } catch { /* ignore */ } }); }
+    setTimeout(() => { try { this.refreshTextMetrics(); } catch { /* ignore */ } }, 80);
   }
 
   /** Restore every field object to its {{placeholder}} text. */

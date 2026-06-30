@@ -51,6 +51,12 @@ export class TourService {
   /** First-run invitation card, shown when not yet seen. */
   readonly offering = signal<TourOffer | null>(null);
 
+  /** Page-registered launcher so a shared (header) button can start the current page's tour. */
+  readonly launcher = signal<(() => void) | null>(null);
+  register(fn: () => void): void { this.launcher.set(fn); }
+  unregister(): void { this.launcher.set(null); }
+  launch(): void { const f = this.launcher(); if (f) { f(); } }
+
   private id = '';
   private offerId = '';
   private accept?: () => void;

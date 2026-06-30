@@ -1,7 +1,8 @@
-import { Component, inject } from '@angular/core';
+import { Component, computed, inject } from '@angular/core';
 import { RouterOutlet, RouterLink } from '@angular/router';
 import { ThemeService } from '../../core/services/theme.service';
 import { LanguageService } from '../../core/services/language.service';
+import { TourService } from '../../core/services/tour.service';
 import { UpgradeDialogComponent } from '../../shared/components/upgrade-dialog/upgrade-dialog';
 
 /** Full-bleed shell for the designer + bulk pages, with a slim top bar
@@ -19,6 +20,9 @@ import { UpgradeDialogComponent } from '../../shared/components/upgrade-dialog/u
       </a>
       <a class="back" routerLink="/app/templates"><span class="material-icons">arrow_back</span> Templates</a>
       <span class="sp"></span>
+      @if (tour.launcher()) {
+        <button type="button" class="ic tour-ico" (click)="tour.launch()" [attr.aria-label]="tourLabel()"><span class="material-icons">explore</span><span class="tour-tip"><span class="material-icons">auto_awesome</span>{{ tourLabel() }}</span></button>
+      }
       <button class="ic" (click)="lang.toggle()" [title]="lang.lang() === 'ar' ? 'English' : 'العربية'">
         {{ lang.lang() === 'ar' ? 'EN' : 'ع' }}
       </button>
@@ -51,4 +55,6 @@ import { UpgradeDialogComponent } from '../../shared/components/upgrade-dialog/u
 export class CanvasLayout {
   theme = inject(ThemeService);
   lang = inject(LanguageService);
+  tour = inject(TourService);
+  readonly tourLabel = computed(() => (this.lang.lang() === 'ar' ? 'جولة تعريفية' : 'Take a tour'));
 }

@@ -167,8 +167,12 @@ export class PropertiesPanelComponent {
 
   isLocked(): boolean { return this.svc.isLocked(); }
   lock(): void { this.svc.toggleLock(); }
+  posLocked(): boolean { return this.obj ? this.svc.isPositionLocked(this.obj) : false; }
+  lockPos(): void { this.svc.togglePositionLock(); }
   dupe(): void { void this.svc.cloneSelected(); }
   del(): void { this.svc.deleteSelected(); }
+  sup(): void { this.svc.applyScript('super'); }
+  sub(): void { this.svc.applyScript('sub'); }
 
   private thumbCache: { rev: number; obj: any; url: string | null } = { rev: -1, obj: null, url: null };
   thumb(): string | null {

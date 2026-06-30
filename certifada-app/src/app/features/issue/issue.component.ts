@@ -13,6 +13,10 @@ import { Actions } from '../../core/constants/actions';
 import { mergeDataIntoJson, renderJsonToPng } from '../../core/utils/render.util';
 import { expandDynamicTablesInJson } from '../designer/fabric-canvas.service';
 import { PaginatorComponent } from '../../shared/components/paginator/paginator.component';
+import { LanguageService } from '../../core/services/language.service';
+import { TourService, TourStep } from '../../core/services/tour.service';
+import { TourOverlayComponent } from '../../shared/components/tour/tour-overlay.component';
+import { ISSUE_TOUR, ISSUE_TOUR_UI } from './issue-tour.data';
 
 interface BulkRow { email: string; data: Record<string, string>; tcells?: string[]; }
 interface Confetti { left: number; delay: number; dur: number; color: string; }
@@ -21,7 +25,7 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 @Component({
   selector: 'app-issue',
   standalone: true,
-  imports: [CommonModule, DatePipe, RouterLink, HasActionDirective, PaginatorComponent],
+  imports: [CommonModule, DatePipe, RouterLink, HasActionDirective, PaginatorComponent, TourOverlayComponent],
   template: `
   <nav class="crumbs"><a routerLink="/app/templates">Templates</a><span class="material-icons">chevron_right</span><span class="cur">Issue</span><a class="crumb-right" [routerLink]="['/app/templates', id, 'issued']"><span class="material-icons">insights</span> Insights</a></nav>
 
@@ -39,20 +43,20 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         <h1>Issue certificates</h1>
         <div class="h-sub"><strong>{{ template()?.name || 'Template' }}</strong><span class="dot">·</span><span>{{ template()?.width }}×{{ template()?.height }}</span><span class="dot">·</span><span>{{ vars().length }} variable{{ vars().length === 1 ? '' : 's' }}</span>@if (offline()) { <span class="dot">·</span><span class="off"><span class="material-icons">wifi_off</span> offline</span> }</div>
       </div>
-      <div class="h-quota" [class.warn]="quotaPct() >= 100">
+      <div class="h-quota" data-tour="quota" [class.warn]="quotaPct() >= 100">
         <div class="q-top"><span class="material-icons">bolt</span> Issued this period <b>{{ issuesUsed() }} / {{ quotaLabel() }}</b></div>
         <div class="q-bar"><span [style.width.%]="quotaPct()"></span></div>
       </div>
     </div>
 
-    <div class="stats">
+    <div class="stats" data-tour="stats">
       <div class="stat"><div class="s-ic brand"><span class="material-icons">verified</span></div><div><div class="s-val">{{ stats().total }}</div><div class="s-lbl">Total issued</div></div></div>
       <div class="stat"><div class="s-ic ok"><span class="material-icons">mark_email_read</span></div><div><div class="s-val">{{ stats().sent }}</div><div class="s-lbl">Successfully sent</div>@if (stats().total) { <div class="s-sub">{{ successRate() }}% success</div> }</div></div>
       <div class="stat"><div class="s-ic warn"><span class="material-icons">schedule</span></div><div><div class="s-val">{{ stats().sending + stats().pending }}</div><div class="s-lbl">In progress</div></div></div>
       <div class="stat"><div class="s-ic bad"><span class="material-icons">error_outline</span></div><div><div class="s-val">{{ stats().failed + stats().revoked }}</div><div class="s-lbl">Failed / revoked</div></div></div>
     </div>
 
-    <div class="tabs">
+    <div class="tabs" data-tour="tabs">
       <button [class.on]="tab() === 'one'" (click)="tab.set('one')"><span class="material-icons">person_add</span><span class="t-txt"><b>Issue One by One</b><small>Single recipient + live preview</small></span></button>
       <button [class.on]="tab() === 'bulk'" (click)="tab.set('bulk')"><span class="material-icons">groups</span><span class="t-txt"><b>Issue Bulk</b><small>Many at once from a sheet</small></span></button>
     </div>
@@ -74,7 +78,7 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         } @else {
           <p class="lead"><span class="material-icons">tips_and_updates</span> Fill in the recipient, watch the live preview, and send — done in seconds.</p>
           <div class="two-col" [class.solo]="!showPreview()">
-            <div class="form-side">
+            <div class="form-side" data-tour="form">
               <div class="sec-row"><span class="sec-ic"><span class="material-icons">badge</span></span><h3 class="sec">Recipient details</h3>@if (totalFields()) { <span class="fld-prog" [class.done]="filledFields() === totalFields()"><span class="material-icons">{{ filledFields() === totalFields() ? 'task_alt' : 'pending' }}</span>{{ filledFields() }}/{{ totalFields() }}</span> }</div>
               <div class="field">
                 <label>Recipient Email <span class="req">*</span></label>
@@ -113,12 +117,12 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
               }
               <div class="form-actions">
                 <button class="cf-btn cf-btn-secondary" (click)="updatePreview()" [disabled]="previewing()"><span class="material-icons">{{ previewing() ? 'progress_activity' : (showPreview() ? 'refresh' : 'visibility') }}</span> {{ previewing() ? 'Rendering…' : (showPreview() ? 'Update preview' : 'Show preview') }}</button>
-                <button class="cf-btn cf-btn-primary" (click)="issueOne()" [disabled]="!oneValid() || issuing()" [appHasAction]="A.Credential_Generate" [tooltipMessage]="'🔒 Issuing isn\\'t in your plan.'"><span class="material-icons">send</span> {{ issuing() ? 'Issuing…' : 'Issue & send' }}</button>
+                <button class="cf-btn cf-btn-primary" data-tour="issue" (click)="issueOne()" [disabled]="!oneValid() || issuing()" [appHasAction]="A.Credential_Generate" [tooltipMessage]="'🔒 Issuing isn\\'t in your plan.'"><span class="material-icons">send</span> {{ issuing() ? 'Issuing…' : 'Issue & send' }}</button>
               </div>
               <div class="ready" [class.go]="oneValid()"><span class="material-icons">{{ oneValid() ? 'check_circle' : 'edit_note' }}</span>{{ oneValid() ? 'Ready to issue to ' + email() : 'Fill the email and all fields to issue.' }}</div>
             </div>
             @if (showPreview()) {
-            <div class="preview-side">
+            <div class="preview-side" data-tour="preview">
               <div class="pv-head"><span class="sec">Preview design</span><div class="pv-tools"><span class="live"><span class="d"></span>Live</span>@if (previewUrl()) { <button class="ic sm" (click)="downloadPreview()" title="Download preview"><span class="material-icons">download</span></button> }<button class="ic sm" (click)="showPreview.set(false)" title="Hide preview"><span class="material-icons">visibility_off</span></button></div></div>
               @if (hasSignature()) { <div class="pv-pending"><span class="material-icons">verified_user</span> Has a signature — it is sent for approval; the signature appears once approved.</div> }
               <div class="preview-frame">
@@ -145,7 +149,7 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         } @else {
           <p class="lead"><span class="material-icons">tips_and_updates</span> Have many recipients? Grab the ready-made sheet, fill a row each, upload, and we'll issue them all.</p>
           @if (dynTable(); as dt) { <div class="rinfo"><span class="material-icons">table_chart</span><div><b>This template has a dynamic table.</b><span>Table columns in the sheet are prefixed <b>Table —</b>. Put one table row per spreadsheet row, and repeat the same Recipient Email across rows to add several table rows to that recipient's certificate.</span></div><button type="button" class="thelp lg" (click)="tableHelp.set(true)"><span class="material-icons">help</span> How it works</button></div> }
-          <div class="steps">
+          <div class="steps" data-tour="bulk">
             <div class="step"><span class="step-n">1</span><div class="bi-txt"><strong>Download the tailored sheet</strong><span class="cf-muted">Exact columns — Recipient Email + {{ vars().length }} field{{ vars().length === 1 ? '' : 's' }}.</span></div><button class="cf-btn cf-btn-secondary" (click)="downloadCsvTemplate()"><span class="material-icons">download</span> Download CSV</button></div>
             <div class="step-line"></div>
             <div class="step"><span class="step-n">2</span><div class="bi-txt"><strong>Fill it, then drop it back</strong><span class="cf-muted">One recipient per row.</span></div></div>
@@ -193,7 +197,7 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     }
 
     <!-- history -->
-    <div class="hist">
+    <div class="hist" data-tour="history">
       <div class="hist-head">
         <div class="sec-row"><span class="sec-ic"><span class="material-icons">history</span></span><h3 class="sec">Issued credentials history</h3></div>
         @if (history().length) {
@@ -286,6 +290,8 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       </div>
     }
   }
+
+  <app-tour-overlay />
   `,
   styles: [`
     :host{display:block;width:100%}
@@ -562,6 +568,14 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     .tip .material-icons{font-size:16px;color:var(--cf-brand-600);margin-top:1px;flex:none}
     .tip b{color:var(--cf-ink-900)}
     @media(prefers-reduced-motion:reduce){.srow.ga,.srow.gb,.certcard.ca,.certcard.cb,.caret,.merge .material-icons{animation:none}.srow.ga,.srow.gb{background:transparent}}
+    .itour-btn{display:inline-flex;align-items:center;gap:7px;height:28px;padding:0 11px 0 6px;border:1px solid color-mix(in srgb,var(--cf-brand-500) 30%,var(--cf-line));border-radius:999px;background:color-mix(in srgb,var(--cf-brand-500) 6%,var(--cf-surface));color:var(--cf-brand-700);font:inherit;font-weight:600;font-size:11.5px;letter-spacing:-.005em;cursor:pointer;transition:background .16s,border-color .16s,transform .12s,box-shadow .16s}
+    .itour-btn:hover{background:color-mix(in srgb,var(--cf-brand-500) 13%,var(--cf-surface));border-color:color-mix(in srgb,var(--cf-brand-500) 58%,transparent);transform:translateY(-1px);box-shadow:0 4px 11px -8px color-mix(in srgb,var(--cf-brand-600) 70%,transparent)}
+    .itour-btn:active{transform:translateY(0)}
+    .itour-btn .material-icons{width:18px;height:18px;border-radius:50%;display:grid;place-items:center;font-size:12px;color:var(--cf-brand-600);border:1px solid color-mix(in srgb,var(--cf-brand-500) 35%,transparent);background:var(--cf-surface);transition:transform .6s cubic-bezier(.4,0,.2,1)}
+    .itour-btn:hover .material-icons{transform:rotate(360deg)}
+    .itour-btn:focus-visible{outline:none;box-shadow:0 0 0 3px color-mix(in srgb,var(--cf-brand-500) 30%,transparent)}
+    @media(max-width:760px){.itour-btn .itb-lbl{display:none}.itour-btn{padding:0 5px;gap:0}}
+    @media(prefers-reduced-motion:reduce){.itour-btn .material-icons{transition:none}}
   `],
 })
 export class IssueComponent {
@@ -572,6 +586,9 @@ export class IssueComponent {
   readonly plan = inject(PlanService);
   private approvals = inject(ApprovalService);
   readonly A = Actions;
+  private langSvc = inject(LanguageService);
+  readonly tour = inject(TourService);
+  readonly tourUi = computed(() => (this.langSvc.lang() === 'ar' ? ISSUE_TOUR_UI.ar : ISSUE_TOUR_UI.en));
 
   id = this.route.snapshot.paramMap.get('id') || '';
   template = signal<TemplateDetail | null>(null);
@@ -697,12 +714,12 @@ export class IssueComponent {
   histSafe = computed(() => { const mp = Math.max(1, Math.ceil(this.filteredHistory().length / this.histSize())); return Math.min(this.histPage(), mp); });
   pagedHistory = computed(() => { const f = this.filteredHistory(); const ps = this.histSize(); const start = (this.histSafe() - 1) * ps; return f.slice(start, start + ps); });
 
-  constructor() { this.load(); this.issued.syncFromApi(this.id); }
+  constructor() { this.load(); this.issued.syncFromApi(this.id); this.tour.register(() => this.startIssueTour()); }
 
   private load(): void {
     if (!this.id) { this.loading.set(false); this.error.set('No template selected.'); return; }
     this.templates.get(this.id).subscribe({
-      next: (t) => { this.template.set(t); this.loading.set(false); this.seedTableRows(); },
+      next: (t) => { this.template.set(t); this.loading.set(false); this.seedTableRows(); this.maybeOfferTour(); },
       error: () => {
         try {
           const cache = JSON.parse(localStorage.getItem('cf-tpl-cache') || '[]');
@@ -785,6 +802,42 @@ export class IssueComponent {
     this.alerts.success(needsApproval ? `Submitted for approval — ${email} receives it once approved.` : `Sending certificate to ${email}…`, { title: needsApproval ? 'Pending approval ⏳' : 'Issued 🎉' });
   }
   issueAnother(): void { this.lastIssued.set(null); this.form.set({}); this.email.set(''); this.previewUrl.set(''); this.tableRows.set([]); this.seedTableRows(); }
+
+  // ---- Issue page guided tour (spotlight over the real UI) ----
+  startIssueTour(): void {
+    const ar = this.langSvc.lang() === 'ar';
+    const copy = ar ? ISSUE_TOUR.ar : ISSUE_TOUR.en;
+    const c = (id: string) => copy.find((x) => x.id === id)!;
+    const prevTab = this.tab();
+    const prevPreview = this.showPreview();
+    const oneTab = () => { this.tab.set('one'); };
+    const showOne = () => { this.tab.set('one'); this.showPreview.set(true); };
+    const bulkTab = () => { this.tab.set('bulk'); };
+    const step = (id: string, target?: string, before?: () => void, finale = false): TourStep => {
+      const k = c(id);
+      return { title: k.title, body: k.body, icon: k.icon, target, before, finale };
+    };
+    const steps: TourStep[] = [
+      step('welcome'),
+      step('quota', '[data-tour="quota"]'),
+      step('stats', '[data-tour="stats"]'),
+      step('tabs', '[data-tour="tabs"]'),
+      step('form', '[data-tour="form"]', oneTab),
+      step('preview', '[data-tour="preview"]', showOne),
+      step('issue', '[data-tour="issue"]', oneTab),
+      step('bulk', '[data-tour="bulk"]', bulkTab),
+      step('history', '[data-tour="history"]'),
+      step('finish', undefined, undefined, true),
+    ];
+    void this.tour.start('issue', steps, () => { this.tab.set(prevTab); this.showPreview.set(prevPreview); });
+  }
+
+  private maybeOfferTour(): void {
+    setTimeout(() => {
+      const u = this.tourUi();
+      this.tour.maybeOffer('issue', { title: u.autoTitle, body: u.autoBody, yes: u.autoYes, no: u.autoNo, icon: 'workspace_premium' }, () => this.startIssueTour());
+    }, 1000);
+  }
 
   private norm(s: string): string { return (s || '').toLowerCase().replace(/[^a-z0-9]/g, ''); }
   downloadCsvTemplate(): void {

@@ -48,7 +48,7 @@ type SelKind = 'none' | 'text' | 'image' | 'shape' | 'group' | 'table';
 type CtxAction =
   | 'cut' | 'copy' | 'paste' | 'duplicate'
   | 'front' | 'forward' | 'backward' | 'back'
-  | 'lock' | 'centerH' | 'centerV' | 'selectAll' | 'delete'
+  | 'lock' | 'lockPos' | 'centerH' | 'centerV' | 'selectAll' | 'delete'
   | 'alignLeft' | 'alignRight' | 'alignTop' | 'alignBottom'
   | 'distH' | 'distV' | 'group' | 'ungroup' | 'copyStyle' | 'pasteStyle';
 
@@ -598,13 +598,36 @@ export class DesignerComponent implements AfterViewInit, OnDestroy {
   applyTemplate(t: DesignTemplate): void {
     this.width = t.w; this.height = t.h; this.customW = t.w; this.customH = t.h;
     this.svc.applyTemplate(t.w, t.h, t.items, t.bg ?? '#ffffff');
-    setTimeout(() => {
-      this.drawRulers();
-      this.zoomToFit(1);
-      // Smart: a ready-made layout instantly adopts the user's brand (logo, colors, fonts).
-      if (this.brand.kit().has) this.applyBrandKit(true);
-    }, 0);
+    setTimeout(() => { this.drawRulers(); this.zoomToFit(1); }, 0);
+    // Let the user choose: keep the template's own look, or restyle it with their brand kit.
+    if (!this.brand.kit().has) return;                 // no brand → nothing to choose
+    const pref = localStorage.getItem('cf-tpl-style');
+    if (pref === 'brand') { setTimeout(() => this.applyBrandKit(true), 0); return; }
+    if (pref === 'original') return;
+    this.rememberStyle = false;
+    this.styleChoice.set(t);                            // open the creative chooser
   }
+
+  // ---- template style chooser: keep original vs apply brand ----
+  styleChoice = signal<DesignTemplate | null>(null);
+  rememberStyle = false;
+  readonly styleUi = computed(() => this.langSvc.lang() === 'ar'
+    ? { title: 'اجعلها على ذوقك', sub: 'احتفظ بمظهر القالب الأصلي، أو أعد تصميمه فورًا بهوية علامتك.', or: 'أو', close: 'إغلاق',
+        origTitle: 'القالب الأصلي', origDesc: 'احتفظ بألوان المصمّم وخطوطه وتخطيطه كما هي.', origPick: 'إبقاء الأصلي',
+        brandTitle: 'تطبيق هويتك', brandDesc: 'إعادة تلوين النص والعناصر وإضافة شعارك من هوية علامتك.', brandPick: 'تطبيق الهوية',
+        brandTag: 'هويتك', remember: 'تذكّر اختياري' }
+    : { title: 'Make it yours', sub: 'Keep this template’s original look, or restyle it instantly with your brand.', or: 'or', close: 'Close',
+        origTitle: 'Original template', origDesc: 'Keep the designer’s colors, fonts and layout exactly as shown.', origPick: 'Keep original',
+        brandTitle: 'Apply your brand', brandDesc: 'Recolor text and accents and drop in your logo from your brand kit.', brandPick: 'Apply brand',
+        brandTag: 'Your brand', remember: 'Remember my choice' });
+
+  brandSwatches(): string[] {
+    const k = this.brand.kit();
+    const cs = (k.colors && k.colors.length ? k.colors : [k.primary]).filter(Boolean).slice(0, 4);
+    return cs.length ? cs : [k.primary];
+  }
+  keepOriginal(): void { if (this.rememberStyle) localStorage.setItem('cf-tpl-style', 'original'); this.styleChoice.set(null); }
+  applyBrandStyle(): void { if (this.rememberStyle) localStorage.setItem('cf-tpl-style', 'brand'); this.styleChoice.set(null); this.applyBrandKit(); }
 
   // Elements
   elementsTab = signal<'shapes' | 'decor' | 'icons' | 'badges'>('shapes');
@@ -905,6 +928,7 @@ export class DesignerComponent implements AfterViewInit, OnDestroy {
   readonly RULER = 24;
   gridSize = 20;
   showRuler = signal(true);
+  rulerOrigin = signal<'corner' | 'center'>((() => { try { return localStorage.getItem('cf-ruler-origin') === 'center' ? 'center' : 'corner'; } catch { return 'corner'; } })());
   showGrid = signal(true);
   snap = signal(false);
   guidesOn = signal(true);
@@ -1136,6 +1160,7 @@ export class DesignerComponent implements AfterViewInit, OnDestroy {
   readonly usedVars = computed<Set<string>>(() => { this.svc.revision(); return new Set(this.svc.usedFieldKeys()); });
   readonly usedVarList = computed<string[]>(() => { this.svc.revision(); return this.svc.usedFieldKeys(); });
   readonly usedSigs = computed<Set<string>>(() => { this.svc.revision(); return new Set(this.svc.usedSignatureKeys()); });
+  readonly sigOnCanvas = computed<string[]>(() => { this.svc.revision(); return this.svc.usedSignatureKeys(); });
   previewing = signal<Set<string>>(new Set());
   isPreviewing(key: string): boolean { return this.previewing().has(key); }
   captionVars = ['name', 'title', 'date', 'org'];
@@ -1187,6 +1212,7 @@ export class DesignerComponent implements AfterViewInit, OnDestroy {
   ];
 
   ngAfterViewInit(): void {
+    this.tour.register(() => this.startTour());
     this.svc.init(this.canvasEl.nativeElement, this.width, this.height);
     this.svc.gridSize = this.gridSize;
     this.svc.smartGuides = this.guidesOn();
@@ -1201,11 +1227,17 @@ export class DesignerComponent implements AfterViewInit, OnDestroy {
     this.svc.onCellEdit((hit) => this.openCellEditor(hit));
     this.svc.setDistanceIndicators(this.showDist());
     this.versions.set(this.loadVersions());
-    // First-run: gently offer the Application Tour (once — never nags again).
-    setTimeout(() => {
-      const u = this.tourUi();
-      this.tour.maybeOffer('canvas', { title: u.autoTitle, body: u.autoBody, yes: u.autoYes, no: u.autoNo, icon: 'explore' }, () => this.startTour());
-    }, 1100);
+    if (sessionStorage.getItem('cf-just-saved')) {
+      // Came here right after saving a brand-new template -> show the "what next?" dialog.
+      sessionStorage.removeItem('cf-just-saved');
+      setTimeout(() => this.savedDialog.set(true), 300);
+    } else {
+      // First-run: gently offer the Application Tour (once — never nags again).
+      setTimeout(() => {
+        const u = this.tourUi();
+        this.tour.maybeOffer('canvas', { title: u.autoTitle, body: u.autoBody, yes: u.autoYes, no: u.autoNo, icon: 'explore' }, () => this.startTour());
+      }, 1100);
+    }
   }
 
   // -------------------- inline table-cell editor (double-click on canvas) --------------------
@@ -1235,6 +1267,7 @@ export class DesignerComponent implements AfterViewInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    this.tour.unregister();
     this.svc.dispose();
   }
 
@@ -1827,6 +1860,11 @@ export class DesignerComponent implements AfterViewInit, OnDestroy {
     this.showRuler.set(!this.showRuler());
     setTimeout(() => this.drawRulers(), 0);
   }
+  setRulerOrigin(mode: 'corner' | 'center'): void {
+    this.rulerOrigin.set(mode);
+    try { localStorage.setItem('cf-ruler-origin', mode); } catch { /* ignore */ }
+    setTimeout(() => this.drawRulers(), 0);
+  }
   toggleGrid(): void { this.showGrid.set(!this.showGrid()); }
   toggleSnap(): void {
     this.snap.set(!this.snap());
@@ -1906,25 +1944,29 @@ export class DesignerComponent implements AfterViewInit, OnDestroy {
     ctx.font = '9px Inter, system-ui, sans-serif';
     ctx.lineWidth = 1;
 
-    for (let p = 0; p <= len; p += 10) {
-      const major = p % 100 === 0;
-      const med = p % 50 === 0;
+    const centered = this.rulerOrigin() === 'center';
+    const c0 = centered ? Math.round(len / 2) : 0;
+    const tickAt = (pos: number, dist: number, showZero: boolean): void => {
+      const major = dist % 100 === 0;
+      const med = dist % 50 === 0;
       const tick = major ? 12 : med ? 8 : 5;
       ctx.beginPath();
-      if (dir === 'h') { ctx.moveTo(p + 0.5, t); ctx.lineTo(p + 0.5, t - tick); }
-      else { ctx.moveTo(t, p + 0.5); ctx.lineTo(t - tick, p + 0.5); }
+      if (dir === 'h') { ctx.moveTo(pos + 0.5, t); ctx.lineTo(pos + 0.5, t - tick); }
+      else { ctx.moveTo(t, pos + 0.5); ctx.lineTo(t - tick, pos + 0.5); }
       ctx.stroke();
-
-      if (major && p > 0) {
-        if (dir === 'h') {
-          ctx.fillText(String(p), p + 2, 9);
-        } else {
-          ctx.save();
-          ctx.translate(9, p + 2);
-          ctx.rotate(-Math.PI / 2);
-          ctx.fillText(String(p), 0, 0);
-          ctx.restore();
-        }
+      if (major && (dist > 0 || showZero)) {
+        const label = String(dist);
+        if (dir === 'h') { ctx.fillText(label, pos + 2, 9); }
+        else { ctx.save(); ctx.translate(9, pos + 2); ctx.rotate(-Math.PI / 2); ctx.fillText(label, 0, 0); ctx.restore(); }
+      }
+    };
+    if (!centered) {
+      for (let p = 0; p <= len; p += 10) tickAt(p, p, false);
+    } else {
+      tickAt(c0, 0, true);
+      for (let d = 10; c0 - d >= 0 || c0 + d <= len; d += 10) {
+        if (c0 - d >= 0) tickAt(c0 - d, d, false);
+        if (c0 + d <= len) tickAt(c0 + d, d, false);
       }
     }
   }
@@ -1958,6 +2000,7 @@ export class DesignerComponent implements AfterViewInit, OnDestroy {
       case 'backward': this.svc.sendBackwards(); break;
       case 'back': this.svc.sendToBack(); break;
       case 'lock': this.svc.toggleLock(); break;
+      case 'lockPos': this.svc.togglePositionLock(); break;
       case 'alignLeft': this.svc.alignObjects('left'); break;
       case 'centerH': this.svc.alignObjects('center-h'); break;
       case 'alignRight': this.svc.alignObjects('right'); break;
@@ -2117,8 +2160,14 @@ export class DesignerComponent implements AfterViewInit, OnDestroy {
       next: (t) => {
         this.templateId.set(t.id);
         this.saving.set(false);
-        this.flash('Template saved.', true);
-        if (!id) this.router.navigate(['/canvas', t.id], { replaceUrl: true });
+        if (!id) {
+          // New template: navigating to /canvas/:id recreates this component,
+          // so hand the "what next?" intent across the navigation.
+          sessionStorage.setItem('cf-just-saved', '1');
+          this.router.navigate(['/canvas', t.id], { replaceUrl: true });
+        } else {
+          this.savedDialog.set(true);   // creative "what next?" popup (re-save)
+        }
       },
       error: () => {
         this.saving.set(false);
@@ -2145,6 +2194,22 @@ export class DesignerComponent implements AfterViewInit, OnDestroy {
     if (!id) { this.flash('Save the template first to enable bulk generation.', false); return; }
     this.router.navigate(['/bulk', id]);
   }
+
+  // -------------------- post-save "what next?" dialog --------------------
+  savedDialog = signal(false);
+  readonly savedUi = computed(() => this.langSvc.lang() === 'ar'
+    ? { title: 'تم حفظ القالب بنجاح', sub: 'ماذا تريد أن تفعل الآن؟', close: 'إغلاق',
+        edit: 'متابعة التحرير', editD: 'واصل تحرير تخطيط اللوحة والمتغيّرات.',
+        dash: 'الذهاب إلى لوحة التحكم', dashD: 'العودة إلى الإحصائيات وقائمة الانتظار والخيارات.',
+        issue: 'إصدار الشهادات', issueD: 'ابدأ بإنشاء الشهادات للطلاب الآن.', tag: 'مُوصى به' }
+    : { title: 'Template saved successfully', sub: 'What would you like to do next?', close: 'Close',
+        edit: 'Continue Editing', editD: 'Keep editing the canvas layout and variables.',
+        dash: 'Go to Dashboard', dashD: 'Return to dashboard stats, queue, and options.',
+        issue: 'Issue Credentials', issueD: 'Start generating certificates for students now.', tag: 'Recommended' });
+
+  continueEditing(): void { this.savedDialog.set(false); }
+  goDashboard(): void { this.savedDialog.set(false); this.router.navigate(['/app/dashboard']); }
+  issueCredentials(): void { this.savedDialog.set(false); this.goBulk(); }
 
   // -------------------- brand kit (smart apply across templates) --------------------
   /** Refreshed when the editor opens so the toolbar reflects the latest brand. */
