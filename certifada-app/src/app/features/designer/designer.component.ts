@@ -928,10 +928,37 @@ export class DesignerComponent implements AfterViewInit, OnDestroy {
   readonly RULER = 24;
   gridSize = 20;
   showRuler = signal(true);
-  rulerOrigin = signal<'corner' | 'center'>((() => { try { return localStorage.getItem('cf-ruler-origin') === 'center' ? 'center' : 'corner'; } catch { return 'corner'; } })());
+  rulerOrigin = signal<'corner' | 'center' | 'custom'>((() => { try { const v = localStorage.getItem('cf-ruler-origin'); return v === 'center' || v === 'custom' ? v : 'corner'; } catch { return 'corner'; } })());
+  /** Custom 0,0 set by dragging the ruler corner box (canvas px). */
+  customOrigin = signal<{ x: number; y: number }>((() => { try { const v = JSON.parse(localStorage.getItem('cf-ruler-custom') || 'null'); return v && typeof v.x === 'number' ? v : { x: 0, y: 0 }; } catch { return { x: 0, y: 0 }; } })());
+  /** Ruler measurement unit. px is canvas-native; mm/cm/in derive from the 96dpi CSS reference. */
+  rulerUnit = signal<'px' | 'mm' | 'cm' | 'in'>((() => { try { const v = localStorage.getItem('cf-ruler-unit'); return v === 'mm' || v === 'cm' || v === 'in' ? v : 'px'; } catch { return 'px'; } })());
+  /** Live pointer position over the canvas (canvas px) — drives the ruler hairlines. */
+  cursorPos = signal<{ x: number; y: number } | null>(null);
+  /** Floating position badge shown while a guide is dragged. */
+  dragGuideBadge = signal<{ axis: 'v' | 'h'; pos: number; text: string } | null>(null);
+  /** px per unit at the 96dpi CSS reference (96px = 1in = 25.4mm). */
+  private readonly UNIT_PX: Record<'px' | 'mm' | 'cm' | 'in', number> = { px: 1, mm: 96 / 25.4, cm: 96 / 2.54, in: 96 };
+  /** Candidate label steps per unit (ascending) — the ruler picks the smallest that keeps labels legible. */
+  private readonly UNIT_LADDER: Record<'px' | 'mm' | 'cm' | 'in', number[]> = {
+    px: [10, 20, 50, 100, 200, 500, 1000, 2000],
+    mm: [1, 2, 5, 10, 20, 50, 100, 200],
+    cm: [0.1, 0.2, 0.5, 1, 2, 5, 10, 20],
+    in: [0.125, 0.25, 0.5, 1, 2, 4, 8, 16],
+  };
+  private rulerRaf = 0;
+  /** Redraw the rulers whenever the selection, unit or origin changes. (Zoom redraws flow through zoomAt.) */
+  private readonly _rulerFx = effect(() => {
+    this.svc.revision(); this.rulerUnit(); this.rulerOrigin(); this.customOrigin(); this.showSelMark();
+    if (this.showRuler()) this.scheduleRuler();
+  });
   showGrid = signal(true);
   snap = signal(false);
   guidesOn = signal(true);
+  /** Allow creating guides by dragging out from a ruler. */
+  allowGuideDrag = signal((() => { try { return localStorage.getItem('cf-guide-drag') !== '0'; } catch { return true; } })());
+  /** Show the colored selection-extent mark on the rulers. */
+  showSelMark = signal((() => { try { return localStorage.getItem('cf-sel-mark') !== '0'; } catch { return true; } })());
   viewMenu = signal(false);
   gridDots = signal(false);
   showMargins = signal(false);
@@ -1214,6 +1241,8 @@ export class DesignerComponent implements AfterViewInit, OnDestroy {
   ngAfterViewInit(): void {
     this.tour.register(() => this.startTour());
     this.svc.init(this.canvasEl.nativeElement, this.width, this.height);
+    const _cv = this.svc.getCanvas();
+    ['object:moving', 'object:scaling', 'object:rotating'].forEach((evt) => _cv.on(evt as any, () => this.scheduleRuler()));
     this.svc.gridSize = this.gridSize;
     this.svc.smartGuides = this.guidesOn();
     const idParam = this.route.snapshot.paramMap.get('id');
@@ -1268,6 +1297,7 @@ export class DesignerComponent implements AfterViewInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.tour.unregister();
+    if (this.rulerRaf) cancelAnimationFrame(this.rulerRaf);
     this.svc.dispose();
   }
 
@@ -1860,10 +1890,50 @@ export class DesignerComponent implements AfterViewInit, OnDestroy {
     this.showRuler.set(!this.showRuler());
     setTimeout(() => this.drawRulers(), 0);
   }
-  setRulerOrigin(mode: 'corner' | 'center'): void {
+  setRulerOrigin(mode: 'corner' | 'center' | 'custom'): void {
     this.rulerOrigin.set(mode);
     try { localStorage.setItem('cf-ruler-origin', mode); } catch { /* ignore */ }
     setTimeout(() => this.drawRulers(), 0);
+  }
+  setRulerUnit(u: 'px' | 'mm' | 'cm' | 'in'): void {
+    this.rulerUnit.set(u);
+    try { localStorage.setItem('cf-ruler-unit', u); } catch { /* ignore */ }
+    setTimeout(() => this.drawRulers(), 0);
+  }
+  /** Drag the corner box to drop a custom 0,0 anywhere on the canvas. */
+  onCornerPointerDown(ev: PointerEvent): void {
+    if (ev.button !== 0) return;
+    ev.preventDefault(); ev.stopPropagation();
+    const shadow = this.host.nativeElement.querySelector('.canvas-shadow') as HTMLElement | null;
+    if (!shadow) return;
+    const move = (e: PointerEvent) => {
+      const r = shadow.getBoundingClientRect();
+      const z = this.viewZoom() || 1;
+      const x = Math.max(0, Math.min(this.width, (e.clientX - r.left) / z));
+      const y = Math.max(0, Math.min(this.height, (e.clientY - r.top) / z));
+      this.customOrigin.set({ x: Math.round(x), y: Math.round(y) });
+      if (this.rulerOrigin() !== 'custom') this.rulerOrigin.set('custom');
+    };
+    const up = () => {
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', up);
+      try { localStorage.setItem('cf-ruler-origin', 'custom'); localStorage.setItem('cf-ruler-custom', JSON.stringify(this.customOrigin())); } catch { /* ignore */ }
+    };
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', up);
+  }
+  resetRulerOrigin(): void {
+    this.rulerOrigin.set('corner');
+    try { localStorage.setItem('cf-ruler-origin', 'corner'); } catch { /* ignore */ }
+  }
+  /** Track the pointer over the canvas so the rulers can show a live position hairline. */
+  onStageMove(e: PointerEvent): void {
+    const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    const z = this.viewZoom() || 1;
+    const x = (e.clientX - r.left) / z;
+    const y = (e.clientY - r.top) / z;
+    if (x < 0 || y < 0 || x > this.width || y > this.height) { this.cursorPos.set(null); return; }
+    this.cursorPos.set({ x: Math.round(x), y: Math.round(y) });
   }
   toggleGrid(): void { this.showGrid.set(!this.showGrid()); }
   toggleSnap(): void {
@@ -1873,6 +1943,19 @@ export class DesignerComponent implements AfterViewInit, OnDestroy {
   toggleGuides(): void {
     this.guidesOn.set(!this.guidesOn());
     this.svc.smartGuides = this.guidesOn();
+  }
+  /** Allow or block creating guides by dragging out from a ruler. */
+  toggleGuideDrag(): void {
+    const v = !this.allowGuideDrag();
+    this.allowGuideDrag.set(v);
+    try { localStorage.setItem('cf-guide-drag', v ? '1' : '0'); } catch { /* ignore */ }
+  }
+  /** Show or hide the colored selection-extent mark on the rulers. */
+  toggleSelMark(): void {
+    const v = !this.showSelMark();
+    this.showSelMark.set(v);
+    try { localStorage.setItem('cf-sel-mark', v ? '1' : '0'); } catch { /* ignore */ }
+    setTimeout(() => this.drawRulers(), 0);
   }
   setGridSize(v: string | number): void { this.gridSize = +v; this.svc.gridSize = +v; }
   setSnapTol(v: string | number): void { this.snapTol = +v; this.svc.snapTol = +v; }
@@ -1885,17 +1968,47 @@ export class DesignerComponent implements AfterViewInit, OnDestroy {
   clearGuides(): void { this.svc.clearAllGuides(); }
   removeGuide(axis: 'v' | 'h', i: number): void { axis === 'v' ? this.svc.removeVGuide(i) : this.svc.removeHGuide(i); }
   onGuidePointerDown(axis: 'v' | 'h', i: number, ev: PointerEvent): void {
+    this.guideDrag(axis, i, ev);
+  }
+  /** Drag a fresh guide *out* of a ruler (Figma-style): top ruler -> vertical, left ruler -> horizontal. */
+  onRulerPointerDown(axis: 'v' | 'h', ev: PointerEvent): void {
+    if (ev.button !== 0) return;
+    if (!this.allowGuideDrag()) return;   // drag-to-add guides disabled in view options
+    ev.preventDefault();
+    const shadow = this.host.nativeElement.querySelector('.canvas-shadow') as HTMLElement | null;
+    if (!shadow) return;
+    const r = shadow.getBoundingClientRect();
+    const z = this.viewZoom() || 1;
+    const max = axis === 'v' ? this.width : this.height;
+    const pos = Math.max(0, Math.min(max, axis === 'v' ? (ev.clientX - r.left) / z : (ev.clientY - r.top) / z));
+    if (axis === 'v') this.svc.addVGuide(pos); else this.svc.addHGuide(pos);
+    const i = (axis === 'v' ? this.svc.vGuides() : this.svc.hGuides()).length - 1;
+    this.guideDrag(axis, i, ev);
+  }
+  /** Shared guide-drag loop: live position badge, and drop-outside-to-delete. */
+  private guideDrag(axis: 'v' | 'h', i: number, ev: PointerEvent): void {
     ev.preventDefault(); ev.stopPropagation();
     this.dragGuide = { axis, i };
     const shadow = this.host.nativeElement.querySelector('.canvas-shadow') as HTMLElement | null;
+    if (!shadow) return;
+    const max = axis === 'v' ? this.width : this.height;
+    let willDelete = false;
     const move = (e: PointerEvent) => {
-      if (!shadow) return;
       const r = shadow.getBoundingClientRect();
       const z = this.viewZoom() || 1;
-      if (axis === 'v') this.svc.moveVGuide(i, Math.max(0, Math.min(this.width, (e.clientX - r.left) / z)));
-      else this.svc.moveHGuide(i, Math.max(0, Math.min(this.height, (e.clientY - r.top) / z)));
+      const raw = axis === 'v' ? (e.clientX - r.left) / z : (e.clientY - r.top) / z;
+      willDelete = raw < -12 || raw > max + 12;
+      const pos = Math.max(0, Math.min(max, raw));
+      if (axis === 'v') this.svc.moveVGuide(i, pos); else this.svc.moveHGuide(i, pos);
+      this.dragGuideBadge.set({ axis, pos, text: willDelete ? '✕ release to remove' : this.formatLen(pos) });
     };
-    const up = () => { window.removeEventListener('pointermove', move); window.removeEventListener('pointerup', up); this.dragGuide = null; };
+    const up = () => {
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', up);
+      this.dragGuide = null;
+      this.dragGuideBadge.set(null);
+      if (willDelete) { if (axis === 'v') this.svc.removeVGuide(i); else this.svc.removeHGuide(i); }
+    };
     window.addEventListener('pointermove', move);
     window.addEventListener('pointerup', up);
   }
@@ -1912,6 +2025,46 @@ export class DesignerComponent implements AfterViewInit, OnDestroy {
     else document.exitFullscreen?.();
   }
 
+  private scheduleRuler(): void {
+    if (this.rulerRaf) return;
+    this.rulerRaf = requestAnimationFrame(() => { this.rulerRaf = 0; this.drawRulers(); });
+  }
+  /** Format a canvas-px length in the active ruler unit, e.g. "12.4 cm". */
+  formatLen(px: number): string {
+    const u = this.rulerUnit();
+    return this.fmtUnit(px / this.UNIT_PX[u], u) + ' ' + u;
+  }
+  private fmtUnit(v: number, unit: 'px' | 'mm' | 'cm' | 'in'): string {
+    if (unit === 'px') return String(Math.round(v));
+    const r = Math.round(v * 100) / 100;
+    return Number.isInteger(r) ? String(r) : r.toFixed(2).replace(/0+$/, '').replace(/\.$/, '');
+  }
+  /** Pick a label step (and minor subdivision) that stays legible at the current zoom. */
+  private rulerScale(): { ppu: number; subdiv: number; minorPx: number } {
+    const unit = this.rulerUnit();
+    const ppu = this.UNIT_PX[unit];
+    const z = this.viewZoom() || 1;
+    const ladder = this.UNIT_LADDER[unit];
+    let labelStep = ladder[ladder.length - 1];
+    for (const s of ladder) { if (s * ppu * z >= 52) { labelStep = s; break; } }
+    const subs = unit === 'in' ? [8, 4, 2, 1] : [10, 5, 4, 2, 1];
+    let subdiv = 1;
+    for (const k of subs) { if ((labelStep / k) * ppu * z >= 6) { subdiv = k; break; } }
+    return { ppu, subdiv, minorPx: (labelStep / subdiv) * ppu };
+  }
+  private rulerOriginPx(dir: 'h' | 'v', len: number): number {
+    const m = this.rulerOrigin();
+    if (m === 'center') return Math.round(len / 2);
+    if (m === 'custom') { const c = this.customOrigin(); return Math.max(0, Math.min(len, dir === 'h' ? c.x : c.y)); }
+    return 0;
+  }
+  private selBoundsPx(): { x: number; y: number; w: number; h: number } | null {
+    const c = this.svc.getCanvas();
+    const o: any = c?.getActiveObject?.();
+    if (!o || typeof o.getBoundingRect !== 'function') return null;
+    const b = o.getBoundingRect();
+    return { x: b.left, y: b.top, w: b.width, h: b.height };
+  }
   private drawRulers(): void {
     this.drawRuler(this.rulerTop?.nativeElement, 'h', this.width);
     this.drawRuler(this.rulerLeft?.nativeElement, 'v', this.height);
@@ -1929,45 +2082,67 @@ export class DesignerComponent implements AfterViewInit, OnDestroy {
     f = Math.max(1, f);
     const wCss = dir === 'h' ? len : t;
     const hCss = dir === 'h' ? t : len;
+    const bw = Math.round(wCss * f);
+    const bh = Math.round(hCss * f);
     cv.style.width = wCss + 'px';
     cv.style.height = hCss + 'px';
-    cv.width = Math.round(wCss * f);
-    cv.height = Math.round(hCss * f);
+    if (cv.width !== bw) cv.width = bw;      // avoid reallocating the backing store on every redraw
+    if (cv.height !== bh) cv.height = bh;
     const ctx = cv.getContext('2d');
     if (!ctx) return;
     ctx.setTransform(f, 0, 0, f, 0, 0);   // draw in logical coords; rendered at f× density
     ctx.clearRect(0, 0, wCss, hCss);
     ctx.fillStyle = 'rgba(125,135,156,0.10)';
     ctx.fillRect(0, 0, wCss, hCss);
+
+    // Selection extent: a slim marker on the ruler's inner edge (not a full-height block).
+    const sel = this.showSelMark() ? this.selBoundsPx() : null;
+    if (sel) {
+      const a0 = Math.max(0, dir === 'h' ? sel.x : sel.y);
+      const a1 = Math.min(len, dir === 'h' ? sel.x + sel.w : sel.y + sel.h);
+      if (a1 > a0) {
+        const span = a1 - a0;
+        ctx.fillStyle = 'rgba(79,70,229,0.12)';
+        if (dir === 'h') ctx.fillRect(a0, t - 6, span, 6); else ctx.fillRect(t - 6, a0, 6, span);
+        ctx.fillStyle = 'rgba(79,70,229,0.85)';
+        if (dir === 'h') { ctx.fillRect(a0, t - 2, span, 2); ctx.fillRect(a0, t - 7, 1, 7); ctx.fillRect(a1 - 1, t - 7, 1, 7); }
+        else { ctx.fillRect(t - 2, a0, 2, span); ctx.fillRect(t - 7, a0, 7, 1); ctx.fillRect(t - 7, a1 - 1, 7, 1); }
+      }
+    }
+
     ctx.strokeStyle = 'rgba(125,135,156,0.55)';
     ctx.fillStyle = 'rgba(125,135,156,0.95)';
     ctx.font = '9px Inter, system-ui, sans-serif';
     ctx.lineWidth = 1;
 
-    const centered = this.rulerOrigin() === 'center';
-    const c0 = centered ? Math.round(len / 2) : 0;
-    const tickAt = (pos: number, dist: number, showZero: boolean): void => {
-      const major = dist % 100 === 0;
-      const med = dist % 50 === 0;
+    const { ppu, subdiv, minorPx } = this.rulerScale();
+    const mode = this.rulerOrigin();
+    const o0 = this.rulerOriginPx(dir, len);
+    const unit = this.rulerUnit();
+    const drawTick = (k: number, side: 1 | -1): void => {
+      const pos = o0 + side * k * minorPx;
+      if (pos < -0.5 || pos > len + 0.5) return;
+      const major = k % subdiv === 0;
+      const med = subdiv % 2 === 0 && k % (subdiv / 2) === 0;
       const tick = major ? 12 : med ? 8 : 5;
       ctx.beginPath();
       if (dir === 'h') { ctx.moveTo(pos + 0.5, t); ctx.lineTo(pos + 0.5, t - tick); }
       else { ctx.moveTo(t, pos + 0.5); ctx.lineTo(t - tick, pos + 0.5); }
       ctx.stroke();
-      if (major && (dist > 0 || showZero)) {
-        const label = String(dist);
-        if (dir === 'h') { ctx.fillText(label, pos + 2, 9); }
-        else { ctx.save(); ctx.translate(9, pos + 2); ctx.rotate(-Math.PI / 2); ctx.fillText(label, 0, 0); ctx.restore(); }
-      }
+      if (!major) return;
+      if (k === 0 && mode === 'corner') return;   // corner origin: no "0" pinned at the very edge
+      let value: number;
+      if (mode === 'center') value = (k * minorPx) / ppu;
+      else if (mode === 'custom') value = (side * k * minorPx) / ppu;
+      else value = pos / ppu;
+      const label = this.fmtUnit(value, unit);
+      if (dir === 'h') { ctx.fillText(label, pos + 2, 9); }
+      else { ctx.save(); ctx.translate(9, pos + 2); ctx.rotate(-Math.PI / 2); ctx.fillText(label, 0, 0); ctx.restore(); }
     };
-    if (!centered) {
-      for (let p = 0; p <= len; p += 10) tickAt(p, p, false);
-    } else {
-      tickAt(c0, 0, true);
-      for (let d = 10; c0 - d >= 0 || c0 + d <= len; d += 10) {
-        if (c0 - d >= 0) tickAt(c0 - d, d, false);
-        if (c0 + d <= len) tickAt(c0 + d, d, false);
-      }
+    drawTick(0, 1);
+    for (let k = 1; o0 + k * minorPx <= len + 0.5 || o0 - k * minorPx >= -0.5; k++) {
+      if (o0 + k * minorPx <= len + 0.5) drawTick(k, 1);
+      if (mode !== 'corner' && o0 - k * minorPx >= -0.5) drawTick(k, -1);
     }
   }
 

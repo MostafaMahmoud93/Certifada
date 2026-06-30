@@ -512,6 +512,7 @@ input[type="range"] { padding: 0; accent-color: var(--cf-brand-600); }
   display: inline-grid;
   grid-template-columns: 24px auto;
   grid-template-rows: 24px auto;
+  position: relative;
 }
 .stage.no-ruler { grid-template-columns: auto; grid-template-rows: auto; }
 .stage.no-ruler .corner,
@@ -524,16 +525,26 @@ input[type="range"] { padding: 0; accent-color: var(--cf-brand-600); }
   background: var(--cf-surface-2);
   border-right: 1px solid var(--cf-line);
   border-bottom: 1px solid var(--cf-line);
+  cursor: crosshair;
+  display: grid; place-items: center;
+  user-select: none;
+  transition: background .12s;
 }
+.corner.custom { background: var(--cf-brand-50); }
+.corner span { font: 700 8px/1 Inter, system-ui, sans-serif; letter-spacing: .03em; text-transform: uppercase; color: var(--cf-ink-400, #94a3b8); pointer-events: none; }
+.corner:hover { background: var(--cf-brand-50); }
+.corner:hover span { color: var(--cf-brand-600); }
 .ruler-top {
   grid-column: 2; grid-row: 1;
   display: block;
   border-bottom: 1px solid var(--cf-line);
+  cursor: ew-resize;
 }
 .ruler-left {
   grid-column: 1; grid-row: 2;
   display: block;
   border-right: 1px solid var(--cf-line);
+  cursor: ns-resize;
 }
 
 .canvas-shadow {
@@ -563,6 +574,20 @@ input[type="range"] { padding: 0; accent-color: var(--cf-brand-600); }
 .cv-guide.h { left: 0; right: 0; height: 9px; transform: translateY(-4px); cursor: ns-resize; background: linear-gradient(to bottom, transparent 4px, #06b6d4 4px, #06b6d4 5px, transparent 5px); }
 .cv-guide:hover { background-color: rgba(6, 182, 212, .10); }
 
+/* Live cursor hairline over each ruler */
+.ruler-cursor { position: absolute; z-index: 6; pointer-events: none; background: var(--cf-brand-600, #4f46e5); }
+.ruler-cursor.v { top: 0; width: 1px; height: 24px; }
+.ruler-cursor.h { left: 0; height: 1px; width: 24px; }
+
+/* Floating position read-out while dragging a guide */
+.guide-badge {
+  position: absolute; z-index: 8; pointer-events: none; white-space: nowrap;
+  background: #0f172a; color: #fff; font: 600 10px/1 Inter, system-ui, sans-serif;
+  padding: 3px 6px; border-radius: 5px; box-shadow: 0 2px 8px rgba(15, 23, 42, .28);
+}
+.guide-badge.v { transform: translateX(-50%); }
+.guide-badge.h { transform: translateY(-50%); }
+
 /* Inline table-cell editor (double-click a cell on the canvas) */
 .cell-edit {
   position: absolute; z-index: 9; margin: 0; resize: none;
@@ -575,7 +600,11 @@ input[type="range"] { padding: 0; accent-color: var(--cf-brand-600); }
 
 /* View-options popover */
 .view-wrap { position: relative; }
-.view-menu { min-width: 250px; }
+.view-menu { min-width: 250px; max-height: calc(100vh - 80px); overflow-y: auto; overflow-x: hidden; overscroll-behavior: contain; }
+.view-menu::-webkit-scrollbar { width: 9px; }
+.view-menu::-webkit-scrollbar-track { background: transparent; }
+.view-menu::-webkit-scrollbar-thumb { background: var(--cf-line); border-radius: 999px; border: 2px solid var(--cf-surface); }
+.view-menu::-webkit-scrollbar-thumb:hover { background: var(--cf-ink-300, #cbd5e1); }
 .view-menu .pm-label { display: flex; align-items: center; gap: 6px; margin-top: 6px; }
 .view-menu .pm-label .material-icons { font-size: 14px; color: var(--cf-brand-500); }
 .view-menu .pm-label:first-child { margin-top: 0; }
@@ -587,6 +616,8 @@ input[type="range"] { padding: 0; accent-color: var(--cf-brand-600); }
 .vm-seg button { flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 5px; padding: 6px; border: 1px solid var(--cf-line); border-radius: 7px; background: var(--cf-surface); color: var(--cf-ink-600); font: inherit; font-size: 11.5px; font-weight: 600; cursor: pointer; }
 .vm-seg button .material-icons { font-size: 15px; }
 .vm-seg button.on { background: var(--cf-brand-50); border-color: var(--cf-brand-500); color: var(--cf-brand-700); }
+.vm-seg-units { padding-top: 0; }
+.vm-seg-units button { padding: 5px 0; text-transform: uppercase; letter-spacing: .02em; }
 /* toggle switch rows */
 .vm-toggle { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 6px 2px; cursor: pointer; }
 .vt-label { display: inline-flex; align-items: center; gap: 9px; font-size: 12.5px; color: var(--cf-ink-700); }

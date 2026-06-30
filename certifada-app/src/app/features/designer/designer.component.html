@@ -66,7 +66,16 @@
         <div class="vm-seg">
           <button [class.on]="rulerOrigin() === 'corner'" (click)="setRulerOrigin('corner')"><span class="material-icons">north_west</span> Corner</button>
           <button [class.on]="rulerOrigin() === 'center'" (click)="setRulerOrigin('center')"><span class="material-icons">filter_center_focus</span> Center</button>
+          <button [class.on]="rulerOrigin() === 'custom'" (click)="setRulerOrigin('custom')" title="Drag the ruler corner to place"><span class="material-icons">my_location</span> Custom</button>
         </div>
+        <div class="vm-seg vm-seg-units">
+          <button [class.on]="rulerUnit() === 'px'" (click)="setRulerUnit('px')">px</button>
+          <button [class.on]="rulerUnit() === 'mm'" (click)="setRulerUnit('mm')">mm</button>
+          <button [class.on]="rulerUnit() === 'cm'" (click)="setRulerUnit('cm')">cm</button>
+          <button [class.on]="rulerUnit() === 'in'" (click)="setRulerUnit('in')">in</button>
+        </div>
+        <label class="vm-toggle"><span class="vt-label"><span class="material-icons">swipe</span> Drag rulers to add guides</span><span class="vt-switch"><input type="checkbox" [checked]="allowGuideDrag()" (change)="toggleGuideDrag()" /><i></i></span></label>
+        <label class="vm-toggle"><span class="vt-label"><span class="material-icons">highlight_alt</span> Selection mark on ruler</span><span class="vt-switch"><input type="checkbox" [checked]="showSelMark()" (change)="toggleSelMark()" /><i></i></span></label>
         <div class="vm-acts">
           <button (click)="addCenterGuides()">{{ 'canvas.vm.center' | transloco }}</button>
           <button (click)="addMarginGuides()">{{ 'canvas.vm.marginsBtn' | transloco }}</button>
@@ -1443,10 +1452,15 @@
   <section class="canvas-area">
     <div class="canvas-scroll" (wheel)="onWheel($event)" (scroll)="recomputeMini()">
       <div class="stage" [class.no-ruler]="!showRuler()" [style.zoom]="viewZoom()">
-        <div class="corner"></div>
-        <canvas #rulerTop class="ruler-top"></canvas>
-        <canvas #rulerLeft class="ruler-left"></canvas>
-        <div class="canvas-shadow" data-tour="canvas" (contextmenu)="onCanvasContext($event)">
+        <div class="corner" [class.custom]="rulerOrigin() === 'custom'" (pointerdown)="onCornerPointerDown($event)" (dblclick)="resetRulerOrigin()"
+             title="Units: drag to set a custom 0,0 — double-click to reset"><span>{{ rulerUnit() }}</span></div>
+        <canvas #rulerTop class="ruler-top" (pointerdown)="onRulerPointerDown('v', $event)" title="Drag down to add a vertical guide"></canvas>
+        <canvas #rulerLeft class="ruler-left" (pointerdown)="onRulerPointerDown('h', $event)" title="Drag right to add a horizontal guide"></canvas>
+        @if (showRuler() && cursorPos(); as cp) {
+          <div class="ruler-cursor v" [style.left.px]="RULER + cp.x"></div>
+          <div class="ruler-cursor h" [style.top.px]="RULER + cp.y"></div>
+        }
+        <div class="canvas-shadow" data-tour="canvas" (contextmenu)="onCanvasContext($event)" (pointermove)="onStageMove($event)" (pointerleave)="cursorPos.set(null)">
           <canvas #canvasEl></canvas>
           @if (showGrid()) {
             <div class="grid-overlay" [class.dots]="gridDots()"
@@ -1466,6 +1480,10 @@
           }
           @for (gy of svc.hGuides(); track $index) {
             <div class="cv-guide h" [style.top.px]="gy" (pointerdown)="onGuidePointerDown('h', $index, $event)" (dblclick)="removeGuide('h', $index)" [title]="'canvas.pg.guide' | transloco"></div>
+          }
+          @if (dragGuideBadge(); as gb) {
+            <div class="guide-badge" [class.v]="gb.axis === 'v'" [class.h]="gb.axis === 'h'"
+                 [style.left.px]="gb.axis === 'v' ? gb.pos : 6" [style.top.px]="gb.axis === 'h' ? gb.pos : 6">{{ gb.text }}</div>
           }
           @if (cellEditor(); as ce) {
             <textarea class="cell-edit" [class.header]="ce.header"
