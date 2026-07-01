@@ -390,27 +390,38 @@
         @case ('templates') {
           <h3 class="flyout-title">{{ 'canvas.title.templates' | transloco }}<button type="button" class="tg-help" [class.on]="helpFor()==='templates'" (click)="helpFor.set(helpFor()==='templates' ? null : 'templates')" [title]="helpUi().how"><span class="material-icons">help_outline</span></button></h3>
           <div class="panel-search"><span class="material-icons">search</span><input [value]="search()" (input)="search.set($any($event.target).value)" [placeholder]="'canvas.tpl.searchPh' | transloco" /></div>
-          <div class="tpl-cats">
-            @for (c of tplCategories; track c.id) {
-              <button class="tpl-cat" [class.on]="tplCat() === c.id" (click)="setTplCat(c.id)">{{ c.label }}</button>
-            }
+          <div class="tpl-lang">
+            <button [class.on]="tplLang() === 'en'" (click)="setTplLang('en')">English</button>
+            <button [class.on]="tplLang() === 'ar'" (click)="setTplLang('ar')">العربية</button>
           </div>
-          <div class="tpl-grid">
-            @for (t of filteredTemplates(); track t.id) {
-              <button class="tpl-card" (click)="applyTemplate(t)" [title]="t.w + ' × ' + t.h">
-                <span class="tpl-prev" [style.aspect-ratio]="t.w + ' / ' + t.h" [style.background]="t.bg || '#ffffff'" style="position:relative;overflow:hidden">
-                  @if (tplThumbs()[t.id]) { <img class="tpl-img" [src]="tplThumbs()[t.id]" alt="" /> }
-                  @else { <span class="tpl-bar" [style.background]="brand.kit().has ? brand.kit().primary : t.accent"></span> }
-                  @if (brand.kit().has && brand.kit().logo) {
-                    <img [src]="brand.kit().logo" alt="" style="position:absolute;top:4px;inset-inline-start:4px;width:20px;height:20px;object-fit:contain;border-radius:5px;background:rgba(255,255,255,.85);padding:2px;box-shadow:0 1px 3px rgba(0,0,0,.18)" />
-                  }
-                </span>
-                <span class="tpl-name">{{ t.name }}</span>
-                <span class="tpl-dim">{{ t.w }}×{{ t.h }}</span>
-              </button>
+          @for (cat of catSections(); track cat.cat) {
+            <button type="button" class="tpl-sec-h" [class.collapsed]="!isCatOpen(cat.cat)" (click)="toggleCat(cat.cat)">
+              <span class="material-icons tpl-sec-cv">expand_more</span>
+              <span class="tpl-sec-t">{{ cat.label }}</span>
+              <span class="tpl-sec-n">{{ cat.count }}</span>
+            </button>
+            @if (isCatOpen(cat.cat)) {
+              @for (sub of cat.subs; track sub.label) {
+              @if (sub.label) { <div class="tpl-subh">{{ sub.label }}</div> }
+              <div class="tpl-grid">
+              @for (t of sub.items; track t.id) {
+                <button class="tpl-card" (click)="applyTemplate(t)" [title]="t.w + ' × ' + t.h">
+                  <span class="tpl-prev" [style.aspect-ratio]="t.w + ' / ' + t.h" [style.background]="t.bg || '#ffffff'" style="position:relative;overflow:hidden">
+                    @if (tplThumbs()[t.id]) { <img class="tpl-img" [src]="tplThumbs()[t.id]" alt="" /> }
+                    @else { <span class="tpl-bar" [style.background]="brand.kit().has ? brand.kit().primary : t.accent"></span> }
+                    @if (brand.kit().has && brand.kit().logo) {
+                      <img [src]="brand.kit().logo" alt="" style="position:absolute;top:4px;inset-inline-start:4px;width:20px;height:20px;object-fit:contain;border-radius:5px;background:rgba(255,255,255,.85);padding:2px;box-shadow:0 1px 3px rgba(0,0,0,.18)" />
+                    }
+                  </span>
+                  <span class="tpl-name">{{ t.name }}</span>
+                  <span class="tpl-dim">{{ t.w }}×{{ t.h }}</span>
+                </button>
+              }
+            </div>
+              }
             }
-          </div>
-          @if (filteredTemplates().length === 0) { <p class="hint">{{ 'canvas.tpl.none' | transloco }}</p> }
+          }
+          @if (catSections().length === 0) { <p class="hint">{{ 'canvas.tpl.none' | transloco }}</p> }
         }
 
         @case ('ai') {

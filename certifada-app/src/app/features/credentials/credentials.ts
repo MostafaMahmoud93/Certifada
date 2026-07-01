@@ -106,11 +106,13 @@ import { ExcelExportService, ExcelColumn } from '../../core/services/excel-expor
             @for (c of paged(); track c.id) {
               <tr>
                 <td><div class="recip"><span class="av">{{ initials(c) }}</span><div class="rc"><strong>{{ c.recipientEmail || c.recipientName }}</strong>@if (c.recipientName && c.recipientName !== c.recipientEmail) { <small class="cf-muted">{{ c.recipientName }}</small> }</div></div></td>
-                <td><span class="tpl-chip"><span class="material-icons">workspace_premium</span>{{ tplName(c) }}</span></td>
+                <td><span class="tpl-chip"><span class="tc-thumb">@if (tplThumb(c); as th) { <img [src]="th" alt="" /> } @else { <span class="material-icons">workspace_premium</span> }</span><span class="tc-name">{{ tplName(c) }}</span></span></td>
                 @for (v of selectedVars(); track v) { <td class="varcell">{{ c.data[v] || '—' }}</td> }
-                <td><span class="cf-badge st" [ngClass]="badgeClass(c.status)">@if (c.status === 'Sending') { <span class="spin-dot"></span> } @else { <span class="dot"></span> }{{ statusLabel(c.status) }}</span>
-                  @if (c.signedBy) { <div class="sig signed" [title]="'Signed by ' + c.signedBy + (c.signedAt ? ' · ' + (c.signedAt | date: 'mediumDate') : '')"><span class="material-icons">draw</span><span class="sg-name">{{ c.signedBy }}</span></div> }
-                  @else if (c.status === 'Pending') { <div class="sig wait"><span class="material-icons">hourglass_top</span> Awaiting signature</div> }</td>
+                <td>@if (c.status === 'Pending' && !c.signedBy) {
+                  <span class="cf-badge st cf-badge-warning await" title="Awaiting approver signature"><span class="material-icons b-ic">draw</span>Awaiting signature</span>
+                } @else {
+                  <span class="cf-badge st" [ngClass]="badgeClass(c.status)">@if (c.status === 'Sending') { <span class="spin-dot"></span> } @else { <span class="material-icons b-ic">{{ statusIcon(c.status) }}</span> }{{ statusLabel(c.status) }}@if (c.signedBy) { <span class="material-icons sig-chk" [title]="'Signed by ' + c.signedBy + (c.signedAt ? ' &middot; ' + (c.signedAt | date: 'mediumDate') : '')">verified</span> }</span>
+                }</td>
                 <td><div class="when"><span>{{ c.createdAt | date: 'mediumDate' }}</span><small class="cf-muted">{{ relativeTime(c.createdAt) }}</small></div></td>
                 <td>
                   @if (an(c).views) {
@@ -243,9 +245,11 @@ import { ExcelExportService, ExcelColumn } from '../../core/services/excel-expor
     .recip{display:flex;align-items:center;gap:10px}
     .av{width:34px;height:34px;border-radius:50%;background:var(--cf-brand-50);color:var(--cf-brand-700);border:1px solid var(--cf-brand-100);display:grid;place-items:center;font-size:11.5px;font-weight:700;flex:none}
     .rc{display:flex;flex-direction:column;min-width:0}.rc strong{font-size:13px;color:var(--cf-ink-900);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:170px}.rc small{font-size:11px}
-    .tpl-chip{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;color:var(--cf-ink-700);background:var(--cf-surface-2);border:1px solid var(--cf-line);border-radius:999px;padding:4px 10px;max-width:140px}
-    .tpl-chip .material-icons{font-size:13px;color:var(--cf-brand-600)}
-    .tpl-chip{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .tpl-chip{display:inline-flex;align-items:center;gap:9px;max-width:200px;padding:4px 13px 4px 4px;border:1px solid var(--cf-line);border-radius:10px;background:var(--cf-surface-2)}
+    .tc-thumb{width:38px;height:26px;border-radius:6px;overflow:hidden;flex:none;display:grid;place-items:center;background:var(--cf-surface);border:1px solid var(--cf-line);box-shadow:0 1px 3px rgba(15,23,42,.08)}
+    .tc-thumb img{width:100%;height:100%;object-fit:cover}
+    .tc-thumb .material-icons{font-size:15px;color:var(--cf-brand-600)}
+    .tc-name{font-size:12.5px;font-weight:600;color:var(--cf-ink-700);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
     .when{display:flex;flex-direction:column}.when span{font-size:12.5px;color:var(--cf-ink-700)}.when small{font-size:10.5px}
     .cf-badge.st{display:inline-flex;align-items:center}
     .cf-badge .dot{width:6px;height:6px;border-radius:50%;background:currentColor;display:inline-block;margin-inline-end:5px;vertical-align:middle}
@@ -253,12 +257,11 @@ import { ExcelExportService, ExcelColumn } from '../../core/services/excel-expor
     @keyframes spin{to{transform:rotate(360deg)}}
     .st-sending{background:var(--cf-brand-50);color:var(--cf-brand-700);border:1px solid var(--cf-brand-100)}
     .st-revoked{background:var(--cf-surface-2);color:var(--cf-ink-500);border:1px solid var(--cf-line)}
-    .sig{display:inline-flex;align-items:center;gap:4px;font-size:11px;margin-top:5px}
-    .sig.signed{color:var(--cf-brand-700)}
-    .sig.signed .material-icons{font-size:13px}
-    .sig.signed .sg-name{font-family:'Brush Script MT','Segoe Script',cursive;font-size:16px;line-height:1}
-    .sig.wait{color:var(--cf-warning);font-weight:600}
-    .sig.wait .material-icons{font-size:13px}
+    .cf-badge.st{white-space:nowrap}
+    .cf-badge.st .b-ic{font-size:14px;margin-inline-end:4px}
+    .cf-badge.st .sig-chk{font-size:13px;margin-inline-start:5px;opacity:.85}
+    .cf-badge.st.await .b-ic{animation:sig-pulse 1.7s ease-in-out infinite}
+    @keyframes sig-pulse{0%,100%{opacity:.5}50%{opacity:1}}
 
     .actbar{display:inline-flex;align-items:center;gap:2px;padding:3px;border:1px solid var(--cf-line);border-radius:10px;background:var(--cf-surface);box-shadow:0 1px 2px rgba(15,23,42,.05);transition:box-shadow .16s,border-color .16s}
     .actbar:hover{box-shadow:0 6px 16px -10px rgba(15,23,42,.3);border-color:color-mix(in srgb,var(--cf-brand-500) 24%,var(--cf-line))}
@@ -405,6 +408,7 @@ export class CredentialsPage {
   }
 
   tplName(r: IssuedRecord): string { return r.templateName || this.tmeta().get(r.templateId)?.name || 'Template'; }
+  tplThumb(r: IssuedRecord): string | null { return this.tmeta().get(r.templateId)?.thumb || null; }
   initials(r: IssuedRecord): string { const b = (r.recipientName || r.recipientEmail || '?').trim(); const p = b.split(/[\s@._-]+/).filter(Boolean); return (((p[0]?.[0] || '') + (p[1]?.[0] || '')).toUpperCase()) || b.charAt(0).toUpperCase(); }
   relativeTime(iso: string): string {
     const d = +new Date(iso); if (!d) return '';
@@ -416,6 +420,7 @@ export class CredentialsPage {
     return new Date(iso).toLocaleDateString();
   }
   statusLabel(s: DeliveryStatus): string { return s === 'Sending' ? 'Sending…' : s; }
+  statusIcon(s: DeliveryStatus): string { return s === 'Sent' ? 'mark_email_read' : s === 'Pending' ? 'hourglass_top' : s === 'Revoked' ? 'block' : s === 'Failed' ? 'error_outline' : 'schedule'; }
   badgeClass(s: DeliveryStatus): string { return s === 'Sent' ? 'cf-badge-success' : s === 'Sending' ? 'st-sending' : s === 'Pending' ? 'cf-badge-warning' : s === 'Revoked' ? 'st-revoked' : 'cf-badge-danger'; }
 
   verify(c: IssuedRecord): void { window.open(location.origin + '/verify/' + c.id, '_blank'); }

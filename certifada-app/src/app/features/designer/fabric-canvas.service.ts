@@ -304,12 +304,18 @@ const SEPIA_MATRIX = [
 
 /** One element in a ready-made template layout (positioned by its centre). */
 export interface TemplateItem {
-  kind: 'text' | 'field' | 'line' | 'rect' | 'circle' | 'triangle' | 'seal';
+  kind: 'text' | 'field' | 'line' | 'rect' | 'circle' | 'triangle' | 'seal' | 'polygon';
   text?: string; key?: string;
   x: number; y: number; w?: number; h?: number;
   fontSize?: number; fill?: string; fontFamily?: string; fontWeight?: string;
   align?: 'left' | 'center' | 'right'; stroke?: string; strokeWidth?: number; rx?: number;
   grad?: string; angle?: number; opacity?: number; charSpacing?: number; fontStyle?: string; lineHeight?: number; dir?: 'rtl' | 'ltr';
+  /** Polygon vertices in absolute canvas coords (for corner bands, ribbons, angular accents). */
+  points?: { x: number; y: number }[];
+  /** Gradient direction for fills: 'h' left->right, 'v' top->bottom, 'diag' (default). */
+  gradDir?: 'h' | 'v' | 'diag';
+  /** Full multi-stop gradient (overrides grad). e.g. metallic gold sheen. */
+  stops?: { offset: number; color: string }[];
 }
 
 /**
@@ -2566,8 +2572,13 @@ export class FabricCanvasService {
 
   /** Build the Fabric objects for a template layout (shared by apply + preview). */
   private buildTemplateObjects(items: TemplateItem[]): FabricObject[] {
-    const grad = (from: string, to: string, w: number, h: number) =>
-      new Gradient({ type: 'linear', gradientUnits: 'pixels', coords: { x1: 0, y1: 0, x2: w, y2: h }, colorStops: [{ offset: 0, color: from }, { offset: 1, color: to }] });
+    const grad = (stops: { offset: number; color: string }[], w: number, h: number, dir?: 'h' | 'v' | 'diag') =>
+      new Gradient({ type: 'linear', gradientUnits: 'pixels', coords: dir === 'h' ? { x1: 0, y1: 0, x2: w, y2: 0 } : dir === 'v' ? { x1: 0, y1: 0, x2: 0, y2: h } : { x1: 0, y1: 0, x2: w, y2: h }, colorStops: stops });
+    const fillFor = (it: TemplateItem, w: number, h: number, solid: string): any => {
+      if (it.stops && it.stops.length) return grad(it.stops, w, h, it.gradDir);
+      if (it.grad) return grad([{ offset: 0, color: it.fill ?? solid }, { offset: 1, color: it.grad }], w, h, it.gradDir);
+      return it.fill ?? solid;
+    };
     const out: FabricObject[] = [];
     for (const it of items) {
       let obj: any;
@@ -2599,7 +2610,7 @@ export class FabricCanvasService {
         const w = it.w ?? 200, h = it.h ?? 120;
         obj = new Rect({
           left: it.x, top: it.y, width: w, height: h,
-          fill: it.grad ? grad(it.fill ?? '#000', it.grad, w, h) as any : (it.fill ?? ''),
+          fill: fillFor(it, w, h, ''),
           stroke: it.stroke ?? '', strokeWidth: it.strokeWidth ?? 0,
           rx: it.rx ?? 0, ry: it.rx ?? 0, originX: 'center', originY: 'center',
         });
@@ -2607,15 +2618,23 @@ export class FabricCanvasService {
         const r = (it.w ?? 100) / 2;
         obj = new Circle({
           left: it.x, top: it.y, radius: r,
-          fill: it.grad ? grad(it.fill ?? '#000', it.grad, r * 2, r * 2) as any : (it.fill ?? ''),
+          fill: fillFor(it, r * 2, r * 2, ''),
           stroke: it.stroke ?? '', strokeWidth: it.strokeWidth ?? 0, originX: 'center', originY: 'center',
         });
       } else if (it.kind === 'triangle') {
         const w = it.w ?? 100, h = it.h ?? 100;
         obj = new Triangle({
           left: it.x, top: it.y, width: w, height: h,
-          fill: it.grad ? grad(it.fill ?? '#000', it.grad, w, h) as any : (it.fill ?? '#000'),
+          fill: fillFor(it, w, h, '#000'),
           originX: 'center', originY: 'center',
+        });
+      } else if (it.kind === 'polygon') {
+        const pts = it.points ?? [];
+        const xs = pts.map((p) => p.x), ys = pts.map((p) => p.y);
+        const pw = (Math.max(...xs) - Math.min(...xs)) || 1, ph = (Math.max(...ys) - Math.min(...ys)) || 1;
+        obj = new Polygon(pts, {
+          fill: fillFor(it, pw, ph, '#000'),
+          stroke: it.stroke ?? '', strokeWidth: it.strokeWidth ?? 0,
         });
       } else if (it.kind === 'seal') {
         obj = this.buildSeal(it.x, it.y, it.w ?? 120, it.fill ?? '#b08d2e', it.stroke ?? '#0f172a');

@@ -74,6 +74,11 @@ function escapeForJson(value: string): string {
  * When signatureUrl/pendingApproval is supplied, signature placeholders are
  * filled with the signature image (or a Pending Approval stamp).
  */
+/** Blank unfilled dynamic-table cell placeholders ({{cell_r_c}}) before rendering. */
+function stripCellPlaceholders(json: string): string {
+  return json.replace(/\{\{\s*cell_\d+_\d+\s*\}\}/g, '');
+}
+
 export async function renderJsonToPng(
   json: string,
   width: number,
@@ -82,6 +87,9 @@ export async function renderJsonToPng(
   signatureUrl: string | null = null,
   pendingApproval = false,
 ): Promise<string> {
+  // Blank any unfilled dynamic-table cell placeholders ({{cell_r_c}}) so issued,
+  // approved and verified certificates never show raw "{{cell_…}}" text.
+  json = stripCellPlaceholders(json);
   // Make sure web fonts are ready so text isn't rendered with a fallback font.
   if (document.fonts?.ready) {
     try { await document.fonts.ready; } catch { /* ignore */ }

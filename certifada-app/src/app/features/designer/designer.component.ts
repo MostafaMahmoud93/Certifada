@@ -11,6 +11,9 @@ import {
   signal,
 } from '@angular/core';
 import { DESIGNER_HELP, DESIGNER_HELP_AR, HELP_UI, TABLE_HELP } from './designer-help.data';
+import { CERT_TEMPLATES } from './certificate-templates.data';
+import { EXTRA_TEMPLATES } from './extra-templates.data';
+import { AR_TEMPLATES } from './arabic-templates.data';
 import { CANVAS_TOUR, CANVAS_TOUR_UI } from './canvas-tour.data';
 import { LanguageService } from '../../core/services/language.service';
 import { TourService, TourStep } from '../../core/services/tour.service';
@@ -41,7 +44,7 @@ type PanelId = 'design' | 'templates' | 'ai' | 'text' | 'elements' | 'images' | 
 interface CanvasVersion { id: number; name: string; at: number; json: string; thumb: string; meta: string; }
 interface SizePresetItem { label: string; w: number; h: number; }
 interface SizeGroup { label: string; items: SizePresetItem[]; }
-interface DesignTemplate { id: string; name: string; cat: string; tags: string; w: number; h: number; bg?: string; accent: string; items: TemplateItem[]; }
+interface DesignTemplate { id: string; name: string; cat: string; tags: string; w: number; h: number; bg?: string; accent: string; grp?: string; lang?: 'en' | 'ar'; items: TemplateItem[]; }
 interface TplCategory { id: string; label: string; }
 interface TextStyleOpts { fontFamily?: string; fontSize?: number; fontWeight?: string; fill?: string; fontStyle?: string; underline?: boolean; textAlign?: string; charSpacing?: number; lineHeight?: number; shadow?: boolean; outline?: boolean; outlineColor?: string; }
 type SelKind = 'none' | 'text' | 'image' | 'shape' | 'group' | 'table';
@@ -267,6 +270,9 @@ export class DesignerComponent implements AfterViewInit, OnDestroy {
 
   // ---- ready-made templates ----
   designTemplates: DesignTemplate[] = [
+    ...CERT_TEMPLATES,
+    ...EXTRA_TEMPLATES,
+    ...AR_TEMPLATES,
     { id: 'gold-participation', name: 'Gold Participation', cat: 'certificate', tags: 'certificate gold participation award seal ornate elegant landscape', w: 1123, h: 794, bg: '#f7f3ea', accent: '#c9a227', items: [
       { kind: 'triangle', x: 1085, y: 28, w: 360, h: 300, fill: '#0f172a', grad: '#3a3a3a', angle: 205, opacity: 0.96 },
       { kind: 'triangle', x: 1108, y: 64, w: 300, h: 235, fill: '#c9a227', grad: '#f4dd92', angle: 205 },
@@ -303,7 +309,7 @@ export class DesignerComponent implements AfterViewInit, OnDestroy {
       { kind: 'field', key: 'signer', x: 397, y: 942, w: 340, fontSize: 14, fontWeight: '700', fill: '#f5ecd6', charSpacing: 60 },
       { kind: 'text', text: 'Authorized Signature', x: 397, y: 966, w: 340, fontSize: 12, fill: '#8c97a6' },
     ] },
-    { id: 'wedding-ar', name: 'Wedding Invitation', cat: 'cards', tags: 'wedding invitation arabic floral green elegant rtl دعوة زفاف عقد قران', w: 794, h: 1123, bg: '#f3f6ee', accent: '#7e9168', items: [
+    { id: 'wedding-ar', name: 'Wedding Invitation', cat: 'cards', lang: 'ar', tags: 'wedding invitation arabic floral green elegant rtl دعوة زفاف عقد قران', w: 794, h: 1123, bg: '#f3f6ee', accent: '#7e9168', items: [
       { kind: 'text', text: '🌿🤍🌿', x: 130, y: 110, w: 280, fontSize: 64, angle: -8, opacity: 0.9 },
       { kind: 'text', text: '🌿🤍🌿', x: 668, y: 1012, w: 300, fontSize: 80, angle: 8, opacity: 0.9 },
       { kind: 'text', text: 'بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ', x: 397, y: 150, w: 640, fontSize: 30, fontFamily: 'Amiri', fontWeight: '700', fill: '#b79a4a', dir: 'rtl' },
@@ -1220,6 +1226,74 @@ export class DesignerComponent implements AfterViewInit, OnDestroy {
       (cat === 'all' || t.cat === cat) &&
       (!q || (t.name + ' ' + t.tags).toLowerCase().includes(q)));
   });
+  /** Display order for the per-type sections in the Templates tab. */
+  readonly tplGroupOrder = ['Achievement', 'Participation', 'Appreciation', 'Completion', 'Recognition', 'Excellence', 'Honor', 'Award', 'Training', 'Certificates', 'Social Media', 'Business', 'Cards & Invites', 'Signage', 'Letterheads', 'Invoices', 'Reports', 'Resumes', 'Documents', 'Menus'];
+  private tplGroupLabel(t: DesignTemplate): string {
+    return t.grp ?? (this.tplCategories.find((c) => c.id === t.cat)?.label ?? 'Other');
+  }
+  /** Templates grouped into sections (by award type, then category). */
+  readonly groupedTemplates = computed<{ label: string; items: DesignTemplate[] }[]>(() => {
+    const map = new Map<string, DesignTemplate[]>();
+    for (const t of this.filteredTemplates()) {
+      const g = this.tplGroupLabel(t);
+      const arr = map.get(g) ?? map.set(g, []).get(g)!;
+      arr.push(t);
+    }
+    const order = this.tplGroupOrder;
+    return [...map.entries()]
+      .sort((a, b) => ((order.indexOf(a[0]) + 1) || 99) - ((order.indexOf(b[0]) + 1) || 99))
+      .map(([label, items]) => ({ label, items }));
+  });
+  /** Collapsed (accordion) template sections. */
+  readonly tplCollapsed = signal<ReadonlySet<string>>(new Set<string>());
+  toggleSection(label: string): void {
+    const s = new Set(this.tplCollapsed());
+    if (s.has(label)) s.delete(label); else s.add(label);
+    this.tplCollapsed.set(s);
+  }
+  // ---- Category accordion (Templates tab) --------------------------------
+  private readonly catLabelAr: Record<string, string> = { certificate: 'الشهادات', social: 'وسائل التواصل', business: 'بطاقات الأعمال', cards: 'البطاقات والدعوات', signage: 'اللافتات', document: 'المستندات', menu: 'القوائم' };
+  private catLabel(cat: string): string {
+    const en = this.tplCategories.find((c) => c.id === cat)?.label ?? cat;
+    return this.tplLang() === 'ar' ? (this.catLabelAr[cat] ?? en) : en;
+  }
+  readonly catOrder = ['certificate', 'social', 'business', 'cards', 'signage', 'document', 'menu'];
+  /** Templates grouped into category accordions, each sub-grouped by type. */
+  readonly catSections = computed<{ cat: string; label: string; count: number; subs: { label: string; items: DesignTemplate[] }[] }[]>(() => {
+    const q = this.q();
+    const list = this.designTemplates.filter((t) => (t.lang ?? 'en') === this.tplLang() && (!q || (t.name + ' ' + t.tags).toLowerCase().includes(q)));
+    const byCat = new Map<string, DesignTemplate[]>();
+    for (const t of list) { const a = byCat.get(t.cat) ?? byCat.set(t.cat, []).get(t.cat)!; a.push(t); }
+    const co = this.catOrder, go = this.tplGroupOrder;
+    return [...byCat.entries()]
+      .sort((a, b) => ((co.indexOf(a[0]) + 1) || 99) - ((co.indexOf(b[0]) + 1) || 99))
+      .map(([cat, items]) => {
+        const bySub = new Map<string, DesignTemplate[]>();
+        for (const t of items) { const g = t.grp ?? ''; const a = bySub.get(g) ?? bySub.set(g, []).get(g)!; a.push(t); }
+        const subs = [...bySub.entries()]
+          .sort((a, b) => ((go.indexOf(a[0]) + 1) || 99) - ((go.indexOf(b[0]) + 1) || 99))
+          .map(([label, its]) => ({ label, items: its }));
+        return { cat, label: this.catLabel(cat), count: items.length, subs };
+      });
+  });
+  private userOpenCats = signal<ReadonlySet<string> | null>(null);
+  private defaultOpenCats(): Set<string> {
+    const first = this.catSections()[0]?.cat;
+    return new Set(first ? [first] : []);
+  }
+  /** Smart: while searching, expand every section so matches are visible. */
+  isCatOpen(cat: string): boolean {
+    if (this.q()) return true;
+    return (this.userOpenCats() ?? this.defaultOpenCats()).has(cat);
+  }
+  toggleCat(cat: string): void {
+    const cur = new Set(this.userOpenCats() ?? this.defaultOpenCats());
+    if (cur.has(cat)) cur.delete(cat); else cur.add(cat);
+    this.userOpenCats.set(cur);
+  }
+  /** Template language (defaults to the app's current language). */
+  readonly tplLang = signal<'en' | 'ar'>((() => { try { return localStorage.getItem('lang') === 'ar' ? 'ar' : 'en'; } catch { return 'en'; } })());
+  setTplLang(l: 'en' | 'ar'): void { this.tplLang.set(l); this.userOpenCats.set(null); }
 
   // Properties panel docking + auto-hide + fullscreen
   propPos = signal<'right' | 'left' | 'top' | 'bottom'>((localStorage.getItem('cf-prop-pos') as 'right' | 'left' | 'top' | 'bottom') || 'right');

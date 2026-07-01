@@ -44,12 +44,12 @@ import { AlertService, AlertType } from '../../../core/services/alert.service';
   @if (alerts.confirmState(); as c) {
     <div class="ov" [@fade] (click)="alerts.resolveConfirm(false)">
       <div class="dlg" [@pop] (click)="$event.stopPropagation()">
-        <div class="dic" [class.danger]="c.danger"><span class="material-icons">{{ c.danger ? 'warning_amber' : 'help_outline' }}</span></div>
+        <div class="dic" [class.danger]="c.danger || c.tone === 'danger'" [class.ok]="c.tone === 'success'"><span class="material-icons">{{ c.icon || (c.danger ? 'warning_amber' : 'help_outline') }}</span></div>
         @if (c.title) { <h3>{{ c.title }}</h3> }
         <p>{{ c.message }}</p>
         <div class="acts">
           <button class="b sec" (click)="alerts.resolveConfirm(false)">{{ c.cancelText || 'Cancel' }}</button>
-          <button class="b" [class.prim]="!c.danger" [class.dang]="c.danger" (click)="alerts.resolveConfirm(true)">{{ c.confirmText || 'Confirm' }}</button>
+          <button class="b" [class.prim]="!c.danger && c.tone !== 'success' && c.tone !== 'danger'" [class.ok]="c.tone === 'success'" [class.dang]="c.danger || c.tone === 'danger'" (click)="alerts.resolveConfirm(true)">{{ c.confirmText || 'Confirm' }}</button>
         </div>
       </div>
     </div>
@@ -79,6 +79,7 @@ import { AlertService, AlertType } from '../../../core/services/alert.service';
     .dlg{width:100%;max-width:420px;background:var(--cf-surface);border:1px solid var(--cf-line);border-radius:18px;box-shadow:0 30px 70px -25px rgba(2,6,23,.6),0 10px 24px -12px rgba(2,6,23,.3);padding:28px 26px;text-align:center}
     .dic{width:58px;height:58px;border-radius:16px;margin:0 auto 16px;display:grid;place-items:center;background:color-mix(in srgb,var(--cf-brand-500) 14%,transparent);color:var(--cf-brand-600);box-shadow:0 8px 20px -10px color-mix(in srgb,var(--cf-brand-600) 70%,transparent)}
     .dic.danger{background:var(--cf-danger-soft);color:var(--cf-danger);box-shadow:0 8px 20px -10px color-mix(in srgb,var(--cf-danger) 60%,transparent)}
+    .dic.ok{background:color-mix(in srgb,#16a34a 15%,transparent);color:#16a34a;box-shadow:0 10px 22px -10px color-mix(in srgb,#16a34a 65%,transparent)}
     .dic .material-icons{font-size:28px}
     .dlg h3{font-size:18px;font-weight:800;letter-spacing:-.01em;color:var(--cf-ink-900);margin-bottom:7px}
     .dlg p{font-size:13.5px;color:var(--cf-ink-500);line-height:1.55;max-width:340px;margin:0 auto}
@@ -89,6 +90,8 @@ import { AlertService, AlertType } from '../../../core/services/alert.service';
     .b.prim:hover{background:var(--cf-brand-700)}
     .b.dang{background:var(--cf-danger);border-color:var(--cf-danger);color:#fff}
     .b.dang:hover{filter:brightness(.94)}
+    .b.ok{background:linear-gradient(135deg,#16a34a,#15803d);border-color:#15803d;color:#fff}
+    .b.ok:hover{filter:brightness(1.06)}
     @media(max-width:520px){.stack{inset-inline:16px;width:auto}}
   `],
 })

@@ -75,6 +75,29 @@ export class ApprovalService {
     this.persist(); toStamp.forEach((a) => this.stamp(a, by));
   }
 
+  /** Approve a subset of a batch's credentials by record id; resolves the batch entry once none remain. */
+  approveBatchSubset(approval: Approval, recordIds: string[], by = 'You'): number {
+    recordIds.forEach((id) => this.issued.sign(id, by));
+    return this.reconcileBatch(approval, by, 'Approved', null);
+  }
+  /** Reject a subset of a batch's credentials by record id. */
+  rejectBatchSubset(approval: Approval, recordIds: string[], by = 'You', reason: string | null = null): number {
+    recordIds.forEach((id) => this.issued.setStatus(id, 'Revoked'));
+    return this.reconcileBatch(approval, by, 'Rejected', reason);
+  }
+  /** After a partial batch decision, update the batch's remaining count or close it out. */
+  private reconcileBatch(approval: Approval, by: string, finalStatus: ApprovalStatus, reason: string | null): number {
+    const remaining = this.issued.records().filter((r) => r.batchId === approval.batchId && r.status === 'Pending' && !r.signedBy).length;
+    const now = new Date().toISOString();
+    this.items.update((l) => l.map((a) => {
+      if (a.id !== approval.id) return a;
+      if (remaining <= 0) return { ...a, status: finalStatus, decidedBy: by, decidedAt: now, reason };
+      return { ...a, count: remaining };
+    }));
+    this.persist();
+    return remaining;
+  }
+
   private decide(id: number, status: ApprovalStatus, reason: string | null, by: string): void {
     const now = new Date().toISOString();
     this.items.update((l) => l.map((a) => (a.id === id ? { ...a, status, decidedBy: by, decidedAt: now, reason } : a)));

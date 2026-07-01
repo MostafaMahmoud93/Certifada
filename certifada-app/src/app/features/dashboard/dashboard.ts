@@ -10,7 +10,7 @@ import { OnboardingDialogComponent } from './onboarding-dialog';
 import { AlertService } from '../../core/services/alert.service';
 import { ApprovalService, Approval } from '../../core/services/approval.service';
 import { AuthService } from '../../core/services/auth.service';
-import { IssuedService } from '../../core/services/issued.service';
+import { IssuedService, IssuedRecord } from '../../core/services/issued.service';
 import { PlanService } from '../../core/services/plan.service';
 import { firstValueFrom } from 'rxjs';
 import { mergeDataIntoJson, renderJsonToPng } from '../../core/utils/render.util';
@@ -180,7 +180,28 @@ interface CertRow { recipient: string; template: string; status: 'Active' | 'Pen
         </button>
       </div>
       <div class="ap-list">
-        @for (a of pendingItems(); track a.id) {
+        @for (tg of dashTplGroups(); track tg.name) {
+          <div class="ap-tsec">
+            <div class="ap-tsec-head">
+              <span class="ap-tsec-ava" [style.background]="tplGrad(tg.name)"><span class="material-icons">workspace_premium</span></span>
+              <span class="ap-tsec-name">{{ tg.name }}</span>
+              <span class="ap-tsec-meta">
+                @if (tg.batches.length) { <span><span class="material-icons">groups</span>{{ tg.batches.length }}</span> }
+                @if (tg.individ.length) { <span><span class="material-icons">person</span>{{ tg.individ.length }}</span> }
+              </span>
+              <span class="ap-tsec-cnt">{{ tg.recips }}</span>
+            </div>
+            @if (tg.batches.length) {
+              <div class="ap-subh bulk"><span class="material-icons">groups</span> Bulk batches</div>
+              @for (a of tg.batches; track a.id) { <ng-container [ngTemplateOutlet]="apRow" [ngTemplateOutletContext]="{ $implicit: a }"></ng-container> }
+            }
+            @if (tg.individ.length) {
+              <div class="ap-subh indiv"><span class="material-icons">workspace_premium</span> Individual</div>
+              @for (a of tg.individ; track a.id) { <ng-container [ngTemplateOutlet]="apRow" [ngTemplateOutletContext]="{ $implicit: a }"></ng-container> }
+            }
+          </div>
+        }
+        <ng-template #apRow let-a>
           <div class="ap-item" [class.sel]="dashIsSel(a.id)">
             <label class="cbx"><input type="checkbox" [checked]="dashIsSel(a.id)" (change)="dashToggle(a.id)" /><span></span></label>
             <span class="ap-av" [class]="'t-' + a.type.toLowerCase()"><span class="material-icons">{{ a.type === 'Batch' ? 'groups' : a.type === 'Template' ? 'dashboard_customize' : 'workspace_premium' }}</span></span>
@@ -190,10 +211,14 @@ interface CertRow { recipient: string; template: string; status: 'Active' | 'Pen
             </div>
             <div class="ap-rowact">
               <button class="ap-mini view" (click)="openDashView(a)" title="View & sign"><span class="material-icons">visibility</span></button>
-              <button class="ap-approve-row" (click)="approveRow(a)" [appHasAction]="A.Credential_Approve" [tooltipMessage]="'🔒 Not in your plan.'"><span class="material-icons">check_circle</span> Approve</button>
+              @if (a.type === 'Batch') {
+                <button class="ap-approve-row" (click)="openBatch(a)" [appHasAction]="A.Credential_Approve" [tooltipMessage]="'🔒 Not in your plan.'"><span class="material-icons">groups</span> Review</button>
+              } @else {
+                <button class="ap-approve-row" (click)="approveRow(a)" [appHasAction]="A.Credential_Approve" [tooltipMessage]="'🔒 Not in your plan.'"><span class="material-icons">check_circle</span> Approve</button>
+              }
             </div>
           </div>
-        }
+        </ng-template>
       </div>
       @if (pendingAll().length > apqPageSize) {
         <div class="apq-pager">
@@ -355,6 +380,72 @@ interface CertRow { recipient: string; template: string; status: 'Active' | 'Pen
               <button class="cf-btn cf-btn-primary" (click)="dashSign(a)"><span class="material-icons">draw</span> Sign &amp; Approve Now</button>
             </div>
           </div>
+        </div>
+      </div>
+    </div>
+  }
+
+  @if (batchTarget(); as a) {
+    <div class="overlay" (click)="closeBatch()">
+      <div class="bmodal" (click)="$event.stopPropagation()">
+        <button class="close" (click)="closeBatch()"><span class="material-icons">close</span></button>
+        <div class="bm-head">
+          <span class="bm-bigav"><span class="material-icons">groups</span></span>
+          <div class="bm-h-txt">
+            <h3>{{ a.item }}</h3>
+            <span class="cf-muted">{{ batchRecs().length }} awaiting approval · by {{ a.requestedBy }}</span>
+          </div>
+        </div>
+        <div class="bm-progrow">
+          <span class="bm-prog-lbl">{{ batchDone() }} / {{ batchTotal() }} approved</span>
+          <div class="bm-prog-bar"><i [style.width.%]="batchPct()"></i></div>
+          <span class="bm-prog-pct">{{ batchPct() }}%</span>
+        </div>
+        <div class="bm-grid">
+          <div class="bm-list">
+            <div class="bm-tools">
+              <label class="cbx" (click)="$event.stopPropagation()"><input type="checkbox" [checked]="batchAllSel()" (change)="toggleBatchAll()" /><span></span></label>
+              <span>{{ batchSelCount() ? batchSelCount() + ' selected' : 'Select recipients' }}</span>
+            </div>
+            <div class="bm-rows">
+              @for (r of batchRecs(); track r.id) {
+                <div class="bm-row" [class.sel]="batchSel().has(r.id)" [class.active]="batchPreview()?.rec?.id === r.id" (click)="pickRecord(r)">
+                  <label class="cbx" (click)="$event.stopPropagation()"><input type="checkbox" [checked]="batchSel().has(r.id)" (change)="toggleBatchSel(r.id)" /><span></span></label>
+                  <span class="bm-ava" [style.background]="avColor(r.recipientEmail || r.recipientName || '?')">{{ certInitials(r.recipientName || '?') }}</span>
+                  <div class="bm-info"><strong>{{ r.recipientName || 'Recipient' }}</strong><small class="cf-muted">{{ r.recipientEmail || '—' }}</small></div>
+                </div>
+              }
+              @if (!batchRecs().length) { <div class="bm-empty"><span class="material-icons">task_alt</span> All recipients approved.</div> }
+            </div>
+          </div>
+          <div class="bm-prev">
+            @if (batchPreview(); as p) {
+              @if (p.img) { <img class="bm-img" [src]="p.img" alt="certificate preview" /> }
+              @else { <div class="bm-loading"><span class="material-icons spin">autorenew</span> Rendering…</div> }
+              <div class="bm-prev-foot">
+                <div class="bm-prev-who"><strong>{{ p.rec.recipientName || 'Recipient' }}</strong><small class="cf-muted">{{ p.rec.recipientEmail }}</small></div>
+                <span class="bm-prev-btns">
+                  <button class="cf-btn cf-btn-secondary sm bm-rej" (click)="rejectOne(p.rec)" [appHasAction]="A.Credential_Approve" [tooltipMessage]="'🔒 Not in your plan.'"><span class="material-icons">close</span> Reject</button>
+                  <button class="cf-btn cf-btn-primary sm" (click)="approveOne(p.rec)" [appHasAction]="A.Credential_Approve" [tooltipMessage]="'🔒 Not in your plan.'"><span class="material-icons">check</span> Approve this</button>
+                </span>
+              </div>
+            } @else {
+              <div class="bm-noprev"><span class="material-icons">image_search</span> Select a recipient to preview</div>
+            }
+          </div>
+        </div>
+        <div class="bm-foot">
+          <span class="bm-foot-sig" [class.nosig]="!hasSig()">
+            @if (hasSig()) { <img [src]="mySig()!" alt="signature" /> <span class="cf-muted">Signing as {{ approver() }}</span> }
+            @else { <button class="sb-add" (click)="addSignatureNow()">Add your signature to approve</button> }
+          </span>
+          <span class="bm-foot-actions">
+            @if (batchSelCount()) {
+              <button class="cf-btn cf-btn-secondary sm bm-rej" (click)="rejectBatchSelected()" [appHasAction]="A.Credential_Approve" [tooltipMessage]="'🔒 Not in your plan.'"><span class="material-icons">close</span> Reject ({{ batchSelCount() }})</button>
+            }
+            <button class="cf-btn cf-btn-secondary sm" [disabled]="!batchSelCount()" (click)="approveBatchSelected()" [appHasAction]="A.Credential_Approve" [tooltipMessage]="'🔒 Not in your plan.'"><span class="material-icons">done</span> Approve selected ({{ batchSelCount() }})</button>
+            <button class="cf-btn cf-btn-primary sm" (click)="approveBatchAll()" [appHasAction]="A.Credential_Approve" [tooltipMessage]="'🔒 Not in your plan.'"><span class="material-icons">done_all</span> Approve all ({{ batchRecs().length }})</button>
+          </span>
         </div>
       </div>
     </div>
@@ -528,6 +619,20 @@ interface CertRow { recipient: string; template: string; status: 'Active' | 'Pen
     .apq-approve .cnt{display:inline-grid;place-items:center;min-width:18px;height:18px;padding:0 5px;border-radius:999px;background:rgba(255,255,255,.26);font-size:11px;font-weight:800;animation:cntpop .2s ease}
     @keyframes cntpop{from{transform:scale(.4);opacity:0}to{transform:scale(1);opacity:1}}
     .ap-list{display:flex;flex-direction:column;gap:7px;padding:12px 14px 14px}
+    .ap-tsec{display:flex;flex-direction:column;gap:6px;padding:8px;border:1px solid var(--cf-line);border-radius:13px;background:var(--cf-surface-2)}
+    .ap-tsec+.ap-tsec{margin-top:2px}
+    .ap-tsec-head{display:flex;align-items:center;gap:9px;padding:2px 4px 4px}
+    .ap-tsec-ava{width:28px;height:28px;border-radius:8px;display:grid;place-items:center;flex:none;box-shadow:0 3px 7px -2px rgba(15,23,42,.4)}
+    .ap-tsec-ava .material-icons{font-size:15px;color:#fff}
+    .ap-tsec-name{font-size:13px;font-weight:800;color:var(--cf-ink-900);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;min-width:0}
+    .ap-tsec-meta{display:flex;align-items:center;gap:9px;font-size:11.5px;color:var(--cf-ink-500)}
+    .ap-tsec-meta>span{display:inline-flex;align-items:center;gap:3px}
+    .ap-tsec-meta .material-icons{font-size:13px;color:var(--cf-ink-400)}
+    .ap-tsec-cnt{min-width:24px;height:22px;padding:0 8px;border-radius:11px;display:grid;place-items:center;background:var(--cf-brand-50);color:var(--cf-brand-700);font-size:12px;font-weight:800;flex:none}
+    .ap-subh{display:flex;align-items:center;gap:6px;font-size:10px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--cf-ink-400);padding:4px 4px 2px 6px}
+    .ap-subh .material-icons{font-size:13px}
+    .ap-subh.bulk .material-icons{color:#7c3aed}
+    .ap-subh.indiv .material-icons{color:var(--cf-brand-600)}
     .ap-item{display:flex;align-items:center;gap:12px;padding:9px 11px;border:1px solid var(--cf-line);border-radius:11px;background:var(--cf-surface);transition:border-color .14s,box-shadow .14s,background .14s}
     .ap-item:hover{border-color:color-mix(in srgb,var(--cf-brand-500) 26%,var(--cf-line));box-shadow:0 8px 20px -14px rgba(15,23,42,.4)}
     .ap-item.sel{border-color:var(--cf-brand-500);background:color-mix(in srgb,var(--cf-brand-50) 55%,var(--cf-surface))}
@@ -693,7 +798,7 @@ interface CertRow { recipient: string; template: string; status: 'Active' | 'Pen
     .submodal.vmodal{max-width:720px}
     .vm-grid{display:grid;grid-template-columns:1.05fr 1fr}
     @media(max-width:640px){.vm-grid{grid-template-columns:1fr}}
-    .vm-cert{padding:22px;background:linear-gradient(135deg,color-mix(in srgb,var(--cf-brand-500) 12%,var(--cf-surface-2)),var(--cf-surface-2));display:grid;place-items:center}
+    .vm-cert{padding:22px;background:radial-gradient(130% 100% at 50% 0%,color-mix(in srgb,var(--cf-brand-500) 15%,var(--cf-surface-2)),color-mix(in srgb,var(--cf-ink-900) 6%,var(--cf-surface-2)));display:grid;place-items:center}
     .cert-mock{width:100%;background:var(--cf-surface);border:1px solid var(--cf-line);border-top:4px solid var(--cf-brand-600);border-radius:12px;padding:24px 20px;text-align:center;box-shadow:0 18px 40px -22px rgba(2,6,23,.5);display:flex;flex-direction:column;align-items:center;gap:4px}
     .cm-seal{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;background:linear-gradient(135deg,var(--cf-brand-500),var(--cf-brand-700));color:#fff;margin-bottom:6px;box-shadow:0 8px 18px -8px color-mix(in srgb,var(--cf-brand-600) 80%,transparent)}.cm-seal .material-icons{font-size:23px}
     .cm-eyebrow{font-size:9.5px;font-weight:800;letter-spacing:.22em;color:var(--cf-ink-400)}
@@ -708,12 +813,21 @@ interface CertRow { recipient: string; template: string; status: 'Active' | 'Pen
     .tchip{display:inline-flex;align-items:center;font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;padding:3px 9px;border-radius:999px;background:var(--cf-brand-50);color:var(--cf-brand-700)}
     .vm-head .age{display:inline-flex;align-items:center;gap:3px;font-size:11px;font-weight:700;color:var(--cf-warning);background:var(--cf-warning-soft);padding:3px 9px;border-radius:999px}.vm-head .age .material-icons{font-size:12px}
     .vm-meta{display:flex;flex-direction:column;gap:8px;font-size:12.5px;color:var(--cf-ink-700)}
-    .vm-meta>div{display:flex;align-items:center;gap:8px;min-width:0}.vm-meta .material-icons{font-size:16px;color:var(--cf-ink-400);flex:none}
+    .vm-meta>div{display:flex;align-items:center;gap:10px;min-width:0;font-size:12.5px}
+    .vm-meta .material-icons{font-size:16px;color:var(--cf-brand-600);flex:none;width:28px;height:28px;border-radius:8px;background:var(--cf-brand-50);display:grid;place-items:center}
+    .vm-real{transition:transform .3s cubic-bezier(.2,.8,.25,1)}
+    .vm-real:hover{transform:scale(1.02)}
     .vm-note{display:flex;align-items:flex-start;gap:7px;margin-top:12px;padding:8px 11px;background:var(--cf-surface-2);border-radius:9px;font-size:12.5px;color:var(--cf-ink-700)}.vm-note .material-icons{font-size:16px;color:var(--cf-ink-400)}
     .signbox{margin-top:14px;border:1px dashed color-mix(in srgb,var(--cf-brand-500) 40%,var(--cf-line));border-radius:12px;padding:11px 14px;background:var(--cf-brand-50);display:flex;flex-direction:column;gap:1px}
     .sb-lbl{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--cf-brand-700)}
     .sb-sign{font-family:'Brush Script MT','Segoe Script',cursive;font-size:28px;line-height:1.2;color:var(--cf-ink-900)}
-    .signbox .sb-lbl{display:inline-flex;align-items:center;gap:5px}.signbox .sb-lbl .material-icons{font-size:14px}
+    .signbox .sb-lbl{display:inline-flex;align-items:center;gap:5px}.signbox .sb-lbl .material-icons{font-size:13px}
+    .signbox{position:relative;overflow:hidden;padding:8px 13px 8px 16px;margin-top:12px;gap:0;background:linear-gradient(135deg,var(--cf-brand-50),var(--cf-surface))}
+    .signbox:not(.nosig)::before{content:'';position:absolute;inset-inline-start:0;top:0;bottom:0;width:3px;background:linear-gradient(180deg,var(--cf-brand-500),var(--cf-brand-700))}
+    .signbox .sb-img{max-height:42px;max-width:160px;margin:2px 0}
+    .signbox .sb-sign{font-size:21px}
+    .signbox .sb-name{font-size:10.5px}
+    .signbox .sb-lbl{font-size:9.5px}
     .sb-img{max-width:220px;max-height:72px;object-fit:contain;align-self:flex-start;margin:3px 0}
     .signbox.nosig{border-color:color-mix(in srgb,#d97706 45%,var(--cf-line));background:color-mix(in srgb,#d97706 8%,transparent)}
     .sb-missing{font-size:12px;color:#b45309;line-height:1.5}
@@ -726,7 +840,12 @@ interface CertRow { recipient: string; template: string; status: 'Active' | 'Pen
     .nsmodal h3{margin:0 0 6px;font-size:17px}.nsmodal p{margin:0 0 18px}
     .ns-actions{display:flex;gap:10px;justify-content:center}
     .sb-name{font-size:11px}
-    .vm-actions{display:flex;gap:10px;margin-top:auto;padding-top:15px}.vm-actions .cf-btn{flex:1;justify-content:center}
+    .vm-actions{display:flex;gap:10px;margin-top:auto;padding-top:15px}.vm-actions{justify-content:flex-end;gap:9px}
+    .vm-actions .cf-btn{flex:none;height:40px;padding:0 16px;border-radius:11px;font-size:13px;justify-content:center}
+    .vm-actions .cf-btn-secondary{color:var(--cf-ink-600)}
+    .vm-actions .cf-btn-primary{background:linear-gradient(135deg,#16a34a,#15803d);border:0;color:#fff;font-weight:700;padding:0 18px;box-shadow:0 8px 18px -8px rgba(22,163,74,.65);transition:transform .14s,box-shadow .14s,filter .14s}
+    .vm-actions .cf-btn-primary:hover{transform:translateY(-1px);box-shadow:0 12px 22px -8px rgba(22,163,74,.78);filter:brightness(1.04)}
+    .vm-actions .cf-btn-primary .material-icons{font-size:17px}
     /* ===== amazing polish ===== */
     @keyframes dUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
     @media (prefers-reduced-motion: no-preference){
@@ -865,6 +984,60 @@ interface CertRow { recipient: string; template: string; status: 'Active' | 'Pen
     .certs-card .card-head .link:hover .material-icons{transform:translateX(3px)}
     .certs-card .cf-table.pro tbody tr{cursor:pointer;transition:background .12s}
     @media(max-width:720px){.plan{grid-template-columns:1fr}.plan-right{justify-content:flex-start}}
+    .bmodal{position:relative;width:100%;max-width:900px;background:var(--cf-surface);border:1px solid var(--cf-line);border-radius:20px;box-shadow:0 30px 80px rgba(15,23,42,.34);overflow:hidden;display:flex;flex-direction:column;height:min(680px,90vh);max-height:90vh;animation:bmIn .26s cubic-bezier(.2,.8,.25,1)}
+    .bmodal .close{position:absolute;top:14px;inset-inline-end:14px;z-index:6;width:32px;height:32px;border:0;border-radius:9px;background:var(--cf-surface);box-shadow:0 1px 5px rgba(15,23,42,.18);display:grid;place-items:center;color:var(--cf-ink-500);cursor:pointer;transition:background .12s,color .12s}
+    .bmodal .close:hover{background:var(--cf-surface-2);color:var(--cf-ink-800)}
+    @keyframes bmIn{from{opacity:0;transform:translateY(14px) scale(.97)}to{opacity:1;transform:none}}
+    .bm-head{display:flex;align-items:center;gap:14px;padding:18px 22px;padding-inline-end:56px;background:linear-gradient(135deg,color-mix(in srgb,var(--cf-brand-500) 12%,var(--cf-surface)),var(--cf-surface));border-bottom:1px solid var(--cf-line)}
+    .bm-h-txt{flex:1;min-width:0}
+    .bm-progrow{display:flex;align-items:center;gap:12px;padding:11px 22px;border-bottom:1px solid var(--cf-line);background:var(--cf-surface)}
+    .bm-prog-pct{font-size:11px;font-weight:800;color:var(--cf-brand-700);white-space:nowrap;min-width:32px;text-align:end}
+    .bm-prog-bar{flex:1;height:7px;border-radius:999px;background:var(--cf-surface-2);overflow:hidden;border:1px solid var(--cf-line)}
+    .bm-prog-bar i{display:block;height:100%;border-radius:999px;background:linear-gradient(90deg,#6366f1,#22c55e);transition:width .45s cubic-bezier(.2,.8,.25,1)}
+    .bm-prog-lbl{font-size:11px;font-weight:800;color:var(--cf-ink-600);white-space:nowrap}
+    .bm-bigav{width:46px;height:46px;flex:none;border-radius:14px;display:grid;place-items:center;background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;box-shadow:0 8px 20px rgba(99,102,241,.4)}
+    .bm-bigav .material-icons{font-size:24px}
+    .bm-h-txt h3{font-size:16px;margin:0}.bm-h-txt span{font-size:12.5px}
+    .bm-grid{display:grid;grid-template-columns:322px 1fr;min-height:0;flex:1}
+    .bm-list{display:flex;flex-direction:column;border-inline-end:1px solid var(--cf-line);min-height:0}
+    .bm-tools{display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--cf-line);font-size:12px;font-weight:600;color:var(--cf-ink-600)}
+    .bm-rows{overflow:auto;padding:6px;display:flex;flex-direction:column;gap:4px}
+    .bm-row{display:flex;align-items:center;gap:11px;padding:9px 11px;border-radius:12px;cursor:pointer;border:1px solid transparent;transition:background .14s,box-shadow .14s;position:relative}
+    .bm-row:hover{background:var(--cf-surface-2)}
+    .bm-row.active{background:var(--cf-brand-50);box-shadow:inset 3px 0 0 var(--cf-brand-500)}
+    .bm-row.sel{background:color-mix(in srgb,var(--cf-brand-500) 9%,transparent)}
+    .bm-ava{width:34px;height:34px;border-radius:50%;flex:none;display:grid;place-items:center;background:linear-gradient(135deg,#818cf8,#a78bfa);color:#fff;font-size:12px;font-weight:800;transition:box-shadow .14s}
+    .bm-row.sel .bm-ava{box-shadow:0 0 0 3px color-mix(in srgb,var(--cf-brand-500) 35%,transparent)}
+    .bm-ava{position:relative}
+    .bm-row.sel .bm-ava::after{content:'✓';position:absolute;bottom:-3px;inset-inline-end:-3px;width:16px;height:16px;border-radius:50%;background:#16a34a;color:#fff;font-size:10px;font-weight:800;display:grid;place-items:center;border:2px solid var(--cf-surface)}
+    .bm-img{transition:transform .3s cubic-bezier(.2,.8,.25,1)}
+    .bm-img:hover{transform:scale(1.015)}
+    .bm-prog-bar i{position:relative;overflow:hidden}
+    .bm-prog-bar i::after{content:'';position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,.55),transparent);transform:translateX(-100%);animation:bmShim 1.9s ease-in-out infinite}
+    @keyframes bmShim{to{transform:translateX(100%)}}
+    .bm-empty .material-icons{animation:bmPop .5s cubic-bezier(.2,1.3,.5,1)}
+    @keyframes bmPop{from{transform:scale(0);opacity:0}to{transform:scale(1);opacity:1}}
+    .bm-info{flex:1;min-width:0;display:flex;flex-direction:column;line-height:1.2}
+    .bm-info strong{font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .bm-info small{font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .bm-empty{padding:30px 16px;text-align:center;color:var(--cf-ink-500);font-size:13px;display:flex;flex-direction:column;align-items:center;gap:8px}
+    .bm-empty .material-icons{font-size:30px;color:var(--cf-brand-500)}
+    .bm-prev{display:flex;flex-direction:column;background:radial-gradient(120% 80% at 50% 0%,var(--cf-surface-2),color-mix(in srgb,var(--cf-ink-900) 7%,var(--cf-surface-2)));min-height:0}
+    .bm-img{width:100%;flex:1;min-height:0;object-fit:contain;padding:22px;box-sizing:border-box;filter:drop-shadow(0 14px 30px rgba(15,23,42,.24))}
+    .bm-loading,.bm-noprev{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;color:var(--cf-ink-500);font-size:13px}
+    .bm-noprev .material-icons,.bm-loading .material-icons{font-size:34px;color:var(--cf-ink-300,#cbd5e1)}
+    .bm-prev-foot{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 16px;border-top:1px solid var(--cf-line);background:var(--cf-surface)}
+    .bm-prev-btns{display:flex;gap:8px;flex:none}
+    .bm-rej .material-icons{color:var(--cf-danger)}
+    .bm-rej:hover{border-color:color-mix(in srgb,var(--cf-danger) 50%,var(--cf-line));color:var(--cf-danger);background:var(--cf-danger-soft)}
+    .bm-prev-who{display:flex;flex-direction:column;line-height:1.2}.bm-prev-who strong{font-size:13px}.bm-prev-who small{font-size:11px}
+    .bm-foot{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 18px;border-top:1px solid var(--cf-line);flex-wrap:wrap}
+    .bm-foot-sig{display:inline-flex;align-items:center;gap:9px;font-size:12px;background:var(--cf-surface-2);border:1px solid var(--cf-line);border-radius:999px;padding:5px 13px 5px 8px}
+    .bm-foot-sig img{height:26px;max-width:96px;object-fit:contain}
+    .bm-foot-sig.nosig .sb-add{background:none;border:0;color:var(--cf-brand-600);font:inherit;font-weight:700;cursor:pointer;text-decoration:underline}
+    .bm-foot-actions{display:flex;gap:10px}
+    .spin{animation:spin 1s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}
+    @media(max-width:680px){.bm-grid{grid-template-columns:1fr}.bm-list{border-inline-end:0;border-bottom:1px solid var(--cf-line);max-height:190px}.bm-img{min-height:220px}}
   `],
 })
 export class DashboardPage {
@@ -898,6 +1071,24 @@ export class DashboardPage {
   pendingAll = computed(() => this.approvals.pending());
   pendingItems = computed(() => { const all = this.pendingAll(); const start = (this.apqPage() - 1) * this.apqPageSize; return all.slice(start, start + this.apqPageSize); });
   apqPages = computed(() => Math.max(1, Math.ceil(this.pendingAll().length / this.apqPageSize)));
+  tplGrad(name: string): string {
+    let h = 0;
+    for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) % 360;
+    return `linear-gradient(135deg, hsl(${h},68%,54%), hsl(${(h + 28) % 360},70%,44%))`;
+  }
+  /** Group the current queue page: Template -> { Bulk batches, Individual }. */
+  dashTplGroups = computed(() => {
+    const map = new Map<string, Approval[]>();
+    for (const a of this.pendingItems()) { const k = a.item || 'Untitled'; const arr = map.get(k) ?? map.set(k, []).get(k)!; arr.push(a); }
+    return [...map.entries()]
+      .map(([name, items]) => ({
+        name,
+        batches: items.filter((a) => a.type === 'Batch'),
+        individ: items.filter((a) => a.type !== 'Batch'),
+        recips: items.reduce((n, a) => n + (a.count || 1), 0),
+      }))
+      .sort((x, y) => y.recips - x.recips || x.name.localeCompare(y.name));
+  });
   apqPrev(): void { if (this.apqPage() > 1) this.apqPage.update((p) => p - 1); }
   apqNext(): void { if (this.apqPage() < this.apqPages()) this.apqPage.update((p) => p + 1); }
   min(a: number, b: number): number { return Math.min(a, b); }
@@ -972,7 +1163,11 @@ export class DashboardPage {
   dashToggle(id: number): void { const s = new Set(this.dashSel()); s.has(id) ? s.delete(id) : s.add(id); this.dashSel.set(s); }
   dashAllSel = computed(() => { const p = this.pendingItems(); return p.length > 0 && p.every((a) => this.dashSel().has(a.id)); });
   dashToggleAll(): void { const p = this.pendingItems(); const s = new Set(this.dashSel()); const all = p.every((a) => s.has(a.id)); p.forEach((a) => (all ? s.delete(a.id) : s.add(a.id))); this.dashSel.set(s); }
-  approveSelectedDash(): void { const ids = [...this.dashSel()]; if (!ids.length) return; this.guard(() => { const items = this.approvals.pending().filter((a) => ids.includes(a.id)); this.approvals.approveMany(ids, this.approver()); items.forEach((a) => this.resign(a)); this.dashSel.set(new Set<number>()); this.alerts.success(ids.length + ' approved & signed.'); }); }
+  async approveSelectedDash(): Promise<void> {
+    const ids = [...this.dashSel()]; if (!ids.length) return;
+    if (!(await this.confirmApprove(ids.length))) return;
+    this.guard(() => { const items = this.approvals.pending().filter((a) => ids.includes(a.id)); this.approvals.approveMany(ids, this.approver()); items.forEach((a) => this.resign(a)); this.dashSel.set(new Set<number>()); this.alerts.success(ids.length + ' approved & signed.'); });
+  }
   apAge(a: Approval): string { const d = +new Date(a.requestedAt); const n = d ? Math.floor((Date.now() - d) / 86400000) : 0; return n <= 0 ? 'today' : n === 1 ? '1d' : n + 'd'; }
 
   // ---- live metrics ----
@@ -1064,7 +1259,7 @@ export class DashboardPage {
   });
 
   // ---- approvals: row actions + view/sign popup ----
-  approver = computed(() => { const n = (this.auth.userName || '').trim(); return n ? n.charAt(0).toUpperCase() + n.slice(1) : 'You'; });
+  approver = computed(() => { const raw = (this.auth.userName || '').trim(); const n = raw && raw.toLowerCase() !== 'there' ? raw : ''; return n ? n.charAt(0).toUpperCase() + n.slice(1) : 'You'; });
   today(): string { return new Date().toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }); }
   greeting(): string { const h = new Date().getHours(); return h < 12 ? 'Good morning' : h < 18 ? 'Good afternoon' : 'Good evening'; }
   mySig = signal<string | null>(this.readSig());
@@ -1081,7 +1276,7 @@ export class DashboardPage {
 
   dashView = signal<Approval | null>(null);
   dashViewImg = signal<string | null>(null);
-  openDashView(a: Approval): void { this.dashView.set(a); this.dashViewImg.set(null); this.loadDashViewImg(a); }
+  openDashView(a: Approval): void { if (a.type === 'Batch') { this.openBatch(a); return; } this.dashView.set(a); this.dashViewImg.set(null); this.loadDashViewImg(a); }
   closeDashView(): void { this.dashView.set(null); this.dashViewImg.set(null); }
   private async loadDashViewImg(a: Approval): Promise<void> {
     const rec = this.issuedSvc.records().find((r) =>
@@ -1098,9 +1293,25 @@ export class DashboardPage {
       if (this.dashView()?.id === a.id) this.dashViewImg.set(img);
     } catch { /* keep fallback mock */ }
   }
-  approveRow(a: Approval): void { this.guard(() => { this.approvals.approve(a.id, this.approver()); this.resign(a); this.alerts.success('Approved & signed — ' + a.recipient + '.'); }); }
+  /** Attractive, professional approve confirmation (green tone). */
+  private confirmApprove(n: number): Promise<boolean> {
+    return this.alerts.confirm({
+      tone: 'success', icon: 'verified',
+      title: n > 1 ? 'Approve ' + n + ' certificates?' : 'Approve & sign this certificate?',
+      message: 'Your approver signature will be applied and ' + (n > 1 ? 'all ' + n + ' credentials' : 'the credential') + ' finalized for delivery.',
+      confirmText: n > 1 ? 'Approve all ' + n : 'Approve & sign',
+      cancelText: 'Cancel',
+    });
+  }
+  async approveRow(a: Approval): Promise<void> {
+    if (!(await this.confirmApprove(a.count || 1))) return;
+    this.guard(() => { this.approvals.approve(a.id, this.approver()); this.resign(a); this.alerts.success('Approved & signed — ' + a.recipient + '.'); });
+  }
   dashReject(a: Approval): void { this.approvals.reject(a.id); this.closeDashView(); this.alerts.info('Rejected — ' + a.recipient + '.'); }
-  dashSign(a: Approval): void { this.guard(() => { this.approvals.approve(a.id, this.approver()); this.resign(a); this.closeDashView(); this.alerts.success('Signed & approved — ' + a.recipient + '.'); }); }
+  async dashSign(a: Approval): Promise<void> {
+    if (!(await this.confirmApprove(a.count || 1))) return;
+    this.guard(() => { this.approvals.approve(a.id, this.approver()); this.resign(a); this.closeDashView(); this.alerts.success('Signed & approved — ' + a.recipient + '.'); });
+  }
 
   /** After approval, re-render the credential(s) with the issuer's saved signature and persist the signed image. */
   private async resign(a: Approval): Promise<void> {
@@ -1114,6 +1325,123 @@ export class DashboardPage {
         if (!t?.canvasJson) continue;
         const data = { ...r.data };
         for (const k of Object.keys(data)) { if (/signature/i.test(k)) delete data[k]; }   // keep {{signatureN}} so the signature image is placed
+        const json = mergeDataIntoJson(t.canvasJson, data);
+        const file = await renderJsonToPng(json, t.width, t.height, 2, sig);
+        this.issuedSvc.update(r.id, { fileDataUrl: file });
+      } catch { /* keep existing image */ }
+    }
+  }
+
+  // ---- Bulk batch review (approve all / some, preview one) ---------------
+  batchTarget = signal<Approval | null>(null);
+  batchSel = signal<Set<string>>(new Set<string>());
+  batchPreview = signal<{ rec: IssuedRecord; img: string | null } | null>(null);
+  batchRecs = computed<IssuedRecord[]>(() => {
+    const a = this.batchTarget(); if (!a?.batchId) return [];
+    return this.issuedSvc.records().filter((r) => r.batchId === a.batchId && r.status === 'Pending' && !r.signedBy);
+  });
+  batchSelCount = computed(() => this.batchSel().size);
+  batchAllSel = computed(() => { const recs = this.batchRecs(); return recs.length > 0 && recs.every((r) => this.batchSel().has(r.id)); });
+  batchTotal = computed(() => { const a = this.batchTarget(); if (!a?.batchId) return 0; return this.issuedSvc.records().filter((r) => r.batchId === a.batchId).length; });
+  batchDone = computed(() => Math.max(0, this.batchTotal() - this.batchRecs().length));
+  batchPct = computed(() => { const t = this.batchTotal(); return t ? Math.round((this.batchDone() / t) * 100) : 0; });
+  openBatch(a: Approval): void {
+    this.refreshSig();
+    this.batchTarget.set(a); this.batchSel.set(new Set<string>());
+    const recs = this.batchRecs();
+    if (recs[0]) this.previewRecord(recs[0]); else this.batchPreview.set(null);
+  }
+  /** Click a recipient row: select it (for "Approve selected") and preview it. */
+  pickRecord(rec: IssuedRecord): void { this.toggleBatchSel(rec.id); this.previewRecord(rec); }
+  /** Deterministic gradient avatar colour per recipient (so each person is visually distinct). */
+  avColor(s: string): string {
+    const p = [['#6366f1', '#8b5cf6'], ['#0ea5e9', '#22d3ee'], ['#14b8a6', '#10b981'], ['#f59e0b', '#f97316'], ['#ec4899', '#f43f5e'], ['#8b5cf6', '#6366f1'], ['#0284c7', '#38bdf8'], ['#16a34a', '#4ade80']];
+    const str = s || '?';
+    let h = 0;
+    for (let i = 0; i < str.length; i++) h = (h * 31 + str.charCodeAt(i)) >>> 0;
+    const c = p[h % p.length];
+    return 'linear-gradient(135deg,' + c[0] + ',' + c[1] + ')';
+  }
+  closeBatch(): void { this.batchTarget.set(null); this.batchSel.set(new Set<string>()); this.batchPreview.set(null); }
+  toggleBatchSel(id: string): void { const s = new Set(this.batchSel()); s.has(id) ? s.delete(id) : s.add(id); this.batchSel.set(s); }
+  toggleBatchAll(): void { const recs = this.batchRecs(); const all = this.batchAllSel(); const s = new Set(this.batchSel()); recs.forEach((r) => (all ? s.delete(r.id) : s.add(r.id))); this.batchSel.set(s); }
+  previewRecord(rec: IssuedRecord): void { this.batchPreview.set({ rec, img: rec.fileDataUrl ?? null }); this.renderBatchPreview(rec); }
+  rejectOne(rec: IssuedRecord): void {
+    const a = this.batchTarget(); if (!a) return;
+    this.alerts.confirm({ tone: 'danger', icon: 'block', title: 'Reject this certificate?', message: (rec.recipientName || 'This recipient') + '’s credential will be rejected and won’t be delivered.', confirmText: 'Reject', cancelText: 'Cancel' }).then((ok) => {
+      if (!ok) return;
+      const remaining = this.approvals.rejectBatchSubset(a, [rec.id], this.approver());
+      this.batchPreview.set(null);
+      const recs = this.batchRecs();
+      if (remaining <= 0 || !recs.length) this.closeBatch(); else this.previewRecord(recs[0]);
+      this.alerts.info('Rejected — ' + (rec.recipientName || 'recipient') + '.');
+    });
+  }
+  rejectBatchSelected(): void {
+    const a = this.batchTarget(); if (!a) return;
+    const ids = [...this.batchSel()]; if (!ids.length) return;
+    this.alerts.confirm({ tone: 'danger', icon: 'block', title: 'Reject ' + ids.length + ' certificate' + (ids.length === 1 ? '' : 's') + '?', message: 'The selected credentials will be rejected and won’t be delivered.', confirmText: 'Reject ' + ids.length, cancelText: 'Cancel' }).then((ok) => {
+      if (!ok) return;
+      const remaining = this.approvals.rejectBatchSubset(a, ids, this.approver());
+      this.batchSel.set(new Set<string>()); this.batchPreview.set(null);
+      const recs = this.batchRecs();
+      if (remaining <= 0 || !recs.length) this.closeBatch(); else this.previewRecord(recs[0]);
+      this.alerts.info(ids.length + ' rejected.');
+    });
+  }
+  private async renderBatchPreview(rec: IssuedRecord): Promise<void> {
+    try {
+      const t = await firstValueFrom(this.templates.get(rec.templateId));
+      if (!t?.canvasJson || this.batchPreview()?.rec.id !== rec.id) return;
+      const data = { ...rec.data };
+      for (const k of Object.keys(data)) { if (/signature/i.test(k)) delete data[k]; }
+      const json = mergeDataIntoJson(t.canvasJson, data);
+      const img = await renderJsonToPng(json, t.width, t.height, 2, this.mySig(), !this.hasSig());
+      if (this.batchPreview()?.rec.id === rec.id) this.batchPreview.set({ rec, img });
+    } catch { /* keep fallback */ }
+  }
+  async approveOne(rec: IssuedRecord): Promise<void> {
+    const a = this.batchTarget(); if (!a) return;
+    if (!(await this.confirmApprove(1))) return;
+    this.guard(async () => {
+      const remaining = this.approvals.approveBatchSubset(a, [rec.id], this.approver());
+      await this.resignRecords([rec.id]);
+      this.alerts.success('Approved & signed — ' + (rec.recipientName || 'recipient') + '.');
+      this.batchPreview.set(null);
+      const recs = this.batchRecs();
+      if (remaining <= 0 || !recs.length) this.closeBatch(); else this.previewRecord(recs[0]);
+    });
+  }
+  async approveBatchSelected(): Promise<void> {
+    const a = this.batchTarget(); if (!a) return;
+    const ids = [...this.batchSel()]; if (!ids.length) return;
+    if (!(await this.confirmApprove(ids.length))) return;
+    this.guard(async () => {
+      const n = ids.length;
+      const remaining = this.approvals.approveBatchSubset(a, ids, this.approver());
+      await this.resignRecords(ids);
+      this.alerts.success(n + ' approved & signed.');
+      this.batchSel.set(new Set<string>()); this.batchPreview.set(null);
+      const recs = this.batchRecs();
+      if (remaining <= 0 || !recs.length) this.closeBatch(); else this.previewRecord(recs[0]);
+    });
+  }
+  async approveBatchAll(): Promise<void> {
+    const a = this.batchTarget(); if (!a) return;
+    const n = this.batchRecs().length;
+    if (!(await this.confirmApprove(n))) return;
+    this.guard(() => { this.approvals.approve(a.id, this.approver()); this.resign(a); this.closeBatch(); this.alerts.success('Approved & signed all ' + n + ' recipient' + (n === 1 ? '' : 's') + '.'); });
+  }
+  private async resignRecords(ids: string[]): Promise<void> {
+    let sig: string | null = null;
+    try { sig = localStorage.getItem('cf-signature'); } catch { sig = null; }
+    const recs = this.issuedSvc.records().filter((r) => ids.includes(r.id));
+    for (const r of recs) {
+      try {
+        const t = await firstValueFrom(this.templates.get(r.templateId));
+        if (!t?.canvasJson) continue;
+        const data = { ...r.data };
+        for (const k of Object.keys(data)) { if (/signature/i.test(k)) delete data[k]; }
         const json = mergeDataIntoJson(t.canvasJson, data);
         const file = await renderJsonToPng(json, t.width, t.height, 2, sig);
         this.issuedSvc.update(r.id, { fileDataUrl: file });

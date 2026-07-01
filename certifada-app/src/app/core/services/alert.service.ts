@@ -22,6 +22,10 @@ export interface ConfirmOptions {
   confirmText?: string;
   cancelText?: string;
   danger?: boolean;
+  /** Material icon name for the dialog badge (defaults by tone). */
+  icon?: string;
+  /** Visual tone of the confirm button + icon. */
+  tone?: 'brand' | 'success' | 'danger';
 }
 
 interface ConfirmState extends ConfirmOptions {
