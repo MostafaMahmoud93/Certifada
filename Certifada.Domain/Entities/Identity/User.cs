@@ -14,6 +14,8 @@ namespace Certifada.Domain.Entities.Identity
         public string? Profile_Picture_URL { get; set; }
         public string? Signature_URL { get; set; }
         public bool Is_Active { get; set; }
+        /// <summary>Email sign-ups must verify their address before signing in. Social sign-ups are auto-confirmed.</summary>
+        public bool Email_Confirmed { get; set; }
         public string? Provider_Id { get; set; }
         public string? Provider_Name { get; set; }
         public DateTime Create_Date { get; set; } = DateTime.Now;

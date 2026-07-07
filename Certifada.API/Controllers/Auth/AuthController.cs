@@ -38,10 +38,63 @@ public class AuthController : ApiControllersBase
     [Route(RouteClass.Auth.ResetPassword)]
     public async Task<IActionResult> ResetPassword(ResetPasswordModel model) => Ok(await _authService.ResetPassword(model));
 
+    /// <summary>Emails a one-time passwordless sign-in link (never reveals whether the email exists).</summary>
+    [AllowAnonymous]
+    [HttpPost]
+    [Route(RouteClass.Auth.MagicLink)]
+    public async Task<IActionResult> MagicLink(MagicLinkModel model) => Ok(await _authService.SendMagicLink(model));
+
+    /// <summary>Exchanges a magic-link token for a normal session token.</summary>
+    [AllowAnonymous]
+    [HttpPost]
+    [Route(RouteClass.Auth.MagicLogin)]
+    public async Task<IActionResult> MagicLogin(MagicLoginModel model) => Ok(await _authService.MagicLogin(model));
+
+    /// <summary>Activates an account from the emailed verification link and signs the user in.</summary>
+    [AllowAnonymous]
+    [HttpPost]
+    [Route(RouteClass.Auth.ConfirmEmail)]
+    public async Task<IActionResult> ConfirmEmail(ConfirmEmailModel model) => Ok(await _authService.ConfirmEmail(model));
+
     [AllowAnonymous]
     [HttpGet]
     [Route(RouteClass.Auth.Test)]
     public async Task<IActionResult> Test() => Ok("Test Helloooooo");
+
+    /// <summary>
+    /// SMTP diagnostics: sends a test email and returns the REAL failure reason
+    /// plus the effective settings the running process is using (password masked).
+    /// Remove or protect this endpoint before production.
+    /// </summary>
+    [AllowAnonymous]
+    [HttpGet]
+    [Route(RouteClass.Auth.TestEmail)]
+    public async Task<IActionResult> TestEmail([FromQuery] string to, [FromServices] MailSettings mailSettings)
+    {
+        var result = await _mailService.SendTemplatedAsync(EmailTemplateEnum.Welcome, to, new Dictionary<string, string>
+        {
+            ["name"] = "SMTP Test",
+            ["link"] = $"{_configuration["Frontend:Url"]}/auth/login"
+        });
+        return Ok(new
+        {
+            result.Success,
+            result.Message,
+            EffectiveSettings = new
+            {
+                mailSettings.Host,
+                Port = mailSettings.ResolvedPort,
+                Username = mailSettings.ResolvedUsername,
+                mailSettings.EnableSsl,
+                mailSettings.IsAuth,
+                FromEmail = mailSettings.ResolvedFromEmail,
+                FromName = mailSettings.ResolvedFromName,
+                PasswordSet = !string.IsNullOrEmpty(mailSettings.Password),
+                PasswordLength = mailSettings.Password?.Length ?? 0
+            },
+            Hint = "If Host/Username here differ from appsettings.json, an environment variable (MailSettings__*) is overriding it, or the API wasn't restarted after the config change."
+        });
+    }
 
     [AllowAnonymous]
     [HttpGet]

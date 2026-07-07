@@ -62,7 +62,11 @@ public class AuthService : ServiceBase, IAuthService
 
             if (user == null || result != PasswordVerificationResult.Success) return new ServiceResponse<TokenModel> { Success = false, Data = null, Message = ClutureResource.NotAuthorized };
             if (!user.Is_Active) return new ServiceResponse<TokenModel> { Success = false, Data = null, Message = ClutureResource.InActiveAccount };
-            TokenModel token = await GenerateToken(user, model.Password.Trim(), _configuration["Jwt:Key"]!, _configuration["Jwt:Issuer"]!, _configuration["Jwt:Audience"]!, 1440);
+            if (!user.Email_Confirmed && string.IsNullOrEmpty(user.Provider_Id))
+                return new ServiceResponse<TokenModel> { Success = false, Data = null, Message = "Please verify your email address first — check your inbox for the confirmation link." };
+            // "Remember me" → 30-day session (43200 min); otherwise the default 24 hours.
+            int expireMinutes = model.RememberMe ? 43200 : 1440;
+            TokenModel token = await GenerateToken(user, model.Password.Trim(), _configuration["Jwt:Key"]!, _configuration["Jwt:Issuer"]!, _configuration["Jwt:Audience"]!, expireMinutes);
 
             if (token != null)
             {
@@ -131,7 +135,8 @@ public class AuthService : ServiceBase, IAuthService
                 Provider_Name = providerName.ToString(),
                 Provider_Id = providerId,
                 Tenant_Id = await CreateTanent(name),
-                Is_Active = true
+                Is_Active = true,
+                Email_Confirmed = true // the provider already verified this address
             };
             await _unitOfWork.UserRepository.AddAsync(user);
             var rest = await _unitOfWork.SaveChangesAsync();
@@ -191,6 +196,7 @@ public class AuthService : ServiceBase, IAuthService
                     Full_Name = string.IsNullOrWhiteSpace(model.FullName) ? email.Split('@')[0] : model.FullName.Trim(),
                     Password_Hash = hash,
                     Is_Active = true,
+                    Email_Confirmed = false, // must verify via the emailed link before signing in
                     Tenant_Id = await CreateTanent(string.IsNullOrWhiteSpace(model.FullName) ? email : model.FullName)
                 };
                 await _unitOfWork.UserRepository.AddAsync(user);
@@ -198,23 +204,65 @@ public class AuthService : ServiceBase, IAuthService
                 scope.Complete();
             }
 
-            // Welcome email — best-effort; never block signup on a mail failure.
+            // Verification email (24h link). Registration succeeds even if mail fails —
+            // the user can ask for a new link from the sign-in page.
             try
             {
-                await _mailService.SendTemplatedAsync(EmailTemplateEnum.Welcome, email, new Dictionary<string, string>
+                var confirmToken = GenerateActionToken(user.Id, "confirm", 1440); // 24 hours
+                await _mailService.SendTemplatedAsync(EmailTemplateEnum.ConfirmEmail, email, new Dictionary<string, string>
                 {
                     ["name"] = user.Full_Name,
-                    ["link"] = $"{_configuration["Frontend:Url"]}/auth/login"
+                    ["link"] = $"{_configuration["Frontend:Url"]}/auth/confirm?token={Uri.EscapeDataString(confirmToken)}"
                 });
             }
             catch { /* ignore mail failure */ }
 
-            var token = await GenerateToken(user, null, _configuration["Jwt:Key"]!, _configuration["Jwt:Issuer"]!, _configuration["Jwt:Audience"]!, 1440);
-            return new ServiceResponse<TokenModel> { Success = true, Data = token, Message = ClutureResource.SenedSuccessfully };
+            // No session token yet — the account activates through the email link.
+            return new ServiceResponse<TokenModel> { Success = true, Data = null, Message = "Almost there! Check your inbox and click the verification link to activate your account." };
         }
         catch (Exception ex)
         {
             return await LogErrorAsync<TokenModel>(ex, null, model);
+        }
+    }
+
+    /// <summary>
+    /// Activates an account from the emailed 24-hour verification link and signs
+    /// the user straight in (returns a normal session token). Also sends the
+    /// welcome email once the address is proven real.
+    /// </summary>
+    public async Task<ServiceResponse<TokenModel>> ConfirmEmail(ConfirmEmailModel model)
+    {
+        try
+        {
+            var userId = ValidateActionToken(model.Token, "confirm");
+            if (userId == null)
+                return new ServiceResponse<TokenModel> { Success = false, Data = null, Message = "This verification link is invalid or has expired. Please register again or request a new link." };
+
+            var user = await _unitOfWork.UserRepository.FirstOrDefaultAsync(a => a.Id == userId.Value);
+            if (user == null) return new ServiceResponse<TokenModel> { Success = false, Data = null, Message = ClutureResource.NotAuthorized };
+            if (!user.Is_Active) return new ServiceResponse<TokenModel> { Success = false, Data = null, Message = ClutureResource.InActiveAccount };
+
+            if (!user.Email_Confirmed)
+            {
+                await _unitOfWork.UserRepository.ExecuteUpdateAsync(a => a.Id == user.Id, s => s.SetProperty(b => b.Email_Confirmed, true));
+                try
+                {
+                    await _mailService.SendTemplatedAsync(EmailTemplateEnum.Welcome, user.Email, new Dictionary<string, string>
+                    {
+                        ["name"] = user.Full_Name,
+                        ["link"] = $"{_configuration["Frontend:Url"]}/app/dashboard"
+                    });
+                }
+                catch { /* ignore mail failure */ }
+            }
+
+            var token = await GenerateToken(user, null, _configuration["Jwt:Key"]!, _configuration["Jwt:Issuer"]!, _configuration["Jwt:Audience"]!, 1440);
+            return new ServiceResponse<TokenModel> { Success = true, Data = token, Message = "Your email is verified — welcome to Certifada!" };
+        }
+        catch (Exception ex)
+        {
+            return await LogErrorAsync<TokenModel>(ex, null, null);
         }
     }
 
@@ -268,6 +316,91 @@ public class AuthService : ServiceBase, IAuthService
             return await LogErrorAsync(ex, false, model);
         }
     }
+
+    #region Magic link (passwordless sign-in)
+    /// <summary>Minutes a magic sign-in link stays valid.</summary>
+    private const int MagicLinkMinutes = 15;
+
+    /// <summary>
+    /// Emails a one-time passwordless sign-in link. Always answers success so the
+    /// endpoint never reveals whether an email is registered.
+    /// </summary>
+    public async Task<ServiceResponse<bool>> SendMagicLink(MagicLinkModel model)
+    {
+        try
+        {
+            var email = (model.Email ?? string.Empty).Trim();
+            var user = await _unitOfWork.UserRepository.FirstOrDefaultAsync(a => a.Email == email);
+            if (user != null && user.Is_Active)
+            {
+                // Same lockout window as password login — a magic link must not bypass it.
+                var thirtyMinutesAgo = DateTime.UtcNow.AddMinutes(-30);
+                int failedLoginAttempts = await _unitOfWork.UserLoginLogRepository.GetAllQ().CountAsync(log => log.User_Id == user.Id && log.Login_Time >= thirtyMinutesAgo && !log.Is_Successful);
+                if (failedLoginAttempts < 5)
+                {
+                    var token = GenerateActionToken(user.Id, "magic", MagicLinkMinutes);
+                    var link = $"{_configuration["Frontend:Url"]}/auth/magic?token={Uri.EscapeDataString(token)}";
+                    try
+                    {
+                        await _mailService.SendTemplatedAsync(EmailTemplateEnum.MagicLink, email, new Dictionary<string, string>
+                        {
+                            ["name"] = user.Full_Name ?? email.Split('@')[0],
+                            ["link"] = link,
+                            ["expires"] = MagicLinkMinutes.ToString()
+                        });
+                    }
+                    catch { /* never block / reveal on mail failure */ }
+                }
+            }
+            return new ServiceResponse<bool> { Success = true, Data = true, Message = "If an account exists for that email, a magic sign-in link has been sent." };
+        }
+        catch (Exception ex)
+        {
+            return await LogErrorAsync(ex, false, model);
+        }
+    }
+
+    /// <summary>
+    /// Exchanges a valid magic-link token for a normal session token.
+    /// Security: signature + issuer/audience + "magic" purpose + 15-minute expiry
+    /// are all validated; the attempt is written to the login log like any login.
+    /// </summary>
+    public async Task<ServiceResponse<TokenModel>> MagicLogin(MagicLoginModel model)
+    {
+        try
+        {
+            var userId = ValidateActionToken(model.Token, "magic");
+            if (userId == null)
+                return new ServiceResponse<TokenModel> { Success = false, Data = null, Message = "This magic link is invalid or has expired. Request a new one." };
+
+            var user = await _unitOfWork.UserRepository.FirstOrDefaultAsync(a => a.Id == userId.Value);
+            if (user == null) return new ServiceResponse<TokenModel> { Success = false, Data = null, Message = ClutureResource.NotAuthorized };
+            if (!user.Is_Active) return new ServiceResponse<TokenModel> { Success = false, Data = null, Message = ClutureResource.InActiveAccount };
+            if (!user.Email_Confirmed && string.IsNullOrEmpty(user.Provider_Id))
+                return new ServiceResponse<TokenModel> { Success = false, Data = null, Message = "Please verify your email address first — check your inbox for the confirmation link." };
+
+            await _unitOfWork.UserLoginLogRepository.AddAsync(new UserLoginLog
+            {
+                Id = Guid.NewGuid(),
+                User_Id = user.Id,
+                Login_Time = DateTime.UtcNow,
+                IP_Address = GetIpAddress(),
+                Is_Successful = true,
+                Is_Deleted = false
+            });
+            await _unitOfWork.SaveChangesAsync();
+
+            TokenModel token = await GenerateToken(user, null, _configuration["Jwt:Key"]!, _configuration["Jwt:Issuer"]!, _configuration["Jwt:Audience"]!, 1440);
+            if (token != null)
+                return new ServiceResponse<TokenModel> { Success = true, Data = token, Message = ClutureResource.SenedSuccessfully };
+            return new ServiceResponse<TokenModel> { Success = false, Data = null, Message = ClutureResource.NotAuthorized };
+        }
+        catch (Exception ex)
+        {
+            return await LogErrorAsync<TokenModel>(ex, null, null);
+        }
+    }
+    #endregion
 
     private string GenerateActionToken(Guid userId, string purpose, int minutes)
     {
@@ -352,7 +485,9 @@ public class AuthService : ServiceBase, IAuthService
                 Token = new JwtSecurityTokenHandler().WriteToken(token),
                 Expiration = token.ValidTo,
                 UserId = user.Id,
-                UserActions = userActions
+                UserActions = userActions,
+                UserName = user.Full_Name,
+                Email = user.Email
             };
         }
         return null;

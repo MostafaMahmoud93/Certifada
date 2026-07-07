@@ -4,6 +4,12 @@ public static class RouteClass
     /// <summary>
     /// Ex. api[key word]/Auth[Controller Name]/Login[Action Name]
     /// </summary>
+    public static class Wallet
+    {
+        public const string Request = "api/Wallet/Request";
+        public const string Exchange = "api/Wallet/Exchange";
+        public const string Credentials = "api/Wallet/Credentials";
+    }
     public static class Auth
     {
         public const string ExternalCallback = "api/Auth/ExternalCallback";
@@ -17,18 +23,28 @@ public static class RouteClass
         public const string Register = "api/Auth/Register";
         public const string ForgotPassword = "api/Auth/ForgotPassword";
         public const string ResetPassword = "api/Auth/ResetPassword";
+        public const string MagicLink = "api/Auth/MagicLink";
+        public const string MagicLogin = "api/Auth/MagicLogin";
+        public const string ConfirmEmail = "api/Auth/ConfirmEmail";
+        public const string TestEmail = "api/Auth/TestEmail";
     }
     public static class User
     {
         public const string EditUserProfilePicture = "api/User/EditUserProfilePicture";
         public const string UpdateImgeProfileUser = "api/User/UpdateImgeProfileUser";
         public const string GetCurrentUser = "api/User/GetCurrentUser";
+        public const string UpdateProfile = "api/User/UpdateProfile";
+        public const string UpdateSignature = "api/User/UpdateSignature";
         public const string DeleteUser = "api/User/DeleteUser";
         public const string CreateUser = "api/User/CreateUser";
         public const string SearchUser = "api/User/SearchUser";
         public const string EditUser = "api/User/EditUser";
         public const string GetUsers = "api/User/GetUsers";
         public const string GetUser = "api/User/GetUser";
+    }
+    public static class PlanRoute
+    {
+        public const string GetPricingPlans = "api/Plan/GetPricingPlans";
     }
     public static class Role
     {

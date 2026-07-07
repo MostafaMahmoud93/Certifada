@@ -9,7 +9,9 @@ public static class ConfigureServiceType
         services.AddScoped(typeof(IRoleService), typeof(RoleService));
         services.AddScoped(typeof(ITemplateService), typeof(TemplateService));
         services.AddScoped(typeof(ICertificateService), typeof(CertificateService));
+        services.AddScoped(typeof(IWalletService), typeof(WalletService));
         services.AddScoped(typeof(IAuthService), typeof(AuthService));
+        services.AddScoped(typeof(IPlanService), typeof(PlanService));
         services.AddScoped(typeof(IBaseService), typeof(ServiceBase));
         services.AddScoped(typeof(IMailService), typeof(MailService));
         services.AddScoped(typeof(IFileManager), typeof(FileManager));

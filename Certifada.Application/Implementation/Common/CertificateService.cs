@@ -86,10 +86,26 @@ public class CertificateService : ServiceBase, ICertificateService
             Created_Date = DateTime.Now,
             Status = "Issued",
             Data_Json = dataJson,
+            // The recipient email arrives embedded in the merge data as _email; lift it into the
+            // Email column so it's queryable (the recipient wallet, delivery and resend key off it).
+            Email = ExtractEmail(dataJson),
             Format = format,
             Download_Url = fileUrl,
             Batch_Id = batchId
         };
+
+    /// <summary>Pull the recipient email out of the merge-data JSON (_email / email keys).</summary>
+    private static string? ExtractEmail(string? dataJson)
+    {
+        if (string.IsNullOrWhiteSpace(dataJson)) return null;
+        try
+        {
+            var d = Newtonsoft.Json.Linq.JObject.Parse(dataJson);
+            var email = (d["_email"] ?? d["email"])?.ToString();
+            return string.IsNullOrWhiteSpace(email) ? null : email.Trim();
+        }
+        catch { return null; }
+    }
 
     private async Task<Guid> GetTenantId()
     {

@@ -1,22 +1,22 @@
 namespace Certifada.API.Services;
 
-public record CreateCheckoutRequest(
-    string priceId,
-    string? planId,
-    string? interval,
-    string? region
-);
+/// <summary>Start a checkout for a plan by its code (e.g. "Professional") + interval ("monthly"|"yearly").</summary>
+public record CheckoutRequest(string PlanCode, string Interval);
+public record CheckoutResponse(string Url, string SessionId);
 
-public record CheckoutSessionView(
-    string Id,
-    string? Status,
-    string? PaymentStatus,
-    string? CustomerEmail,
-    string? CustomerId,
-    string? SubscriptionId,
-    long? AmountTotal,
-    string? Currency,
-    List<string> PriceIds
-);
+/// <summary>Upgrade / downgrade an existing subscription.</summary>
+public record ChangePlanRequest(string PlanCode, string Interval);
+public record ChangePlanResponse(bool Success, bool CheckoutRequired, string? CheckoutUrl, string Message);
 
-public record CreateCheckoutResponse(string sessionId);
+public record SubscriptionView(
+    string PlanCode, string PlanName, string Interval, string Status,
+    decimal Amount, string Currency,
+    DateTimeOffset? CurrentPeriodEnd, DateTimeOffset? CancelAt,
+    string? PendingPlanCode = null, DateTimeOffset? ScheduledChangeOn = null);
+
+/// <summary>Result of confirming a Checkout session server-side (the no-webhook path).</summary>
+public record ConfirmCheckoutResponse(bool Success, string PlanCode, string Message);
+
+public record BillingHistoryView(
+    Guid Id, string PlanCode, string Status, decimal Amount, string Currency,
+    string? Interval, string? Description, DateTime CreatedOn);

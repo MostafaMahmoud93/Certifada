@@ -50,6 +50,8 @@ public class Certifada_DbContext : DbContext
     public virtual DbSet<Feature> Features { get; set; }
     public virtual DbSet<Region> Regions { get; set; }
     public virtual DbSet<Plan> Plans { get; set; }
+    public virtual DbSet<BillingHistory> BillingHistories { get; set; }
+    public virtual DbSet<Subscription> Subscriptions { get; set; }
     #endregion
     #region Certificate
     public virtual DbSet<CertificateTemplateVariable> CertificateTemplateVariables { get; set; }

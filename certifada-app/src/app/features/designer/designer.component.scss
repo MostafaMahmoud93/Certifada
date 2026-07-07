@@ -136,6 +136,14 @@ input:focus, select:focus { border-color: var(--cf-brand-500); box-shadow: var(-
 }
 .actionbar [data-tip]:hover::after,
 .actionbar [data-tip]:hover::before { opacity: 1; transform: translateX(-50%) translateY(0); }
+/* Never show a tooltip while the control's own dropdown is open — it would sit on top of the menu. */
+.actionbar [data-tip].on::after,
+.actionbar [data-tip].on::before { display: none; }
+/* Right-edge controls (Export, Save): anchor the tooltip to the right so it can't overflow the viewport and vanish. */
+.actionbar .export-wrap > [data-tip]::after,
+.actionbar .save-btn[data-tip]::after { left: auto; right: 0; transform: translateY(2px); }
+.actionbar .export-wrap > [data-tip]:hover::after,
+.actionbar .save-btn[data-tip]:hover::after { transform: translateY(0); }
 /* keep tooltips from being clipped by the segmented groups */
 .seg, .zoom.seg-z { overflow: visible; }
 
@@ -148,30 +156,68 @@ input:focus, select:focus { border-color: var(--cf-brand-500); box-shadow: var(-
 .zoom-fit { padding-inline: 7px; }
 
 .export-wrap { position: relative; }
+@keyframes emIn { from { opacity: 0; transform: translateY(-6px) scale(.98); } to { opacity: 1; transform: none; } }
 .export-menu {
   position: absolute;
   right: 0;
-  top: calc(100% + 4px);
+  top: calc(100% + 6px);
   background: var(--cf-surface);
   border: 1px solid var(--cf-line);
-  border-radius: var(--cf-radius-md);
-  box-shadow: var(--cf-shadow-md);
-  z-index: 30;
-  min-width: 160px;
+  border-radius: 14px;
+  box-shadow: 0 18px 44px rgba(15, 23, 42, .2), 0 2px 8px rgba(15, 23, 42, .08);
+  z-index: 400; /* above the Layers side-tab & panels (z 40–60), like .size-menu */
+  min-width: 280px;
   overflow: hidden;
+  padding: 6px;
+  animation: emIn .16s cubic-bezier(.2, .8, .3, 1);
 }
-.export-menu button {
-  display: block;
-  width: 100%;
-  text-align: left;
-  padding: .55rem .8rem;
-  background: none;
-  border: none;
-  font: inherit;
-  color: var(--cf-ink-700);
-  cursor: pointer;
+.em-head {
+  display: flex; flex-direction: column; gap: 1px;
+  padding: 9px 12px 10px; margin: -6px -6px 6px;
+  background: linear-gradient(135deg, color-mix(in srgb, var(--cf-brand-600) 10%, transparent), color-mix(in srgb, #7c3aed 8%, transparent));
+  border-bottom: 1px solid var(--cf-line);
+  b { font-size: 13px; color: var(--cf-ink-900); }
+  small { font-size: 11px; color: var(--cf-ink-500); }
 }
-.export-menu button:hover { background: var(--cf-surface-2); color: var(--cf-ink-900); }
+.em-item {
+  display: flex; align-items: center; gap: 10px;
+  width: 100%; padding: 8px 9px;
+  background: none; border: none; border-radius: 10px;
+  font: inherit; text-align: left; cursor: pointer;
+  transition: background .12s;
+  &:hover {
+    background: var(--cf-brand-50);
+    .em-go { opacity: 1; transform: translateX(0); }
+    .em-tag { opacity: 0; }
+    .em-ic { transform: scale(1.06); }
+  }
+}
+.em-ic {
+  flex: 0 0 auto; width: 36px; height: 36px; display: grid; place-items: center;
+  border-radius: 10px; color: #fff; transition: transform .14s;
+  .material-icons { font-size: 19px; }
+  &.png { background: linear-gradient(135deg, #10b981, #059669); }
+  &.pdf { background: linear-gradient(135deg, #f43f5e, #dc2626); }
+  &.svg { background: linear-gradient(135deg, #f59e0b, #ea580c); }
+  &.json { background: linear-gradient(135deg, #8b5cf6, #6366f1); }
+}
+.em-tt {
+  flex: 1; display: flex; flex-direction: column; gap: 1px; min-width: 0;
+  b { font-size: 12.5px; font-weight: 600; color: var(--cf-ink-900); white-space: nowrap; }
+  small { font-size: 11px; color: var(--cf-ink-500); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+}
+.em-tag {
+  flex: 0 0 auto; font-size: 10px; font-weight: 700; letter-spacing: .04em;
+  color: var(--cf-ink-500); background: color-mix(in srgb, var(--cf-line) 45%, transparent);
+  padding: 2px 7px; border-radius: 999px; transition: opacity .12s;
+}
+.em-go {
+  position: absolute; right: 14px;
+  font-size: 17px; color: var(--cf-brand-600);
+  opacity: 0; transform: translateX(-4px);
+  transition: opacity .14s, transform .14s;
+}
+.em-item { position: relative; }
 
 .floating-msg {
   position: fixed;
@@ -1826,3 +1872,38 @@ input[type="range"] { padding: 0; accent-color: var(--cf-brand-600); }
 .cfm-btn .material-icons { font-size: 17px; }
 .cfm-btn.danger { background: var(--cf-danger, #ef4444); border-color: var(--cf-danger, #ef4444); color: #fff; }
 .cfm-btn.danger:hover { filter: brightness(.94); }
+
+/* ═══════════════ Action bar — grouped zones (reformed for clearer UX) ═══════════════
+   Split the flat toolbar into three semantic zones — left (document identity),
+   center (canvas/view controls grouped into subtle "pods"), right (output
+   actions) — so related controls read as clusters instead of one long run.
+   Zones sit on one row on desktop and wrap gracefully (whole-zone) when narrow. */
+.actionbar { gap: 10px 14px; padding: .5rem .9rem; flex-wrap: wrap; align-items: center; justify-content: space-between; }
+.ab-left  { display: inline-flex; align-items: center; gap: 7px; flex: 0 1 auto; min-width: 0; }
+.ab-right { display: inline-flex; align-items: center; gap: 7px; flex: 0 0 auto; }
+/* center groups the canvas/view controls; it may shrink but must not grow and
+   shove the right-side actions onto a second row */
+.ab-center { display: inline-flex; align-items: center; justify-content: center; gap: 8px; flex: 0 1 auto; min-width: 0; flex-wrap: wrap; }
+/* soft tinted grouping container for a cluster of related controls */
+.ab-pod { display: inline-flex; align-items: center; gap: 4px; padding: 3px 5px; background: var(--cf-surface-2); border-radius: 12px; }
+.ab-pod .tb-sep { margin: 4px 1px; }
+/* trim the document name field a touch so all three zones fit one row sooner */
+.ab-left .name-input { width: 148px; }
+/* right zone action hierarchy: secondary buttons, then a prominent primary Save */
+.ab-right .save-btn { margin-inline-start: 2px; }
+
+/* progressive collapse: shed text labels before forcing a wrap so the three
+   zones hold a single row on common desktop widths (1366 / 1440 / 1536+). */
+@media (max-width: 1500px) { .actionbar .gb-lbl { display: none; } }
+@media (max-width: 1400px) {
+  .actionbar .hist-lbl,
+  .ab-right .ab-lbl { display: none; }   /* Preview / Bulk / Export / Brand → icon-only (tooltips remain) */
+  .ab-left .name-input { width: 132px; }
+  .ab-center { gap: 6px; }
+}
+@media (max-width: 1180px) { .ab-center { justify-content: flex-start; } }
+@media (max-width: 720px) {
+  .ab-left, .ab-center, .ab-right { flex: 1 1 100%; }
+  .ab-center { justify-content: flex-start; }
+  .ab-right { justify-content: flex-end; }
+}

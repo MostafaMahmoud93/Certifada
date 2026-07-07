@@ -56,4 +56,26 @@ namespace Certifada.Infrastructure.Configuration
             builder.HasKey(a => a.Id);
         }
     }
+    public class SubscriptionConfig : IEntityTypeConfiguration<Subscription>
+    {
+        public void Configure(EntityTypeBuilder<Subscription> builder)
+        {
+            builder.HasKey(a => a.Id);
+            builder.Property(a => a.Amount).HasPrecision(18, 2);
+            builder.HasIndex(a => a.StripeSubscriptionId);
+            builder.HasIndex(a => a.Tenant_Id);
+            builder.HasOne(q => q.Tenant).WithMany().HasForeignKey(q => q.Tenant_Id).OnDelete(DeleteBehavior.NoAction);
+            builder.HasOne(q => q.Plan).WithMany().HasForeignKey(q => q.Plan_Id).OnDelete(DeleteBehavior.NoAction);
+        }
+    }
+    public class BillingHistoryConfig : IEntityTypeConfiguration<BillingHistory>
+    {
+        public void Configure(EntityTypeBuilder<BillingHistory> builder)
+        {
+            builder.HasKey(a => a.Id);
+            builder.Property(a => a.Amount).HasPrecision(18, 2);
+            builder.HasOne(q => q.Tenant).WithMany().HasForeignKey(q => q.Tenant_Id).OnDelete(DeleteBehavior.NoAction);
+            builder.HasOne(q => q.Plan).WithMany().HasForeignKey(q => q.Plan_Id).OnDelete(DeleteBehavior.NoAction);
+        }
+    }
 }

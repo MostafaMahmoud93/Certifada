@@ -21,6 +21,18 @@ public class UserController : ApiControllersBase
     public async Task<IActionResult> UpdateImgeProfileUser(IFormFile? ProfilePicture) =>
         Ok(await _applicationUserService.UpdateImgeProfileUser(ProfilePicture));
 
+    /// <summary>Self-service: the signed-in user updates their own display name.</summary>
+    [HttpPost]
+    [Route(RouteClass.User.UpdateProfile)]
+    public async Task<IActionResult> UpdateProfile(UpdateProfileModel model) =>
+        Ok(await _applicationUserService.UpdateProfile(model));
+
+    /// <summary>Saves the signed-in user's signature image (Users.Signature_URL).</summary>
+    [HttpPost]
+    [Route(RouteClass.User.UpdateSignature)]
+    public async Task<IActionResult> UpdateSignature(IFormFile signaturePicture) =>
+        Ok(await _applicationUserService.UpdateImgeSignatureUser(signaturePicture));
+
     [HttpGet]
     [Route(RouteClass.User.GetUsers)]
     public async Task<IActionResult> GetUsers() =>

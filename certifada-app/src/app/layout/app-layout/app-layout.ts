@@ -8,6 +8,7 @@ import { SignaturePadComponent } from '../../shared/components/signature/signatu
 import { TranslocoModule } from '@ngneat/transloco';
 import { Actions } from '../../core/constants/actions';
 import { AuthService } from '../../core/services/auth.service';
+import { ProfileService } from '../../core/services/profile.service';
 import { ThemeService } from '../../core/services/theme.service';
 import { LanguageService } from '../../core/services/language.service';
 import { LayoutService } from '../../core/services/layout.service';
@@ -167,12 +168,19 @@ interface NotifItem { id: number; icon: string; tone: 'brand' | 'success' | 'war
       @if (msgs.unread()) { <span class="nbadge">{{ msgs.unread() }}</span> }
     </a>
     <div class="profile">
-      <button class="avatar" (click)="toggleProfile($event)" aria-label="Account">{{ auth.initials }}</button>
+      <button class="avatar" (click)="toggleProfile($event)" aria-label="Account">
+        @if (prof.avatarUrl(); as av) { <img class="av-img" [src]="av" alt="" /> } @else { {{ prof.initials() }} }
+      </button>
       @if (profileOpen()) {
         <div class="menu" (click)="$event.stopPropagation()">
           <div class="m-user">
-            <span class="avatar lg">{{ auth.initials }}</span>
-            <div class="m-id"><div class="m-name">{{ name() }}</div><div class="m-email cf-muted">{{ auth.email || 'Signed in' }}</div></div>
+            <span class="avatar lg">
+              @if (prof.avatarUrl(); as av) { <img class="av-img" [src]="av" alt="" /> } @else { {{ prof.initials() }} }
+            </span>
+            <div class="m-id">
+              <div class="m-name">{{ name() }} @if (prof.role()) { <span class="m-role">{{ prof.role() }}</span> }</div>
+              <div class="m-email cf-muted">{{ prof.email() || 'Signed in' }}</div>
+            </div>
           </div>
           <button class="m-item" (click)="openSignature()"><span class="material-icons">draw</span> {{ 'shell.addSignature' | transloco }}</button>
           <a class="m-item" routerLink="/app/settings" (click)="profileOpen.set(false)"><span class="material-icons">person</span> {{ 'shell.profile' | transloco }}</a>
@@ -278,7 +286,9 @@ interface NotifItem { id: number; icon: string; tone: 'brand' | 'success' | 'war
     .ico:hover{background:var(--cf-surface-2);color:var(--cf-ink-900)}
     .ico .pip{position:absolute;top:8px;inset-inline-end:9px;width:8px;height:8px;border-radius:50%;background:var(--cf-danger);border:2px solid var(--cf-surface)}
     .profile{position:relative}
-    .avatar{width:38px;height:38px;border-radius:50%;background:var(--cf-brand-50);color:var(--cf-brand-600);border:1px solid var(--cf-brand-100);display:grid;place-items:center;cursor:pointer;font-weight:600;font-size:13px}
+    .avatar{width:38px;height:38px;border-radius:50%;background:var(--cf-brand-50);color:var(--cf-brand-600);border:1px solid var(--cf-brand-100);display:grid;place-items:center;cursor:pointer;font-weight:600;font-size:13px;overflow:hidden}
+    .avatar .av-img{width:100%;height:100%;object-fit:cover;border-radius:50%}
+    .m-role{display:inline-block;font-size:9.5px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:var(--cf-brand-700);background:var(--cf-brand-50);border:1px solid var(--cf-brand-100);padding:1px 8px;border-radius:999px;margin-inline-start:6px;vertical-align:middle}
     .avatar.lg{width:42px;height:42px;font-size:15px}
     .menu{position:absolute;inset-inline-end:0;top:46px;width:248px;background:var(--cf-surface);border:1px solid var(--cf-line);border-radius:var(--cf-radius-md);box-shadow:var(--cf-shadow-lg);padding:8px;z-index:70}
     .m-user{display:flex;align-items:center;gap:10px;padding:8px 8px 12px}
@@ -385,6 +395,7 @@ interface NotifItem { id: number; icon: string; tone: 'brand' | 'success' | 'war
 })
 export class AppLayout {
   auth = inject(AuthService);
+  prof = inject(ProfileService);
   theme = inject(ThemeService);
   lang = inject(LanguageService);
   layout = inject(LayoutService);
@@ -414,7 +425,8 @@ export class AppLayout {
   unread = computed(() => this.notifs().filter((n) => !n.read).length);
   signatureOpen = signal(false);
 
-  name = signal(this.capitalize(this.auth.userName));
+  /** Real display name — from the profile API, token as instant fallback. */
+  name = computed(() => this.capitalize(this.prof.displayName()));
 
   nav: NavItem[] = [
     { label: 'nav.dashboard', icon: 'dashboard', link: '/app/dashboard', action: Actions.Dashboard_View },

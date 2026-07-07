@@ -1,6 +1,7 @@
 import { Injectable, signal } from '@angular/core';
 import {
   ActiveSelection,
+  cache,
   Canvas,
   Circle,
   CircleBrush,
@@ -598,7 +599,7 @@ export class FabricCanvasService {
     shadow?: boolean; outline?: boolean; outlineColor?: string;
   } = {}): void {
     const extra: any = {
-      fontFamily: spec.fontFamily ?? 'Inter',
+      fontFamily: spec.fontFamily ?? (this.designIsArabic() ? 'Cairo' : 'Inter'),
       fontSize: spec.fontSize ?? 28,
       fontWeight: spec.fontWeight ?? '400',
       fill: spec.fill ?? '#0f172a',
@@ -725,16 +726,54 @@ export class FabricCanvasService {
     o.pathAlign = 'center';
   }
 
+  /** Font families that indicate Arabic content even when the raw text is Latin (e.g. {{placeholders}}). */
+  private static readonly AR_FONTS = new Set([
+    'Cairo', 'Tajawal', 'Almarai', 'Amiri', 'Noto Kufi Arabic', 'Noto Naskh Arabic',
+    'Reem Kufi', 'El Messiri', 'Changa', 'Mada', 'Scheherazade New', 'Lateef', 'Mirza',
+    'Aref Ruqaa', 'Rakkas', 'Jomhuria', 'Katibeh', 'Marhey', 'Aldhabi', 'DecoType Thuluth',
+    'Diwani Simple Outline', 'Aref Graffiti', 'Arslan Wessam B', 'Abdo Salem', 'Abdo Free',
+    'Yassin', 'Dast Nevis', 'XP Ziba', 'Afsaneh', 'Al Ebdaa', 'Al Gemah Assarim',
+    'Al Gemah King', 'Arabswell', 'B Titr', 'AE Electron',
+  ]);
+
+  /**
+   * True when the current design is (mostly) Arabic — judged by Arabic script,
+   * RTL direction, or Arabic font families (so {{variables}} styled with an
+   * Arabic font count too). Used so newly added variables/text and sample data
+   * adopt Arabic defaults automatically.
+   */
+  designIsArabic(): boolean {
+    const arRe = /[؀-ۿݐ-ݿࢠ-ࣿﭐ-﷿ﹰ-﻿]/;
+    let ar = 0, total = 0;
+    const scan = (objs: FabricObject[]): void => {
+      for (const o of objs as any[]) {
+        const txt = o?.text;
+        if (typeof txt === 'string' && txt.trim()) {
+          const fam = String(o.fontFamily ?? '').split(',')[0].replace(/['"]/g, '').trim();
+          const famAr = FabricCanvasService.AR_FONTS.has(fam);
+          if (o.objType === 'field') { total++; if (famAr || o.direction === 'rtl') ar++; }
+          else { total++; if (arRe.test(txt) || o.direction === 'rtl' || famAr) ar++; }
+        }
+        if (Array.isArray(o?._objects)) scan(o._objects);
+      }
+    };
+    scan(this.canvas.getObjects());
+    return total > 0 && ar / total >= 0.3;
+  }
+
   /** A dynamic field rendered as {{key}} and merged with data on export. */
   addField(key: string): void {
     const clean = key.trim().replace(/[^a-zA-Z0-9_]/g, '');
     if (!clean) return;
+    // Smart default: on Arabic designs, variables use an Arabic font + RTL.
+    const isAr = this.designIsArabic();
     const tb = new Textbox(`{{${clean}}}`, {
       fontSize: 28,
       fill: '#4f46e5',
-      fontFamily: 'Inter',
+      fontFamily: isAr ? 'Cairo' : 'Inter',
       fontWeight: '600',
       textAlign: 'center',
+      direction: (isAr ? 'rtl' : 'ltr') as any,
       width: 360,
       editable: false,   // the {{placeholder}} text is locked; only styling/position change
     });
@@ -2764,8 +2803,58 @@ export class FabricCanvasService {
   }
   private scheduleTextMetricsRefresh(): void {
     const fonts: any = (document as any).fonts;
-    if (fonts?.ready?.then) { fonts.ready.then(() => { try { this.refreshTextMetrics(); } catch { /* ignore */ } }); }
+    if (fonts?.ready?.then) {
+      fonts.ready.then(() => {
+        try { cache.clearFontCache(); } catch { /* ignore */ }
+        try { this.refreshTextMetrics(); } catch { /* ignore */ }
+      });
+    }
     setTimeout(() => { try { this.refreshTextMetrics(); } catch { /* ignore */ } }, 80);
+  }
+
+  /**
+   * Wait for a web font to actually load, purge Fabric's per-family width
+   * cache (it may hold widths measured with the fallback font), then
+   * re-measure all text. Without this, text set in a not-yet-loaded font
+   * renders off-centre or clipped — worst for RTL/Arabic, where a wrong line
+   * width shifts the whole line sideways.
+   */
+  async ensureFontLoaded(family: string): Promise<void> {
+    try {
+      const fonts: any = (document as any).fonts;
+      if (fonts?.load) await Promise.allSettled([fonts.load(`16px "${family}"`), fonts.load(`700 16px "${family}"`)]);
+    } catch { /* ignore */ }
+    try { cache.clearFontCache(family); } catch { /* ignore */ }
+    this.refreshTextMetrics();
+    this.revision.update((v) => v + 1);
+  }
+
+  /** Apply a font family to the selection and fix metrics once it loads. */
+  applyFontFamily(family: string): void {
+    this.setProp({ fontFamily: family });
+    this.commit();
+    void this.ensureFontLoaded(family);
+  }
+
+  /**
+   * Set text alignment by its VISUAL meaning. Fabric mirrors left/right for
+   * `direction: 'rtl'` objects, so the physical value is swapped for RTL text —
+   * this keeps the toolbar buttons behaving exactly as their icons show.
+   */
+  setTextAlign(align: 'left' | 'center' | 'right' | 'justify'): void {
+    const o: any = this.canvas.getActiveObject();
+    const rtl = o?.direction === 'rtl';
+    const phys = rtl && align === 'left' ? 'right' : rtl && align === 'right' ? 'left' : align;
+    this.setProp({ textAlign: phys });
+    this.commit();
+  }
+
+  /** The selection's alignment in VISUAL terms (mirrors the stored value for RTL). */
+  visualTextAlign(): 'left' | 'center' | 'right' | 'justify' {
+    const o: any = this.canvas?.getActiveObject();
+    const a = (o?.textAlign ?? 'left') as 'left' | 'center' | 'right' | 'justify';
+    if (o?.direction === 'rtl') return a === 'left' ? 'right' : a === 'right' ? 'left' : a;
+    return a;
   }
 
   /** Restore every field object to its {{placeholder}} text. */

@@ -8,5 +8,7 @@ namespace Certifada.Domain.Abstractions.Enums
         ResetPassword = 3,
         CredentialIssued = 4,
         MessageReceived = 5,
+        MagicLink = 6,
+        WalletLink = 7,
     }
 }

@@ -48,14 +48,49 @@
 
         <div class="field">
           <label>Font</label>
-          <select class="font-sel" [value]="val('fontFamily')" [style.fontFamily]="val('fontFamily')" (change)="setFont($any($event.target).value)">
-            @for (f of fonts; track f) { <option [value]="f" [style.fontFamily]="f">{{ f }}</option> }
-            @if (svc.userFonts().length) {
-              <optgroup label="Your fonts">
-                @for (f of svc.userFonts(); track f) { <option [value]="f" [style.fontFamily]="f">{{ f }}</option> }
-              </optgroup>
+          <div class="font-dd" [class.open]="fontOpen()">
+            <button type="button" class="font-sel fd-btn" (click)="toggleFontPicker($event)">
+              <span class="fd-cur" [style.fontFamily]="currentFont()">{{ currentFont() }}</span>
+              <span class="material-icons">unfold_more</span>
+            </button>
+            @if (fontOpen()) {
+              <div class="fd-backdrop" (click)="fontOpen.set(false)"></div>
+              <div class="fd-panel"
+                   [style.left.px]="fdPos()?.left" [style.width.px]="fdPos()?.width"
+                   [style.top.px]="fdPos()?.top" [style.bottom.px]="fdPos()?.bottom"
+                   [class.drop-up]="fdPos()?.bottom != null">
+                <div class="fd-tabs">
+                  <button type="button" [class.on]="fontTab() === 'en'" (click)="setFontTab('en')"><b>Aa</b> English <i>{{ fontCounts.en }}</i></button>
+                  <button type="button" [class.on]="fontTab() === 'ar'" (click)="setFontTab('ar')"><b>أب</b> عربي <i>{{ fontCounts.ar }}</i></button>
+                </div>
+                <div class="fd-search">
+                  <span class="material-icons">search</span>
+                  <input [value]="fontQuery()" (input)="fontQuery.set($any($event.target).value)" (keydown.escape)="fontOpen.set(false)" placeholder="Search all fonts… / ابحث في الخطوط" />
+                  @if (fontQuery()) { <button type="button" class="fd-clear" (click)="fontQuery.set('')"><span class="material-icons">close</span></button> }
+                </div>
+                <div class="fd-list">
+                  @for (g of pickerGroups(); track g.label) {
+                    <div class="fd-grp"><span class="material-icons">{{ grpIcon(g.label) }}</span><span>{{ g.label }}</span></div>
+                    @for (f of g.fonts; track f) {
+                      <button type="button" class="fd-item" [class.sel]="currentFont() === f" (click)="pickFont(f)">
+                        <span class="fd-name" [style.fontFamily]="f">{{ f }}</span>
+                        <span class="fd-sample" [style.fontFamily]="f">{{ fontSample(f) }}</span>
+                        @if (currentFont() === f) { <span class="material-icons fd-check">check_circle</span> }
+                      </button>
+                    }
+                  }
+                  @if (!pickerGroups().length) { <div class="fd-empty"><span class="material-icons">search_off</span>No fonts match “{{ fontQuery() }}”</div> }
+                </div>
+                <div class="fd-foot">
+                  <label class="fd-upload">
+                    <span class="material-icons">upload_file</span> Upload font
+                    <input type="file" hidden accept=".ttf,.otf,.woff,.woff2,font/*" (change)="onPickerFontUpload($event)" />
+                  </label>
+                  <span class="fd-count">{{ pickerCount() }} fonts</span>
+                </div>
+              </div>
             }
-          </select>
+          </div>
         </div>
 
         <div class="grid-2">
@@ -102,10 +137,10 @@
         </div>
 
         <div class="btn-group mt-1">
-          <button class="btn btn-sm" [class.on]="val('textAlign') === 'left'" (click)="setAndCommit('textAlign', 'left')" title="Align left"><span class="material-icons">format_align_left</span></button>
-          <button class="btn btn-sm" [class.on]="val('textAlign') === 'center'" (click)="setAndCommit('textAlign', 'center')" title="Align center"><span class="material-icons">format_align_center</span></button>
-          <button class="btn btn-sm" [class.on]="val('textAlign') === 'right'" (click)="setAndCommit('textAlign', 'right')" title="Align right"><span class="material-icons">format_align_right</span></button>
-          <button class="btn btn-sm" [class.on]="val('textAlign') === 'justify'" (click)="setAndCommit('textAlign', 'justify')" title="Justify"><span class="material-icons">format_align_justify</span></button>
+          <button class="btn btn-sm" [class.on]="svc.visualTextAlign() === 'left'" (click)="svc.setTextAlign('left')" title="Align left"><span class="material-icons">format_align_left</span></button>
+          <button class="btn btn-sm" [class.on]="svc.visualTextAlign() === 'center'" (click)="svc.setTextAlign('center')" title="Align center"><span class="material-icons">format_align_center</span></button>
+          <button class="btn btn-sm" [class.on]="svc.visualTextAlign() === 'right'" (click)="svc.setTextAlign('right')" title="Align right"><span class="material-icons">format_align_right</span></button>
+          <button class="btn btn-sm" [class.on]="svc.visualTextAlign() === 'justify'" (click)="svc.setTextAlign('justify')" title="Justify"><span class="material-icons">format_align_justify</span></button>
         </div>
 
         <span class="grp-label">Text color</span>

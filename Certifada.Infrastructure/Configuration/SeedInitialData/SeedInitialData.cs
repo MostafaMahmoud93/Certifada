@@ -19,6 +19,7 @@ namespace Certifada.Infrastructure.Configuration.SeedInitialData
                 Password_Hash = seedHash,
                 Full_Name = "Mostafa Mahmoud",
                 Is_Active = true,
+                Email_Confirmed = true,
                 Create_Date = createdAt,
                 Is_Deleted = false
             };
@@ -178,6 +179,133 @@ namespace Certifada.Infrastructure.Configuration.SeedInitialData
                 new Feature { Id = Guid.Parse("eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee"), Feature_Key = "Integrations", Name = "Integrations", SortOrder = 14, Is_Active = true }
             };
             builder.Entity<Feature>().HasData(features);
+
+            SeedPlansAndPricing(builder);
+        }
+
+        /// <summary>
+        /// Plans + prices + feature rows exactly as shown on the public Pricing page
+        /// (Free Trial / Basic / Professional / Enterprise). The Angular pricing page
+        /// reads this via GET api/Plan/GetPricingPlans.
+        /// </summary>
+        private static void SeedPlansAndPricing(ModelBuilder builder)
+        {
+            // ---- Region (prices are global USD for now) ----
+            builder.Entity<Region>().HasData(new Region { Id = 1, Region_Code = "GLOBAL", Label = "Global", Currency = "USD", Is_Deleted = false });
+
+            // ---- Plans ----
+            var freeId = Guid.Parse("b1000000-0000-4000-8000-000000000001");
+            var basicId = Guid.Parse("b1000000-0000-4000-8000-000000000002");
+            var proId = Guid.Parse("b1000000-0000-4000-8000-000000000003");
+            var entId = Guid.Parse("b1000000-0000-4000-8000-000000000004");
+            builder.Entity<Plan>().HasData(
+                new Plan { Id = freeId, Plan_Code = "Free", Title = "Free Trial", Blurb = "Try our platform free for 14 days", Highlight = false, Is_Trial = true, SortOrder = 1, Is_Active = true, Is_Deleted = false },
+                new Plan { Id = basicId, Plan_Code = "Basic", Title = "Basic", Blurb = "Perfect for small organizations", Highlight = false, Is_Trial = false, SortOrder = 2, Is_Active = true, Is_Deleted = false },
+                new Plan { Id = proId, Plan_Code = "Professional", Title = "Professional", Blurb = "For growing teams and businesses", Highlight = true, Is_Trial = false, SortOrder = 3, Is_Active = true, Is_Deleted = false },
+                new Plan { Id = entId, Plan_Code = "Enterprise", Title = "Enterprise", Blurb = "Unlimited power for large organizations", Highlight = false, Is_Trial = false, SortOrder = 4, Is_Active = true, Is_Deleted = false }
+            );
+
+            // ---- Prices (USD, monthly + yearly; yearly = 2 months free) ----
+            PlanPrice Price(string id, Guid planId, string interval, decimal amount, string stripeSuffix) => new PlanPrice
+            {
+                Id = Guid.Parse(id),
+                Plan_Id = planId,
+                Region_Code = "GLOBAL",
+                Interval = interval,
+                Amount = amount,
+                Currency = "USD",
+                StripeProductId = $"prod_{stripeSuffix}",
+                StripePriceId = $"price_{stripeSuffix}_{interval}",
+                IsActive = true,
+                Is_Deleted = false
+            };
+            builder.Entity<PlanPrice>().HasData(
+                Price("c1000000-0000-4000-8000-000000000001", freeId, "monthly", 0m, "free"),
+                Price("c1000000-0000-4000-8000-000000000002", freeId, "yearly", 0m, "free"),
+                Price("c1000000-0000-4000-8000-000000000003", basicId, "monthly", 19m, "basic"),
+                Price("c1000000-0000-4000-8000-000000000004", basicId, "yearly", 190m, "basic"),
+                Price("c1000000-0000-4000-8000-000000000005", proId, "monthly", 49m, "professional"),
+                Price("c1000000-0000-4000-8000-000000000006", proId, "yearly", 490m, "professional"),
+                Price("c1000000-0000-4000-8000-000000000007", entId, "monthly", 99m, "enterprise"),
+                Price("c1000000-0000-4000-8000-000000000008", entId, "yearly", 990m, "enterprise")
+            );
+
+            // ---- Pricing-page display features (SortOrder 101+ keeps them apart from the product feature flags above) ----
+            Guid F(int n) => Guid.Parse($"f1000000-0000-4000-8000-{n:D12}");
+            builder.Entity<Feature>().HasData(
+                new Feature { Id = F(1), Feature_Key = "Certificate_Templates", Name = "Certificate Templates", SortOrder = 101, Is_Active = true },
+                new Feature { Id = F(2), Feature_Key = "Certificates_Per_Month", Name = "Certificates per Month", SortOrder = 102, Is_Active = true },
+                new Feature { Id = F(3), Feature_Key = "Team_Members", Name = "Team Members", SortOrder = 103, Is_Active = true },
+                new Feature { Id = F(4), Feature_Key = "Storage", Name = "Storage", SortOrder = 104, Is_Active = true },
+                new Feature { Id = F(5), Feature_Key = "Custom_Branding", Name = "Custom Branding", SortOrder = 105, Is_Active = true },
+                new Feature { Id = F(6), Feature_Key = "API_Access", Name = "API Access", SortOrder = 106, Is_Active = true },
+                new Feature { Id = F(7), Feature_Key = "Priority_Support", Name = "Priority Support", SortOrder = 107, Is_Active = true },
+                new Feature { Id = F(8), Feature_Key = "QR_Code_Verification", Name = "QR Code Verification", SortOrder = 108, Is_Active = true },
+                new Feature { Id = F(9), Feature_Key = "Email_Support", Name = "Email Support", SortOrder = 109, Is_Active = true },
+                new Feature { Id = F(10), Feature_Key = "Bulk_Certificate_Generation", Name = "Bulk Certificate Generation", SortOrder = 110, Is_Active = true },
+                new Feature { Id = F(11), Feature_Key = "Advanced_Analytics", Name = "Advanced Analytics", SortOrder = 111, Is_Active = true },
+                new Feature { Id = F(12), Feature_Key = "White_Label", Name = "White-label Solution", SortOrder = 112, Is_Active = true },
+                new Feature { Id = F(13), Feature_Key = "SSO_SAML", Name = "SSO / SAML", SortOrder = 113, Is_Active = true },
+                new Feature { Id = F(14), Feature_Key = "Dedicated_Account_Manager", Name = "Dedicated Account Manager", SortOrder = 114, Is_Active = true }
+            );
+
+            // ---- Plan ↔ feature rows (mirrors the pricing cards 1:1, including the greyed-out rows) ----
+            PlanFeature PF(int plan, int feat, Guid planId, bool enabled, string? value = null, int? times = null) => new PlanFeature
+            {
+                Id = Guid.Parse($"d1000000-0000-4000-800{plan}-{feat:D12}"),
+                Plan_Id = planId,
+                Feature_Id = F(feat),
+                Enabled = enabled,
+                Display_Value = value,
+                FeatureTimes = times,
+                Is_Deleted = false
+            };
+            builder.Entity<PlanFeature>().HasData(
+                // Free Trial
+                PF(1, 1, freeId, true, "3", 3),
+                PF(1, 2, freeId, true, "50", 50),
+                PF(1, 3, freeId, true, "1", 1),
+                PF(1, 4, freeId, true, "10 MB", 10),
+                PF(1, 5, freeId, false),
+                PF(1, 6, freeId, false),
+                PF(1, 7, freeId, false),
+                PF(1, 8, freeId, false),
+                // Basic
+                PF(2, 1, basicId, true, "10", 10),
+                PF(2, 2, basicId, true, "500", 500),
+                PF(2, 3, basicId, true, "3", 3),
+                PF(2, 4, basicId, true, "1 GB", 1024),
+                PF(2, 5, basicId, true),
+                PF(2, 6, basicId, false),
+                PF(2, 7, basicId, false),
+                PF(2, 8, basicId, true),
+                PF(2, 9, basicId, true),
+                // Professional
+                PF(3, 1, proId, true, "50", 50),
+                PF(3, 2, proId, true, "5,000", 5000),
+                PF(3, 3, proId, true, "10", 10),
+                PF(3, 4, proId, true, "10 GB", 10240),
+                PF(3, 5, proId, true),
+                PF(3, 6, proId, true),
+                PF(3, 7, proId, true),
+                PF(3, 8, proId, true),
+                PF(3, 10, proId, true),
+                PF(3, 11, proId, true),
+                // Enterprise (null FeatureTimes = unlimited)
+                PF(4, 1, entId, true, "Unlimited"),
+                PF(4, 2, entId, true, "Unlimited"),
+                PF(4, 3, entId, true, "Unlimited"),
+                PF(4, 4, entId, true, "Unlimited"),
+                PF(4, 5, entId, true),
+                PF(4, 6, entId, true),
+                PF(4, 7, entId, true, "24/7"),
+                PF(4, 8, entId, true),
+                PF(4, 10, entId, true),
+                PF(4, 11, entId, true),
+                PF(4, 12, entId, true),
+                PF(4, 13, entId, true),
+                PF(4, 14, entId, true)
+            );
         }
     }
 }

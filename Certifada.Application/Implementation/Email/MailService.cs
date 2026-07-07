@@ -151,14 +151,24 @@ public class MailService : ServiceBase, IMailService
             return await CustomLogErrorAsync<Guid?>(ex, null, null);
         }
     }
+    /// <summary>
+    /// Sends via SMTP — every setting comes from <see cref="MailSettings"/>
+    /// (bound once from the "MailSettings" section in appsettings.json).
+    /// </summary>
     private async Task<ServiceResponse<bool>> CreateEmailSMTPAsync(MailRequestModel mailRequest)
     {
         try
         {
-            // Create a MailMessage object
+            if (_mailSettings == null || !_mailSettings.IsComplete)
+            {
+                return await LogErrorAsync<bool>(
+                    new InvalidOperationException("SMTP settings are incomplete. Please specify MailSettings:Host, MailSettings:Port, MailSettings:Username (or Mail) and MailSettings:Password in appsettings.json."),
+                    false, new { mailRequest.Subject, mailRequest.ToEmails });
+            }
+
             using (var mailMessage = new MailMessage())
             {
-                mailMessage.From = new MailAddress(_mailSettings.Mail);
+                mailMessage.From = new MailAddress(_mailSettings.ResolvedFromEmail, _mailSettings.ResolvedFromName);
 
                 foreach (var recipient in mailRequest.ToEmails)
                 {
@@ -182,8 +192,14 @@ public class MailService : ServiceBase, IMailService
                 }
 
                 mailMessage.Subject = mailRequest.Subject;
-                mailMessage.Body = mailRequest.Body;
-                mailMessage.IsBodyHtml = true;
+                // Deliverability: send multipart/alternative (plain text + HTML).
+                // HTML-only email is a strong spam signal for Outlook/Yahoo/Gmail.
+                var plainText = HtmlToPlainText(mailRequest.Body);
+                mailMessage.Body = plainText;
+                mailMessage.IsBodyHtml = false;
+                mailMessage.AlternateViews.Add(AlternateView.CreateAlternateViewFromString(plainText, System.Text.Encoding.UTF8, "text/plain"));
+                mailMessage.AlternateViews.Add(AlternateView.CreateAlternateViewFromString(mailRequest.Body, System.Text.Encoding.UTF8, "text/html"));
+                mailMessage.ReplyToList.Add(new MailAddress(_mailSettings.ResolvedFromEmail, _mailSettings.ResolvedFromName));
                 if (mailRequest.Attachments != null)
                 {
                     foreach (var file in mailRequest.Attachments)
@@ -205,18 +221,13 @@ public class MailService : ServiceBase, IMailService
                     }
                 }
 
-                using (var smtpClient = new SmtpClient(_mailSettings.Host, _mailSettings.Port))
+                using (var smtpClient = new SmtpClient(_mailSettings.Host, _mailSettings.ResolvedPort))
                 {
-                    // Enable SSL (STARTTLS)
-                    smtpClient.EnableSsl = true;
-                    // Set other properties if needed, e.g., credentials
                     if (_mailSettings.IsAuth)
-                        smtpClient.Credentials = new NetworkCredential(_mailSettings.Mail, _mailSettings.Password);
-
-                    //smtpClient.DeliveryMethod = SmtpDeliveryMethod.Network;
+                        smtpClient.Credentials = new NetworkCredential(_mailSettings.ResolvedUsername, _mailSettings.Password);
+                    smtpClient.EnableSsl = _mailSettings.EnableSsl; // STARTTLS on 587
 
                     await smtpClient.SendMailAsync(mailMessage);
-                    Console.WriteLine("Email sent successfully!");
                 }
             }
 
@@ -224,7 +235,22 @@ public class MailService : ServiceBase, IMailService
         }
         catch (Exception ex)
         {
-            return await LogErrorAsync<bool>(ex, false, mailRequest);
+            // Log WITH the effective SMTP target so the file log shows exactly which
+            // server/credentials the running process used (config can be overridden
+            // by environment variables or a stale singleton after appsettings edits).
+            var resp = await LogErrorAsync<bool>(ex, false, new
+            {
+                SmtpHost = _mailSettings?.Host,
+                SmtpPort = _mailSettings?.ResolvedPort,
+                SmtpUser = _mailSettings?.ResolvedUsername,
+                SmtpSsl = _mailSettings?.EnableSsl,
+                From = _mailSettings?.ResolvedFromEmail,
+                mailRequest.Subject,
+                mailRequest.ToEmails
+            });
+            // Surface the real SMTP reason to the caller instead of a generic message.
+            resp.Message = $"{ex.Message}{(ex.InnerException != null ? " | " + ex.InnerException.Message : string.Empty)}";
+            return resp;
         }
     }
     private async Task<(string Temp, string Subject)> GetEmailTemplate(Guid templateId)
@@ -239,6 +265,21 @@ public class MailService : ServiceBase, IMailService
             return await CustomLogErrorAsync(ex, ("", ""), templateId);
         }
     }
+    /// <summary>Very small HTML→text conversion for the plain-text alternate view.</summary>
+    private static string HtmlToPlainText(string html)
+    {
+        if (string.IsNullOrWhiteSpace(html)) return string.Empty;
+        var text = Regex.Replace(html, @"<(style|script)[^>]*>.*?</\1>", " ", RegexOptions.Singleline | RegexOptions.IgnoreCase);
+        // keep link targets readable: <a href="url">label</a> → label (url)
+        text = Regex.Replace(text, "<a[^>]*href=\"([^\"]+)\"[^>]*>(.*?)</a>", "$2 ($1)", RegexOptions.Singleline | RegexOptions.IgnoreCase);
+        text = Regex.Replace(text, @"<br\s*/?>|</p>|</tr>|</h\d>", "\n", RegexOptions.IgnoreCase);
+        text = Regex.Replace(text, "<[^>]+>", " ");
+        text = System.Net.WebUtility.HtmlDecode(text);
+        text = Regex.Replace(text, @"[ \t]+", " ");
+        text = Regex.Replace(text, @"\n\s+", "\n");
+        return text.Trim();
+    }
+
     private static string CleanInputString(string input)
     {
         if (string.IsNullOrEmpty(input))

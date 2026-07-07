@@ -9,6 +9,9 @@ namespace Certifada.Domain.Models
         public Guid? UserId { get; set; }
         public bool? IsAdmin { get; set; }
         public string[] UserActions { get; set; }
+        /// <summary>Display name + email so the UI can greet the user right after login.</summary>
+        public string? UserName { get; set; }
+        public string? Email { get; set; }
     }
     public class ExternalLoginStartModel
     {

@@ -108,7 +108,7 @@ export const AR_TEMPLATES: CertTemplate[] = [
 
   // ===================== SOCIAL MEDIA (Arabic) =====================
   {
-    cat: 'social', lang: 'ar', id: 'ar-soc-quote', name: 'منشور اقتباس', accent: '#f59e0b', bg: '#0f172a', w: SQ, h: SQ,
+    cat: 'social', lang: 'ar', id: 'ar-soc-quote', grp: 'منشورات', name: 'منشور اقتباس', accent: '#f59e0b', bg: '#0f172a', w: SQ, h: SQ,
     tags: 'arabic social instagram اقتباس منشور rtl quote post',
     items: [
       { kind: 'text', text: '”', x: SCX, y: 250, w: 400, fontSize: 220, fontFamily: 'Playfair Display', fill: '#1e293b' },
@@ -118,7 +118,7 @@ export const AR_TEMPLATES: CertTemplate[] = [
     ],
   },
   {
-    cat: 'social', lang: 'ar', id: 'ar-soc-promo', name: 'عرض ترويجي', accent: '#4f46e5', bg: '#4f46e5', w: SQ, h: SQ,
+    cat: 'social', lang: 'ar', id: 'ar-soc-promo', grp: 'منشورات', name: 'عرض ترويجي', accent: '#4f46e5', bg: '#4f46e5', w: SQ, h: SQ,
     tags: 'arabic social instagram عرض خصم تخفيض ترويج rtl promo sale',
     items: [
       { kind: 'rect', x: SCX, y: SCX, w: SQ, h: SQ, fill: '', stops: [{ offset: 0, color: '#4f46e5' }, { offset: 1, color: '#7c3aed' }], gradDir: 'diag' },
@@ -132,7 +132,7 @@ export const AR_TEMPLATES: CertTemplate[] = [
 
   // ===================== BUSINESS (Arabic) =====================
   {
-    cat: 'business', lang: 'ar', id: 'ar-biz-card', name: 'بطاقة عمل', accent: '#0f172a', bg: '#ffffff', w: 1050, h: 600,
+    cat: 'business', lang: 'ar', id: 'ar-biz-card', grp: 'بطاقات', name: 'بطاقة عمل', accent: '#0f172a', bg: '#ffffff', w: 1050, h: 600,
     tags: 'arabic business card بطاقة عمل rtl',
     items: [
       { kind: 'rect', x: 165, y: 300, w: 330, h: 600, fill: '', stops: [{ offset: 0, color: '#0f172a' }, { offset: 1, color: '#1e293b' }], gradDir: 'v' },
@@ -149,7 +149,7 @@ export const AR_TEMPLATES: CertTemplate[] = [
 
   // ===================== CARDS (Arabic) =====================
   {
-    cat: 'cards', lang: 'ar', id: 'ar-card-invite', name: 'دعوة لحضور', accent: '#9a7b3f', bg: '#faf6ec', w: 794, h: 1123,
+    cat: 'cards', lang: 'ar', id: 'ar-card-invite', grp: 'دعوات وبطاقات', name: 'دعوة لحضور', accent: '#9a7b3f', bg: '#faf6ec', w: 794, h: 1123,
     tags: 'arabic invitation دعوة مناسبة حفل rtl',
     items: [
       { kind: 'rect', x: 397, y: 561, w: 794 - 70, h: 1123 - 70, fill: '', stroke: '#c2a25a', strokeWidth: 2 },
@@ -167,7 +167,7 @@ export const AR_TEMPLATES: CertTemplate[] = [
 
   // ===================== DOCUMENT (Arabic) =====================
   {
-    cat: 'document', lang: 'ar', id: 'ar-doc-letter', name: 'ورقة رسمية', accent: '#1d4ed8', bg: '#ffffff', w: 794, h: 1123,
+    cat: 'document', lang: 'ar', id: 'ar-doc-letter', grp: 'مستندات', name: 'ورقة رسمية', accent: '#1d4ed8', bg: '#ffffff', w: 794, h: 1123,
     tags: 'arabic document letterhead ورقة رسمية خطاب rtl',
     items: [
       { kind: 'rect', x: 397, y: 70, w: 794, h: 132, fill: '', stops: [{ offset: 0, color: '#1d4ed8' }, { offset: 1, color: '#2563eb' }], gradDir: 'h' },

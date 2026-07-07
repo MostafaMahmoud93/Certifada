@@ -1,71 +1,49 @@
+using Certifada.API.Options;
+using Certifada.API.Services;
 using Microsoft.Extensions.Options;
 using Stripe;
-using Stripe.Checkout;
-using Certifada.API.Options;
 
 namespace Certifada.API.Controllers;
 
+/// <summary>Stripe → Certifada: verified events update TenantPlans + BillingHistories.</summary>
 [ApiController]
 [Route("api/stripe/webhook")]
 public class WebhooksController : ControllerBase
 {
     private readonly StripeOptions _opts;
+    private readonly IBillingService _billing;
 
-    public WebhooksController(IOptions<StripeOptions> opts) => _opts = opts.Value;
+    public WebhooksController(IOptions<StripeOptions> opts, IBillingService billing)
+    {
+        _opts = opts.Value;
+        _billing = billing;
+    }
 
+    [AllowAnonymous]
     [HttpPost]
     public async Task<IActionResult> Handle()
     {
-        // 1) Read the raw body as string
         var json = await new StreamReader(HttpContext.Request.Body).ReadToEndAsync();
-
-        // 2) Verify signature (very important)
-        var signatureHeader = Request.Headers["Stripe-Signature"];
         Event stripeEvent;
         try
         {
-            stripeEvent = EventUtility.ConstructEvent(json, signatureHeader, _opts.WebhookSecret);
+            // Signature verification — never process unsigned payloads.
+            stripeEvent = EventUtility.ConstructEvent(json, Request.Headers["Stripe-Signature"], _opts.WebhookSecret);
         }
         catch (Exception ex)
         {
             return BadRequest($"Webhook signature verification failed: {ex.Message}");
         }
 
-        // 3) Handle the event types you care about
-        switch (stripeEvent.Type)
+        try
         {
-            case "checkout.session.completed":
-            {
-                var session = stripeEvent.Data.Object as Session;
-                if (session is not null)
-                {
-                    // Example: read identifiers
-                    var stripeCustomerId = session.CustomerId;  // cus_...
-                    var sessionId        = session.Id;          // cs_...
-                    var clientRef        = session.ClientReferenceId; // your app user id if you set it
-                    var subId            = session.SubscriptionId;    // sub_... (created)
-
-                    // TODO: upsert your DB:
-                    // - map clientRef (your user) -> stripeCustomerId
-                    // - store subId, status, current period end, plan id (from metadata), etc.
-                }
-                break;
-            }
-            case "customer.subscription.updated":
-            case "customer.subscription.deleted":
-            {
-                var sub = stripeEvent.Data.Object as Stripe.Subscription;
-                if (sub is not null)
-                {
-                    // TODO: update your DB with sub.Status, cancel_at, current_period_end, etc.
-                }
-                break;
-            }
-            default:
-                // Ignore other events
-                break;
+            await _billing.HandleWebhookAsync(stripeEvent);
         }
-
+        catch
+        {
+            // Respond 200 anyway so Stripe doesn't retry forever on a mapping bug;
+            // the event can be replayed from the Stripe dashboard after a fix.
+        }
         return Ok();
     }
 }

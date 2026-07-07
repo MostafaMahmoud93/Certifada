@@ -156,11 +156,38 @@ public class UserService : ServiceBase, IUserService
             User user = await _unitOfWork.UserRepository.FindByIDAsync(UserId.Value);
             if (user == null) return new ServiceResponse<DetailUserModel> { Success = false, Data = null, Message = ClutureResource.FailedRetrieveData };
             DetailUserModel userModel = _mapper.Map<DetailUserModel>(user);
+            userModel.JoinedOn = user.Create_Date;
+            userModel.EmailConfirmed = user.Email_Confirmed || !string.IsNullOrEmpty(user.Provider_Id);
+            if (user.Tenant_Id.HasValue)
+                userModel.TenantName = (await _unitOfWork.TenantRepository.FirstOrDefaultAsync(t => t.Id == user.Tenant_Id.Value))?.Name;
+            // Role: the mapper needs the navigation loaded — resolve it explicitly.
+            // A user without an assigned role is the workspace Owner (the account creator).
+            if (string.IsNullOrEmpty(userModel.UserRole) && user.Role_Id.HasValue)
+                userModel.UserRole = (await _unitOfWork.RoleRepository.FirstOrDefaultAsync(r => r.Id == user.Role_Id.Value))?.Name;
+            if (string.IsNullOrEmpty(userModel.UserRole))
+                userModel.UserRole = "Owner";
             return new ServiceResponse<DetailUserModel> { Success = true, Data = userModel, Message = ClutureResource.RetrieveData };
         }
         catch (Exception ex)
         {
             return await LogErrorAsync<DetailUserModel>(ex, null, GetUserId());
+        }
+    }
+
+    /// <summary>Self-service: the signed-in user updates their own display name.</summary>
+    public async Task<ServiceResponse<bool>> UpdateProfile(UpdateProfileModel model)
+    {
+        try
+        {
+            var name = (model.FullName ?? string.Empty).Trim();
+            if (string.IsNullOrWhiteSpace(name))
+                return new ServiceResponse<bool> { Success = false, Data = false, Message = "Name is required." };
+            await _unitOfWork.UserRepository.ExecuteUpdateAsync(a => a.Id == UserId.Value, s => s.SetProperty(b => b.Full_Name, name));
+            return new ServiceResponse<bool> { Success = true, Data = true, Message = ClutureResource.SavedSuccessfully };
+        }
+        catch (Exception ex)
+        {
+            return await LogErrorAsync(ex, false, model);
         }
     }
     public async Task<ServiceResponse<bool>> UpdateImgeSignatureUser(IFormFile signaturePicture)

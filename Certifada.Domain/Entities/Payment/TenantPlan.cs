@@ -10,12 +10,13 @@ namespace Certifada.Domain.Entities.Payment
         public Guid Plan_Id { get; set; }
         public string Region_Code { get; set; }
         public string Interval { get; set; }
-        public string StripeCustomerId { get; set; }
-        public string StripeSubscriptionId { get; set; }
+        public string? StripeCustomerId { get; set; }
+        public string? StripeSubscriptionId { get; set; }
+        /// <summary>active | trialing | canceling | canceled | past_due</summary>
         public string Status { get; set; }
-        public DateTimeOffset Current_Period_End { get; set; }
-        public DateTimeOffset Trial_End { get; set; }
-        public DateTimeOffset Cancel_At { get; set; }
+        public DateTimeOffset? Current_Period_End { get; set; }
+        public DateTimeOffset? Trial_End { get; set; }
+        public DateTimeOffset? Cancel_At { get; set; }
         public virtual Tenant Tenant { get; set; }
         public virtual Region Region { get; set; }
         public virtual Plan Plan { get; set; }

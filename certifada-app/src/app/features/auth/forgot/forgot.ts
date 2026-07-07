@@ -2,59 +2,72 @@ import { Component, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
+import { TranslocoModule } from '@ngneat/transloco';
 import { AuthService } from '../../../core/services/auth.service';
 
 @Component({
   selector: 'app-forgot',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, RouterLink],
+  imports: [CommonModule, ReactiveFormsModule, RouterLink, TranslocoModule],
   template: `
   <div class="lg">
     <div class="brand">
+      <div class="aurora ba1"></div><div class="aurora ba2"></div><div class="dots"></div>
       <a class="top" routerLink="/"><span class="mark"><span class="material-icons">workspace_premium</span></span><span class="bn">Certifada</span></a>
-      <div class="body"><h2>Forgot your password?</h2><p>We'll email you a secure link to set a new one.</p></div>
+      <div class="mid"><h2>{{ 'auth.forgotBrandHeadline' | transloco }}</h2><p>{{ 'auth.forgotBrandSub' | transloco }}</p></div>
     </div>
     <div class="form"><div class="inner">
-      <h1>Reset your password</h1><p class="sub">Enter your account email and we'll send a reset link.</p>
+      <span class="badge"><span class="material-icons">key</span></span>
+      <h1>{{ 'auth.forgotTitle' | transloco }}</h1><p class="sub">{{ 'auth.forgotSub' | transloco }}</p>
       @if (sent()) {
-        <div class="ok"><span class="material-icons">mark_email_read</span><span>If an account exists for that email, a reset link is on its way. Check your inbox (and spam).</span></div>
+        <div class="ok"><span class="material-icons">mark_email_read</span><span>{{ 'auth.forgotSent' | transloco }}</span></div>
       } @else {
         <form [formGroup]="form" (ngSubmit)="submit()">
-          <label class="lbl">Email</label>
-          <div class="inwrap"><span class="material-icons lead">mail</span><input class="in" type="email" formControlName="email" placeholder="you@company.com" /></div>
+          <label class="lbl">{{ 'auth.email' | transloco }}</label>
+          <div class="inwrap"><span class="material-icons lead">mail</span><input class="in" type="email" formControlName="email" [placeholder]="'auth.emailPh' | transloco" /></div>
           @if (error()) { <div class="err">{{ error() }}</div> }
-          <button type="submit" class="primary" [disabled]="form.invalid || loading()">{{ loading() ? 'Sending…' : 'Send reset link' }}</button>
+          <button type="submit" class="primary" [disabled]="form.invalid || loading()">{{ loading() ? ('auth.sending' | transloco) : ('auth.sendResetLink' | transloco) }}</button>
         </form>
       }
-      <a class="back" routerLink="/auth/login"><span class="material-icons">arrow_back</span> Back to sign in</a>
+      <a class="back" routerLink="/auth/login"><span class="material-icons">arrow_back</span> {{ 'auth.backToSignin' | transloco }}</a>
     </div></div>
   </div>`,
   styles: [`:host{display:block}
-    .lg{min-height:100vh;display:grid;grid-template-columns:1.05fr 1fr;background:var(--cf-bg);font-family:var(--cf-font)}
-    .brand{position:relative;overflow:hidden;background:var(--cf-brand-700);color:#fff;padding:46px;display:flex;flex-direction:column}
-    .brand::before{content:"";position:absolute;inset:0;opacity:.5;background:radial-gradient(420px 220px at 85% 8%,rgba(255,255,255,.16),transparent 60%),radial-gradient(360px 300px at 8% 100%,rgba(217,164,65,.3),transparent 60%)}
-    .top{display:flex;align-items:center;gap:10px;position:relative;text-decoration:none;color:#fff}
-    .mark{width:34px;height:34px;border-radius:10px;background:rgba(255,255,255,.16);display:grid;place-items:center}.mark .material-icons{font-size:20px}
-    .bn{font-weight:700;font-size:17px}
-    .body{margin-top:auto;position:relative}
-    .body h2{color:#fff;font-size:27px;line-height:1.25;letter-spacing:-.02em;max-width:16ch}
-    .body p{color:rgba(255,255,255,.82);margin-top:12px;max-width:40ch}
+    .lg{min-height:100vh;display:grid;grid-template-columns:1fr 1fr;background:var(--cf-bg);font-family:var(--cf-font)}
+    .brand{position:relative;overflow:hidden;background:#070B17;color:#EDF0FF;padding:44px 48px;display:flex;flex-direction:column;isolation:isolate}
+    .aurora{position:absolute;border-radius:50%;filter:blur(80px);z-index:-1;pointer-events:none}
+    .ba1{width:480px;height:420px;top:-180px;inset-inline-start:-120px;background:radial-gradient(circle,#4338CA,transparent 65%);opacity:.55;animation:drift 18s ease-in-out infinite alternate}
+    .ba2{width:420px;height:420px;bottom:-190px;inset-inline-end:-120px;background:radial-gradient(circle,#0EA5E9,transparent 62%);opacity:.3;animation:drift 22s ease-in-out infinite alternate-reverse}
+    @keyframes drift{from{transform:translate(0,0)}to{transform:translate(40px,26px) scale(1.1)}}
+    .dots{position:absolute;inset:0;z-index:-1;background-image:radial-gradient(rgba(255,255,255,.12) 1px,transparent 1px);background-size:24px 24px;mask-image:radial-gradient(ellipse 80% 70% at 50% 40%,#000 30%,transparent 75%)}
+    .top{display:flex;align-items:center;gap:10px;text-decoration:none;color:#fff;align-self:flex-start}
+    .mark{width:36px;height:36px;border-radius:11px;background:linear-gradient(135deg,#6366F1,#7C3AED);display:grid;place-items:center;box-shadow:0 8px 20px -8px rgba(99,102,241,.8)}
+    .mark .material-icons{font-size:21px}
+    .bn{font-weight:700;font-size:17.5px;letter-spacing:-.01em}
+    .mid{margin:auto 0;position:relative}
+    .mid h2{color:#fff;font-size:28px;line-height:1.25;letter-spacing:-.02em;max-width:16ch;font-weight:700}
+    .mid p{color:#A9B4D6;margin-top:12px;max-width:40ch;font-size:14.5px;line-height:1.65}
     .form{display:flex;align-items:center;justify-content:center;background:var(--cf-surface);padding:40px 24px}
-    .inner{width:100%;max-width:380px}
-    h1{font-size:24px;color:var(--cf-ink-900)} .sub{color:var(--cf-ink-500);margin:4px 0 22px}
-    .lbl{display:block;font-size:12.5px;font-weight:500;color:var(--cf-ink-700);margin:14px 0 7px}
+    .inner{width:100%;max-width:392px}
+    .badge{width:52px;height:52px;border-radius:16px;display:grid;place-items:center;background:linear-gradient(135deg,var(--cf-brand-50),var(--cf-accent-50));border:1px solid var(--cf-brand-100);color:var(--cf-brand-600);margin-bottom:18px}
+    .badge .material-icons{font-size:24px}
+    h1{font-size:26px;color:var(--cf-ink-900);letter-spacing:-.02em;font-weight:700}
+    .sub{color:var(--cf-ink-500);margin:6px 0 22px;font-size:14px}
+    .lbl{display:block;font-size:12.5px;font-weight:600;color:var(--cf-ink-700);margin:14px 0 7px}
     .inwrap{position:relative}
-    .lead{position:absolute;inset-inline-start:12px;top:50%;transform:translateY(-50%);color:var(--cf-ink-400);font-size:19px}
-    .in{width:100%;height:42px;border:1px solid var(--cf-line);background:var(--cf-surface);color:var(--cf-ink-900);border-radius:var(--cf-radius-sm);padding:0 14px 0 40px;font:inherit;font-size:14px;outline:none}
-    .in:focus{border-color:var(--cf-brand-500);box-shadow:var(--cf-ring)}
-    .trail{position:absolute;inset-inline-end:10px;top:8px;border:0;background:none;color:var(--cf-ink-400);cursor:pointer}
-    .err{background:var(--cf-danger-soft);color:var(--cf-danger);border-radius:var(--cf-radius-sm);padding:9px 12px;font-size:13px;margin:12px 0}
-    .ok{background:color-mix(in srgb,#16a34a 12%,transparent);color:#15803d;border:1px solid color-mix(in srgb,#16a34a 30%,transparent);border-radius:var(--cf-radius-sm);padding:11px 13px;font-size:13px;margin:12px 0;display:flex;gap:8px;align-items:flex-start}.ok .material-icons{font-size:18px}
-    .primary{width:100%;height:46px;border:0;border-radius:var(--cf-radius-sm);background:var(--cf-brand-600);color:#fff;font:inherit;font-weight:500;font-size:14px;cursor:pointer;margin-top:18px}
-    .primary:hover{background:var(--cf-brand-700)} .primary:disabled{opacity:.55;cursor:not-allowed}
-    .alt{margin-top:18px;text-align:center;font-size:13px;color:var(--cf-ink-500)}.alt a{color:var(--cf-brand-600);font-weight:600;text-decoration:none}
-    .back{display:inline-flex;align-items:center;gap:6px;margin-top:18px;color:var(--cf-brand-600);font-size:13px;font-weight:600;text-decoration:none}.back .material-icons{font-size:17px}
-    @media(max-width:860px){.lg{grid-template-columns:1fr}.brand{display:none}}`],
+    .lead{position:absolute;inset-inline-start:13px;top:50%;transform:translateY(-50%);color:var(--cf-ink-400);font-size:19px;transition:color .18s}
+    .inwrap:focus-within .lead{color:var(--cf-brand-600)}
+    .in{width:100%;height:46px;border:1.5px solid var(--cf-line);background:var(--cf-surface);color:var(--cf-ink-900);border-radius:13px;padding:0 14px;padding-inline-start:42px;font:inherit;font-size:14px;outline:none;transition:border-color .18s,box-shadow .18s}
+    .in:focus{border-color:var(--cf-brand-500);box-shadow:0 0 0 4px color-mix(in srgb,var(--cf-brand-500) 14%,transparent)}
+    .err{background:var(--cf-danger-soft);color:var(--cf-danger);border-radius:11px;padding:10px 13px;font-size:13px;margin:12px 0}
+    .ok{background:color-mix(in srgb,#16a34a 12%,transparent);color:#15803d;border:1px solid color-mix(in srgb,#16a34a 30%,transparent);border-radius:13px;padding:12px 14px;font-size:13px;margin:12px 0;display:flex;gap:9px;align-items:flex-start;line-height:1.55}.ok .material-icons{font-size:18px}
+    .primary{width:100%;height:48px;border:0;border-radius:13px;background:linear-gradient(135deg,#6366F1,#4338CA);color:#fff;font:inherit;font-weight:600;font-size:14.5px;cursor:pointer;margin-top:18px;box-shadow:0 12px 26px -12px rgba(79,70,229,.7),inset 0 1px 0 rgba(255,255,255,.18);transition:transform .16s,box-shadow .2s,filter .18s}
+    .primary:hover:not(:disabled){transform:translateY(-1px);filter:brightness(1.05)}
+    .primary:disabled{opacity:.55;cursor:not-allowed}
+    .back{display:inline-flex;align-items:center;gap:6px;margin-top:20px;color:var(--cf-brand-600);font-size:13px;font-weight:600;text-decoration:none}.back .material-icons{font-size:17px}
+    :host-context([dir=rtl]) .back .material-icons{transform:scaleX(-1)}
+    @media(max-width:860px){.lg{grid-template-columns:1fr}.brand{display:none}}
+    @media(prefers-reduced-motion:reduce){*{animation-duration:.01ms !important}}`],
 })
 export class ForgotPage {
   private fb = inject(FormBuilder);

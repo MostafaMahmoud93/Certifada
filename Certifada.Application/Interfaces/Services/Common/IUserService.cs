@@ -10,6 +10,7 @@
         Task<ServiceResponse<bool>> CreateUser(AddUserModel newUser);
         Task<ServiceResponse<bool>> EditUser(EditUserModel model);
         Task<ServiceResponse<DetailUserModel>> GetCurrentUser();
+        Task<ServiceResponse<bool>> UpdateProfile(UpdateProfileModel model);
         Task<ServiceResponse<bool>> DeleteUser(Guid userId);
     }
 }

@@ -26,6 +26,8 @@ export const routes: Routes = [
       { path: 'register', loadComponent: () => import('./features/auth/register/register').then((m) => m.RegisterPage) },
       { path: 'forgot', loadComponent: () => import('./features/auth/forgot/forgot').then((m) => m.ForgotPage) },
       { path: 'reset', loadComponent: () => import('./features/auth/reset/reset').then((m) => m.ResetPage) },
+      { path: 'magic', loadComponent: () => import('./features/auth/magic/magic').then((m) => m.MagicPage) },
+      { path: 'confirm', loadComponent: () => import('./features/auth/confirm/confirm').then((m) => m.ConfirmPage) },
       { path: '', pathMatch: 'full', redirectTo: 'login' },
     ],
   },
@@ -80,8 +82,15 @@ export const routes: Routes = [
   // ---- public credential verification ----
   { path: 'verify/:id', loadComponent: () => import('./features/verify/verify.component').then((m) => m.VerifyComponent) },
 
+  // ---- public recipient wallet (passwordless, email-owned) ----
+  { path: 'wallet', loadComponent: () => import('./features/wallet/wallet').then((m) => m.WalletPage) },
+
   // ---- public pricing ----
   { path: 'pricing', loadComponent: () => import('./features/pricing/pricing').then((m) => m.PricingPage) },
+
+  // ---- Stripe Checkout return pages ----
+  { path: 'billing/success', loadComponent: () => import('./features/public/billing-result/billing-result').then((m) => m.BillingResultPage), data: { ok: true } },
+  { path: 'billing/cancelled', loadComponent: () => import('./features/public/billing-result/billing-result').then((m) => m.BillingResultPage), data: { ok: false } },
 
   // ---- error pages ----
   { path: '403', loadComponent: () => import('./features/errors/error.pages').then((m) => m.ForbiddenPage) },

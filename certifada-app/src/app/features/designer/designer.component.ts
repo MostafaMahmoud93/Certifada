@@ -14,6 +14,8 @@ import { DESIGNER_HELP, DESIGNER_HELP_AR, HELP_UI, TABLE_HELP } from './designer
 import { CERT_TEMPLATES } from './certificate-templates.data';
 import { EXTRA_TEMPLATES } from './extra-templates.data';
 import { AR_TEMPLATES } from './arabic-templates.data';
+import { CREATIVE_TEMPLATES } from './creative-templates.data';
+import { AR_CREATIVE_TEMPLATES } from './arabic-creative-templates.data';
 import { CANVAS_TOUR, CANVAS_TOUR_UI } from './canvas-tour.data';
 import { LanguageService } from '../../core/services/language.service';
 import { TourService, TourStep } from '../../core/services/tour.service';
@@ -272,7 +274,9 @@ export class DesignerComponent implements AfterViewInit, OnDestroy {
   designTemplates: DesignTemplate[] = [
     ...CERT_TEMPLATES,
     ...EXTRA_TEMPLATES,
+    ...CREATIVE_TEMPLATES,
     ...AR_TEMPLATES,
+    ...AR_CREATIVE_TEMPLATES,
     { id: 'gold-participation', name: 'Gold Participation', cat: 'certificate', tags: 'certificate gold participation award seal ornate elegant landscape', w: 1123, h: 794, bg: '#f7f3ea', accent: '#c9a227', items: [
       { kind: 'triangle', x: 1085, y: 28, w: 360, h: 300, fill: '#0f172a', grad: '#3a3a3a', angle: 205, opacity: 0.96 },
       { kind: 'triangle', x: 1108, y: 64, w: 300, h: 235, fill: '#c9a227', grad: '#f4dd92', angle: 205 },
@@ -665,13 +669,50 @@ export class DesignerComponent implements AfterViewInit, OnDestroy {
     { c: '🛡️', n: 'shield secure protect' }, { c: '📜', n: 'scroll certificate diploma' }, { c: '🎓', n: 'graduation degree cap' }, { c: '🌟', n: 'star glowing shine' },
     { c: '🏵️', n: 'rosette seal award' }, { c: '💯', n: 'hundred score perfect' }, { c: '🔰', n: 'beginner badge japanese' }, { c: '⚜️', n: 'fleur de lis ornament' },
   ];
-  arabicShowcase = [
-    { family: 'Diwani Simple Outline', sample: 'شهادة' },
-    { family: 'Aref Graffiti', sample: 'تقدير' },
-    { family: 'Aldhabi', sample: 'إنجاز' },
-    { family: 'DecoType Thuluth', sample: 'بسم الله' },
-    { family: 'B Titr', sample: 'عنوان' },
-    { family: 'Abdo Salem', sample: 'نص عربي' },
+  /** Grouped font showcase for the Text tab — click a tile to add sample text in that font. */
+  fontShowcase: { label: string; lang: 'en' | 'ar'; fonts: { family: string; sample: string }[] }[] = [
+    {
+      label: 'Display', lang: 'en', fonts: [
+        { family: 'Playfair Display', sample: 'Certificate' }, { family: 'Montserrat', sample: 'MODERN' },
+        { family: 'Merriweather', sample: 'Classic' }, { family: 'Inter', sample: 'Clean & Simple' },
+      ],
+    },
+    {
+      label: 'Script', lang: 'en', fonts: [
+        { family: 'Great Vibes', sample: 'Elegant' }, { family: 'Dancing Script', sample: 'Lovely' },
+        { family: 'Pacifico', sample: 'Playful' }, { family: 'Satisfy', sample: 'Casual' },
+        { family: 'Sacramento', sample: 'Graceful' }, { family: 'Allura', sample: 'Fancy' },
+      ],
+    },
+    {
+      label: 'عصري — Modern', lang: 'ar', fonts: [
+        { family: 'Cairo', sample: 'القاهرة' }, { family: 'Tajawal', sample: 'تجوال' },
+        { family: 'Almarai', sample: 'المراعي' }, { family: 'Reem Kufi', sample: 'ريم كوفي' },
+        { family: 'El Messiri', sample: 'المسيري' }, { family: 'Changa', sample: 'تشانغا' },
+        { family: 'Mada', sample: 'مدى' }, { family: 'Noto Kufi Arabic', sample: 'كوفي' },
+      ],
+    },
+    {
+      label: 'كلاسيكي — Classic', lang: 'ar', fonts: [
+        { family: 'Amiri', sample: 'أميري' }, { family: 'Noto Naskh Arabic', sample: 'نسخ' },
+        { family: 'Scheherazade New', sample: 'شهرزاد' }, { family: 'Lateef', sample: 'لطيف' },
+        { family: 'Mirza', sample: 'ميرزا' }, { family: 'Aref Ruqaa', sample: 'رقعة' },
+      ],
+    },
+    {
+      label: 'عناوين — Display', lang: 'ar', fonts: [
+        { family: 'Rakkas', sample: 'ركّاس' }, { family: 'Jomhuria', sample: 'جمهورية' },
+        { family: 'Katibeh', sample: 'كتيبة' }, { family: 'Marhey', sample: 'مرحى' },
+        { family: 'Aldhabi', sample: 'الذهبي' }, { family: 'B Titr', sample: 'تيتر' },
+      ],
+    },
+    {
+      label: 'خط يدوي — Calligraphy', lang: 'ar', fonts: [
+        { family: 'Diwani Simple Outline', sample: 'شهادة' }, { family: 'DecoType Thuluth', sample: 'بسم الله' },
+        { family: 'Aref Graffiti', sample: 'تقدير' }, { family: 'Arslan Wessam B', sample: 'وسام' },
+        { family: 'Abdo Salem', sample: 'نص عربي' }, { family: 'Yassin', sample: 'ياسين' },
+      ],
+    },
   ];
 
   // ---- Text styles, phrases & effects ----
@@ -700,12 +741,19 @@ export class DesignerComponent implements AfterViewInit, OnDestroy {
   txtSecOpen = signal<Record<string, boolean>>({ styles: true, phrases: false, fonts: false });
   readonly isTextSelected = computed(() => { this.svc.revision(); return this.svc.hasTextSelected(); });
   readonly textFx = computed(() => { this.svc.revision(); return this.svc.getTextFx(); });
-  pairFonts = [
-    { label: 'Classic', head: 'Playfair Display', body: 'Inter' },
-    { label: 'Modern', head: 'Montserrat', body: 'Inter' },
-    { label: 'Editorial', head: 'Lora', body: 'Montserrat' },
-    { label: 'Elegant', head: 'Playfair Display', body: 'Lora' },
+  pairFonts: { label: string; lang: 'en' | 'ar'; head: string; body: string; headText?: string; bodyText?: string }[] = [
+    { label: 'Classic', lang: 'en', head: 'Playfair Display', body: 'Inter' },
+    { label: 'Modern', lang: 'en', head: 'Montserrat', body: 'Inter' },
+    { label: 'Editorial', lang: 'en', head: 'Lora', body: 'Montserrat' },
+    { label: 'Elegant', lang: 'en', head: 'Playfair Display', body: 'Lora' },
+    { label: 'كلاسيكي', lang: 'ar', head: 'Amiri', body: 'Cairo', headText: 'عنوان رئيسي', bodyText: 'نص فرعي داعم للعنوان' },
+    { label: 'عصري', lang: 'ar', head: 'Reem Kufi', body: 'Tajawal', headText: 'عنوان رئيسي', bodyText: 'نص فرعي داعم للعنوان' },
+    { label: 'فاخر', lang: 'ar', head: 'Aref Ruqaa', body: 'Almarai', headText: 'عنوان رئيسي', bodyText: 'نص فرعي داعم للعنوان' },
   ];
+  /** EN/AR tab for the Text-tab font showcase & pairings — defaults to the app language, follows the template-language toggle. */
+  readonly fontShowLang = signal<'en' | 'ar'>((() => { try { return localStorage.getItem('lang') === 'ar' ? 'ar' : 'en'; } catch { return 'en'; } })());
+  readonly shownFontGroups = computed(() => this.fontShowcase.filter((g) => g.lang === this.fontShowLang()));
+  readonly shownPairFonts = computed(() => this.pairFonts.filter((p) => p.lang === this.fontShowLang()));
 
   // QR
   qrType: 'url' | 'text' | 'email' | 'phone' | 'sms' | 'wifi' | 'vcard' = 'url';
@@ -1116,11 +1164,7 @@ export class DesignerComponent implements AfterViewInit, OnDestroy {
 
   @HostListener('window:resize') onWinResize(): void { this.recomputeMini(); }
 
-  mbFont(f: string): void {
-    this.svc.quickSet({ fontFamily: f });
-    const fonts: any = (document as any).fonts;
-    fonts?.load?.(`24px "${f}"`).then(() => this.svc.touch()).catch(() => { /* ignore */ });
-  }
+  mbFont(f: string): void { this.svc.applyFontFamily(f); }
   mbSize(v: string | number): void { this.svc.quickSet({ fontSize: Math.max(4, Math.min(400, Math.round(+v) || 0)) }); }
   mbBold(): void { this.svc.quickSet({ fontWeight: this.mBold() ? '400' : '700' }); }
   mbItalic(): void { this.svc.quickSet({ fontStyle: this.mItalic() ? 'normal' : 'italic' }); }
@@ -1151,11 +1195,11 @@ export class DesignerComponent implements AfterViewInit, OnDestroy {
       default: return { icon: 'crop_free', label: 'Object' };
     }
   });
-  readonly mTextAlign = computed(() => { this.svc.revision(); return (this.svc.selected() as any)?.textAlign ?? 'left'; });
+  readonly mTextAlign = computed(() => { this.svc.revision(); this.svc.selected(); return this.svc.visualTextAlign(); });
   readonly mStrokeW = computed(() => { this.svc.revision(); return Math.round(((this.svc.selected() as any)?.strokeWidth ?? 0) * 2) / 2; });
   readonly mLocked = computed(() => { this.svc.revision(); return !!(this.svc.selected() as any)?.lockMovementX; });
 
-  mbAlign(): void { const c = this.mTextAlign(); this.svc.quickSet({ textAlign: c === 'left' ? 'center' : c === 'center' ? 'right' : 'left' }); }
+  mbAlign(): void { const c = this.mTextAlign(); this.svc.setTextAlign(c === 'left' ? 'center' : c === 'center' ? 'right' : 'left'); }
   mbReplace(): void { this.replaceInput?.nativeElement.click(); }
   mbFlip(): void { this.svc.flipActive('x'); this.recomputeMini(); }
   mbMask(): void { const o: any = this.svc.selected(); this.svc.setImageMask(o?.clipPath ? 'none' : 'circle'); }
@@ -1209,8 +1253,10 @@ export class DesignerComponent implements AfterViewInit, OnDestroy {
   }
   /** fieldKey of the field object currently selected on the canvas, if any. */
   readonly activeFieldKey = computed<string | null>(() => { this.svc.revision(); const o: any = this.svc.selected(); return o?.objType === 'field' ? (o.fieldKey ?? null) : null; });
+  /** Layers panel has its own search — typing here must not leak into the rail tabs' search (Design, Templates…). */
+  readonly layerSearch = signal('');
   readonly filteredLayers = computed(() => {
-    const q = this.q(); const ls = this.layers();
+    const q = this.layerSearch().trim().toLowerCase(); const ls = this.layers();
     return q ? ls.filter((o) => this.layerLabel(o).toLowerCase().includes(q)) : ls;
   });
   readonly filteredSizeGroups = computed<SizeGroup[]>(() => {
@@ -1227,7 +1273,7 @@ export class DesignerComponent implements AfterViewInit, OnDestroy {
       (!q || (t.name + ' ' + t.tags).toLowerCase().includes(q)));
   });
   /** Display order for the per-type sections in the Templates tab. */
-  readonly tplGroupOrder = ['Achievement', 'Participation', 'Appreciation', 'Completion', 'Recognition', 'Excellence', 'Honor', 'Award', 'Training', 'Certificates', 'Social Media', 'Business', 'Cards & Invites', 'Signage', 'Letterheads', 'Invoices', 'Reports', 'Resumes', 'Documents', 'Menus'];
+  readonly tplGroupOrder = ['Achievement', 'Participation', 'Appreciation', 'Completion', 'Recognition', 'Excellence', 'Honor', 'Award', 'Training', 'Graduation', 'Leadership', 'Tech & Innovation', 'Sports & Fitness', 'Kids & School', 'Modern & Creative', 'Certificates', 'Social Media', 'Business', 'Cards & Invites', 'Signage', 'Letterheads', 'Invoices', 'Reports', 'Resumes', 'Documents', 'Menus'];
   private tplGroupLabel(t: DesignTemplate): string {
     return t.grp ?? (this.tplCategories.find((c) => c.id === t.cat)?.label ?? 'Other');
   }
@@ -1293,7 +1339,7 @@ export class DesignerComponent implements AfterViewInit, OnDestroy {
   }
   /** Template language (defaults to the app's current language). */
   readonly tplLang = signal<'en' | 'ar'>((() => { try { return localStorage.getItem('lang') === 'ar' ? 'ar' : 'en'; } catch { return 'en'; } })());
-  setTplLang(l: 'en' | 'ar'): void { this.tplLang.set(l); this.userOpenCats.set(null); }
+  setTplLang(l: 'en' | 'ar'): void { this.tplLang.set(l); this.userOpenCats.set(null); this.fontShowLang.set(l); }
 
   // Properties panel docking + auto-hide + fullscreen
   propPos = signal<'right' | 'left' | 'top' | 'bottom'>((localStorage.getItem('cf-prop-pos') as 'right' | 'left' | 'top' | 'bottom') || 'right');
@@ -1437,8 +1483,7 @@ export class DesignerComponent implements AfterViewInit, OnDestroy {
   /** Add text in a specific (possibly custom) font, loading the webfont first. */
   addFontText(family: string, sample: string, size = 44): void {
     this.svc.addText(sample, { fontFamily: family, fontSize: size });
-    const fonts: any = (document as any).fonts;
-    if (fonts?.load) fonts.load(`${size}px "${family}"`).then(() => this.svc.touch()).catch(() => { /* ignore */ });
+    void this.svc.ensureFontLoaded(family);
   }
   addStyle(t: { text: string; opts: TextStyleOpts }): void { this.svc.addStyledText(t.text, t.opts); }
   addPhrase(p: { text: string; opts: TextStyleOpts }): void { this.svc.addStyledText(p.text, p.opts); }
@@ -1456,9 +1501,11 @@ export class DesignerComponent implements AfterViewInit, OnDestroy {
     const to = (n: string) => (+n).toString(16).padStart(2, '0');
     return '#' + to(m[0]) + to(m[1]) + to(m[2]);
   }
-  addPair(p: { head: string; body: string }): void {
-    this.svc.addStyledText('Heading', { fontFamily: p.head, fontSize: 44, fontWeight: '700' });
-    this.svc.addStyledText('Supporting subtitle text', { fontFamily: p.body, fontSize: 18, fill: '#475569' });
+  addPair(p: { head: string; body: string; headText?: string; bodyText?: string }): void {
+    this.svc.addStyledText(p.headText ?? 'Heading', { fontFamily: p.head, fontSize: 44, fontWeight: '700' });
+    this.svc.addStyledText(p.bodyText ?? 'Supporting subtitle text', { fontFamily: p.body, fontSize: 18, fill: '#475569' });
+    void this.svc.ensureFontLoaded(p.head);
+    void this.svc.ensureFontLoaded(p.body);
   }
   async onFontUpload(e: Event): Promise<void> {
     const input = e.target as HTMLInputElement;
@@ -1602,7 +1649,7 @@ export class DesignerComponent implements AfterViewInit, OnDestroy {
     if (this.previewOn()) this.svc.setFieldPreview(this.previewMap());
   }
   autofillSample(): void {
-    const d: Record<string, string> = {
+    const en: Record<string, string> = {
       Name: 'Jordan Lee', Email: 'jordan@acme.com', Phone: '+1 555 0142', JobTitle: 'Product Designer',
       Address: '24 Market St', City: 'Austin', Country: 'USA', Sex: 'Female',
       CourseName: 'Advanced UX Design', CertificateID: 'CF-2026-0148', Grade: 'A', Score: '95%', Credits: '40',
@@ -1610,8 +1657,20 @@ export class DesignerComponent implements AfterViewInit, OnDestroy {
       OrgName: 'Certifada Academy', Issuer: 'Dr. A. Patel', Department: 'Education', Website: 'certifada.com',
       Date: 'Jun 16, 2026', Year: '2026', Month: 'June', signature1: 'Jordan Lee', signature2: 'A. Patel',
     };
+    // Arabic designs (Arabic text or Arabic fonts) get Arabic sample data.
+    const ar: Record<string, string> = {
+      Name: 'محمد الأحمد', Email: 'mohammed@acme.com', Phone: '+971 50 123 4567', JobTitle: 'مصمم منتجات',
+      Address: 'شارع الشيخ زايد', City: 'دبي', Country: 'الإمارات', Sex: 'ذكر',
+      CourseName: 'تصميم تجربة المستخدم المتقدم', CertificateID: 'CF-2026-0148', Grade: 'ممتاز', Score: '٩٥٪', Credits: '٤٠',
+      IssueDate: '١٦ يونيو ٢٠٢٦', ExpiryDate: '١٦ يونيو ٢٠٢٨',
+      OrgName: 'أكاديمية سيرتيفادا', Issuer: 'د. أحمد العلي', Department: 'التعليم', Website: 'certifada.com',
+      Date: '١٦ يونيو ٢٠٢٦', Year: '٢٠٢٦', Month: 'يونيو', signature1: 'محمد الأحمد', signature2: 'د. أحمد',
+      name: 'محمد الأحمد', event: 'حفل التميّز السنوي', company: 'شركة سيرتيفادا', date: '١٦ يونيو ٢٠٢٦',
+    };
+    const isAr = this.svc.designIsArabic();
+    const d = isAr ? ar : en;
     const next = { ...this.sampleData };
-    for (const k of this.usedVarList()) next[k] = next[k] || d[k] || ('Sample ' + k);
+    for (const k of this.usedVarList()) next[k] = next[k] || d[k] || ((isAr ? 'نموذج ' : 'Sample ') + k);
     this.sampleData = next;
     this.saveSample();
     if (!this.previewOn()) this.togglePreview(); else this.svc.setFieldPreview(this.previewMap());
@@ -2562,6 +2621,14 @@ export class DesignerComponent implements AfterViewInit, OnDestroy {
   // -------------------- keyboard --------------------
   @HostListener('window:keydown', ['$event'])
   onKey(e: KeyboardEvent): void {
+    // Never hijack keys while typing in any DOM field (preview form, sample
+    // values, searches, renames…) — Backspace/Delete there must edit text,
+    // not delete the selected canvas object.
+    const t = e.target as HTMLElement | null;
+    if (t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))) return;
+    // While a blocking overlay is open, keyboard shortcuts must not reach the canvas.
+    if (this.previewOpen() || this.assetFolderOpen()) return;
+
     const active = this.svc.getCanvas()?.getActiveObject() as any;
     const editing = active?.isEditing;
     if (editing) return;
@@ -2707,18 +2774,34 @@ export class DesignerComponent implements AfterViewInit, OnDestroy {
   }
 
   fillSampleData(): void {
-    const samples: Record<string, () => string> = {
+    const en: Record<string, () => string> = {
       name: () => 'Alex Johnson', fullname: () => 'Alexandra M. Johnson', recipient: () => 'Alex Johnson',
       course: () => 'Advanced Web Development', program: () => 'Professional Certification',
       date: () => new Date().toLocaleDateString(), score: () => '96%', grade: () => 'A+',
       id: () => 'CF-2026-0481', code: () => 'CF-2026-0481', title: () => 'Certificate of Achievement',
       email: () => 'alex@example.com', organization: () => 'Certifada Academy', company: () => 'Certifada Inc.',
       instructor: () => 'Dr. Sarah Lee', hours: () => '40', city: () => 'Dubai', role: () => 'Participant',
+      event: () => 'Annual Excellence Gala', venue: () => 'Grand Hall, Downtown', time: () => '7:00 PM',
+      speaker: () => 'Dr. Sarah Lee', headline: () => 'Something big is coming', tagline: () => 'Learn. Grow. Succeed.',
     };
+    // Arabic designs (Arabic text or Arabic fonts) → Arabic sample data.
+    const ar: Record<string, () => string> = {
+      name: () => 'مصطفى محمود', fullname: () => 'محمد عبدالله الأحمد', recipient: () => 'مصطفى محمود',
+      course: () => 'تطوير الويب المتقدم', program: () => 'برنامج الشهادة الاحترافية',
+      date: () => new Date().toLocaleDateString('ar-AE'), score: () => '٩٦٪', grade: () => 'ممتاز',
+      id: () => 'CF-2026-0481', code: () => 'CF-2026-0481', title: () => 'شهادة إنجاز',
+      email: () => 'mohammed@example.com', organization: () => 'أكاديمية سيرتيفادا', company: () => 'شركة سيرتيفادا',
+      instructor: () => 'د. سارة العلي', hours: () => '٤٠', city: () => 'دبي', role: () => 'مشارك',
+      event: () => 'حفل التميّز السنوي', venue: () => 'القاعة الكبرى، وسط المدينة', time: () => 'السابعة مساءً',
+      speaker: () => 'د. سارة العلي', headline: () => 'شيء مميز في الطريق إليكم', tagline: () => 'تعلّم. انمُ. انجح.',
+      restaurant: () => 'مطعم الأصالة', sender: () => 'عائلة الأحمد',
+    };
+    const isAr = this.svc.designIsArabic();
+    const samples = isAr ? ar : en;
     for (const k of this.previewVars()) {
       const low = k.toLowerCase();
       const hit = Object.keys(samples).find((s) => low.includes(s));
-      this.previewValues[k] = hit ? samples[hit]() : `Sample ${k}`;
+      this.previewValues[k] = hit ? samples[hit]() : (isAr ? `نموذج ${k}` : `Sample ${k}`);
     }
     const d = this.previewDyn();
     if (d && !this.previewRowsText.trim()) {
@@ -2990,7 +3073,7 @@ export class DesignerComponent implements AfterViewInit, OnDestroy {
     try {
       if (c.kind === 'folder' && c.folder) await this.assets.removeFolder(c.folder);
       else if (c.id) await this.assets.remove(c.id);
-    } catch { /* ignore */ }
+    } catch { /* ignore delete errors */ }
     this.assetConfirm.set(null);
   }
 }

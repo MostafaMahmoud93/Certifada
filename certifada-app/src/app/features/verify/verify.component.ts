@@ -5,6 +5,7 @@ import { jsPDF } from 'jspdf';
 import { TemplateService } from '../../core/services/template.service';
 import { IssuedService, IssuedRecord } from '../../core/services/issued.service';
 import { AlertService } from '../../core/services/alert.service';
+import { WalletService } from '../../core/services/wallet.service';
 import { BrandService } from '../../core/services/brand.service';
 import { MessageService } from '../../core/services/message.service';
 import { mergeDataIntoJson, renderJsonToPng } from '../../core/utils/render.util';
@@ -73,6 +74,7 @@ import { mergeDataIntoJson, renderJsonToPng } from '../../core/utils/render.util
             <button class="vbtn primary" (click)="downloadPdf()"><span class="material-icons">picture_as_pdf</span> Download PDF</button>
             <button class="vbtn" (click)="downloadPng()"><span class="material-icons">image</span> PNG</button>
             <button class="vbtn ghost" (click)="copy(verifyUrl, 'Verification link')"><span class="material-icons">link</span> Copy link</button>
+            <button class="vbtn ghost" (click)="seeAllCredentials()" [disabled]="walletSending()"><span class="material-icons">account_balance_wallet</span> {{ walletSending() ? 'Sending…' : 'See all my credentials' }}</button>
           </div>
           @if (record()!.status !== 'Revoked') {
             <div class="trust">
@@ -372,7 +374,9 @@ export class VerifyComponent {
   private templates = inject(TemplateService);
   private issued = inject(IssuedService);
   private alerts = inject(AlertService);
+  private wallet = inject(WalletService);
   private brandSvc = inject(BrandService);
+  walletSending = signal(false);
   private msgs = inject(MessageService);
 
   id = this.route.snapshot.paramMap.get('id') || '';
@@ -460,6 +464,16 @@ export class VerifyComponent {
 
   private enc(): string { return encodeURIComponent(this.verifyUrl); }
   copyLink(): void { this.copy(location.href, 'Verification link'); }
+  /** Email the recipient a wallet link/code for the address on THIS credential (resolved server-side). */
+  seeAllCredentials(): void {
+    if (this.walletSending()) return;
+    this.walletSending.set(true);
+    this.wallet.requestLink({ credentialId: this.id }).subscribe({
+      next: () => { this.walletSending.set(false); this.alerts.success('If credentials exist for the email on this certificate, we’ve sent a link to open your wallet.', { title: 'Check your email' }); },
+      error: () => { this.walletSending.set(false); this.alerts.success('If credentials exist for the email on this certificate, we’ve sent a link to open your wallet.', { title: 'Check your email' }); },
+    });
+  }
+
   shareLinkedIn(): string { return `https://www.linkedin.com/sharing/share-offsite/?url=${this.enc()}`; }
   shareX(): string { return `https://twitter.com/intent/tweet?text=${encodeURIComponent('I earned a verified credential from ' + this.issuerOrg() + '!')}&url=${this.enc()}`; }
   shareFacebook(): string { return `https://www.facebook.com/sharer/sharer.php?u=${this.enc()}`; }

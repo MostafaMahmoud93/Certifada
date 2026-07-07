@@ -1,42 +1,23 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { NgTemplateOutlet } from '@angular/common';
 import { FabricCanvasService } from './fabric-canvas.service';
 
-const FONTS = [
-  'Inter',
-  'Playfair Display',
-  'Montserrat',
-  'Merriweather',
-  'Roboto',
-  'Great Vibes',
-  'Arial',
-  'Georgia',
-  'Times New Roman',
-  'Courier New',
-  'Cairo',
-  'Tajawal',
-  'Almarai',
-  'Amiri',
-  'Noto Kufi Arabic',
-  'Noto Naskh Arabic',
-  'Diwani Simple Outline',
-  'XP Ziba',
-  'Yassin',
-  'Abdo Free',
-  'Abdo Salem',
-  'AE Electron',
-  'Afsaneh',
-  'Al Ebdaa',
-  'Aldhabi',
-  'Al Gemah Assarim',
-  'Al Gemah King',
-  'Arabswell',
-  'Aref Graffiti',
-  'Arslan Wessam B',
-  'B Titr',
-  'Dast Nevis',
-  'DecoType Thuluth',
+/** Fonts organized into labeled groups (rendered as <optgroup> in the Font select), tagged by language for the EN/AR tabs. */
+export const FONT_GROUPS: { label: string; lang: 'en' | 'ar'; fonts: string[] }[] = [
+  { label: 'Sans Serif', lang: 'en', fonts: ['Inter', 'Montserrat', 'Roboto', 'Arial'] },
+  { label: 'Serif', lang: 'en', fonts: ['Playfair Display', 'Merriweather', 'Georgia', 'Times New Roman'] },
+  { label: 'Script & Handwriting', lang: 'en', fonts: ['Great Vibes', 'Dancing Script', 'Pacifico', 'Satisfy', 'Sacramento', 'Allura'] },
+  { label: 'Monospace', lang: 'en', fonts: ['Courier New'] },
+  { label: 'عصري — Modern', lang: 'ar', fonts: ['Cairo', 'Tajawal', 'Almarai', 'Mada', 'Changa', 'Reem Kufi', 'El Messiri', 'Noto Kufi Arabic'] },
+  { label: 'كلاسيكي — Classic', lang: 'ar', fonts: ['Amiri', 'Noto Naskh Arabic', 'Scheherazade New', 'Lateef', 'Mirza', 'Aref Ruqaa', 'DecoType Thuluth', 'Aldhabi'] },
+  { label: 'عناوين — Display', lang: 'ar', fonts: ['Rakkas', 'Jomhuria', 'Katibeh', 'Marhey', 'B Titr', 'AE Electron'] },
+  { label: 'خط يدوي — Calligraphy', lang: 'ar', fonts: ['Diwani Simple Outline', 'Aref Graffiti', 'Arslan Wessam B', 'Abdo Salem', 'Abdo Free', 'Yassin', 'Dast Nevis', 'XP Ziba', 'Afsaneh', 'Al Ebdaa', 'Al Gemah Assarim', 'Al Gemah King', 'Arabswell'] },
 ];
+
+/** True when a string contains Arabic script. */
+export const hasArabic = (s: string): boolean => /[؀-ۿݐ-ݿࢠ-ࣿﭐ-﷿ﹰ-﻿]/.test(s);
+
+const FONTS = FONT_GROUPS.flatMap((g) => g.fonts);
 
 /** A curated, well-balanced swatch palette (neutrals + spectrum + rich certificate tones). */
 const SWATCHES = [
@@ -58,6 +39,123 @@ type SectionId = 'text' | 'shape' | 'image' | 'transform' | 'appearance' | 'arra
 export class PropertiesPanelComponent {
   svc = inject(FabricCanvasService);
   fonts = FONTS;
+  fontGroups = FONT_GROUPS;
+
+  // ---- Smart EN/AR font tabs ------------------------------------------------
+  /** User's manual tab choice (null = auto). */
+  private userFontTab = signal<'en' | 'ar' | null>(null);
+  /** Active tab: manual choice, else auto — Arabic if the selected text is Arabic, else the app language. */
+  readonly fontTab = computed<'en' | 'ar'>(() => {
+    const manual = this.userFontTab();
+    if (manual) return manual;
+    this.svc.revision();
+    const o: any = this.svc.selected();
+    const txt = typeof o?.text === 'string' ? o.text : '';
+    if (txt) return hasArabic(txt) ? 'ar' : 'en';
+    try { return localStorage.getItem('lang') === 'ar' ? 'ar' : 'en'; } catch { return 'en'; }
+  });
+  setFontTab(l: 'en' | 'ar'): void { this.userFontTab.set(this.userFontTab() === l ? null : l); }
+  /** Font groups for the active tab. */
+  readonly tabFontGroups = computed(() => FONT_GROUPS.filter((g) => g.lang === this.fontTab()));
+  // ---- Custom font dropdown (tabs + search inside the panel) ---------------
+  readonly fontOpen = signal(false);
+  readonly fontQuery = signal('');
+  /** First family of the selection's font stack (what the trigger button shows). */
+  readonly currentFont = computed<string>(() => {
+    this.svc.revision();
+    const o: any = this.svc.selected();
+    return String(o?.fontFamily ?? 'Inter').split(',')[0].replace(/['"]/g, '').trim() || 'Inter';
+  });
+  /** Fixed-position coords for the picker panel — measured from the trigger so it works in every dock position (right/left/top/bottom) and never gets clipped by the panel's own scroll. Flips upward when there's more room above. */
+  readonly fdPos = signal<{ left: number; width: number; top: number | null; bottom: number | null } | null>(null);
+  toggleFontPicker(ev: MouseEvent): void {
+    if (this.fontOpen()) { this.fontOpen.set(false); return; }
+    const btn = ev.currentTarget as HTMLElement;
+    const r = btn.getBoundingClientRect();
+    const vw = window.innerWidth, vh = window.innerHeight;
+    const width = Math.min(Math.max(300, r.width), vw - 16);
+    const left = Math.max(8, Math.min(r.left, vw - width - 8));
+    const panelH = Math.min(430, vh * 0.7);
+    const below = vh - r.bottom;
+    const up = below < panelH + 12 && r.top > below;
+    this.fdPos.set(up
+      ? { left, width, top: null, bottom: vh - r.top + 6 }
+      : { left, width, top: r.bottom + 6, bottom: null });
+    this.fontQuery.set('');
+    this.fontOpen.set(true);
+  }
+  /** Font totals per language — shown as badges on the tabs. */
+  readonly fontCounts = {
+    en: FONT_GROUPS.filter((g) => g.lang === 'en').reduce((n, g) => n + g.fonts.length, 0),
+    ar: FONT_GROUPS.filter((g) => g.lang === 'ar').reduce((n, g) => n + g.fonts.length, 0),
+  };
+  /** Recently used fonts (persisted, shown as the first group). */
+  readonly recentFonts = signal<string[]>((() => {
+    try { const a = JSON.parse(localStorage.getItem('cf-recent-fonts') || '[]'); return Array.isArray(a) ? a.filter((x) => typeof x === 'string').slice(0, 6) : []; } catch { return []; }
+  })());
+  pickFont(f: string): void {
+    this.setFont(f);
+    this.fontOpen.set(false);
+    const next = [f, ...this.recentFonts().filter((x) => x !== f)].slice(0, 6);
+    this.recentFonts.set(next);
+    try { localStorage.setItem('cf-recent-fonts', JSON.stringify(next)); } catch { /* quota */ }
+  }
+  /** Upload a font right from the picker and apply it immediately. */
+  async onPickerFontUpload(e: Event): Promise<void> {
+    const input = e.target as HTMLInputElement;
+    const file = input.files?.[0];
+    input.value = '';
+    if (!file) return;
+    try { this.pickFont(await this.svc.addFontFromFile(file)); } catch { /* invalid font file */ }
+  }
+  /**
+   * Groups shown in the picker. No query → Recent + Your fonts + the active
+   * language tab. With a query → smart: search across BOTH languages.
+   */
+  readonly pickerGroups = computed<{ label: string; fonts: string[] }[]>(() => {
+    const q = this.fontQuery().toLowerCase().trim();
+    const user = this.svc.userFonts();
+    const recent = this.recentFonts();
+    const base: { label: string; fonts: string[] }[] = [
+      ...(!q && recent.length ? [{ label: 'Recent', fonts: recent }] : []),
+      ...(user.length ? [{ label: 'Your fonts', fonts: user }] : []),
+      ...(q ? FONT_GROUPS : this.tabFontGroups()),
+    ];
+    if (!q) return base;
+    return base
+      .map((g) => ({ label: g.label, fonts: g.fonts.filter((f) => f.toLowerCase().includes(q)) }))
+      .filter((g) => g.fonts.length);
+  });
+  /** Total fonts currently listed (footer counter). */
+  readonly pickerCount = computed(() => this.pickerGroups().reduce((n, g) => n + g.fonts.length, 0));
+  /** The selection's own text, used as the live preview line when its script matches the font. */
+  private readonly ownSample = computed<string>(() => {
+    this.svc.revision();
+    const o: any = this.svc.selected();
+    const t = typeof o?.text === 'string' ? o.text.replace(/\s+/g, ' ').trim() : '';
+    return t.length > 1 && !/^\{\{.*\}\}$/.test(t) ? t.slice(0, 42) : '';
+  });
+  /** Preview sample per font — your own text when scripts match, else a pangram / Arabic sample. */
+  fontSample(f: string): string {
+    const ar = FONT_GROUPS.some((g) => g.lang === 'ar' && g.fonts.includes(f));
+    const own = this.ownSample();
+    if (own && hasArabic(own) === ar) return own;
+    return ar ? 'نموذج النص العربي' : 'Almost before we knew it';
+  }
+  /** Icon per picker group header. */
+  grpIcon(label: string): string {
+    if (label === 'Recent') return 'history';
+    if (label === 'Your fonts') return 'person';
+    if (label.includes('Sans')) return 'text_fields';
+    if (label.includes('Serif')) return 'menu_book';
+    if (label.includes('Script')) return 'gesture';
+    if (label.includes('Monospace')) return 'code';
+    if (label.includes('عصري')) return 'bolt';
+    if (label.includes('كلاسيكي')) return 'auto_stories';
+    if (label.includes('عناوين')) return 'title';
+    if (label.includes('خط')) return 'brush';
+    return 'font_download';
+  }
   swatches = SWATCHES;
 
   readonly opacityOpts = [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1];
@@ -124,14 +222,7 @@ export class PropertiesPanelComponent {
   commit(): void { this.svc.commit(); }
   setAndCommit(prop: string, value: unknown): void { this.svc.setProp({ [prop]: value }); this.svc.commit(); }
 
-  setFont(family: string): void {
-    this.svc.setProp({ fontFamily: family });
-    this.svc.commit();
-    const fonts: any = (document as any).fonts;
-    if (fonts?.load) {
-      fonts.load(`24px "${family}"`).then(() => this.svc.touch()).catch(() => { /* ignore */ });
-    }
-  }
+  setFont(family: string): void { this.svc.applyFontFamily(family); }
 
   toggle(prop: string): void { this.setAndCommit(prop, !this.obj?.[prop]); }
   toggleFontWeight(): void { this.setAndCommit('fontWeight', this.obj?.fontWeight === 'bold' || this.obj?.fontWeight === '700' ? 'normal' : 'bold'); }

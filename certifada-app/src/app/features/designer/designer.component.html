@@ -1,5 +1,6 @@
 <!-- ============================ Action bar ============================ -->
 <div class="actionbar">
+  <div class="ab-left">
   <div class="doc-field" [attr.data-tip]="'canvas.namePh' | transloco">
     <span class="material-icons">description</span>
     <input class="name-input" [(ngModel)]="name" [placeholder]="'canvas.namePh' | transloco" />
@@ -27,8 +28,10 @@
   <button class="btn btn-sm guide-btn" (click)="openGuide()"><span class="material-icons">auto_awesome</span><span class="gb-lbl">{{ helpUi().guide }}</span></button>
 
 
-  <div class="spacer"></div>
+  </div><!-- /ab-left -->
 
+  <div class="ab-center">
+  <div class="ab-pod ab-pod-view">
   <div class="seg">
     <button class="btn btn-sm btn-icon" [class.on]="showRuler()" (click)="toggleRuler()" [attr.data-tip]="'canvas.ruler' | transloco" [attr.aria-label]="'canvas.ruler' | transloco"><span class="material-icons">straighten</span></button>
     <button class="btn btn-sm btn-icon" [class.on]="showGrid()" (click)="toggleGrid()" [attr.data-tip]="'canvas.grid' | transloco" [attr.aria-label]="'canvas.grid' | transloco"><span class="material-icons">grid_on</span></button>
@@ -108,8 +111,9 @@
     }
   </div>
 
-  <div class="tb-sep"></div>
+  </div><!-- /ab-pod-view -->
 
+  <div class="ab-pod ab-pod-zoom">
   <div class="zoom seg-z">
     <button class="btn btn-sm btn-icon" (click)="zoomOut()" [attr.data-tip]="'canvas.zoomOut' | transloco" [attr.aria-label]="'canvas.zoomOut' | transloco"><span class="material-icons">remove</span></button>
     <span class="zoom-val" (click)="zoomReset()" [attr.data-tip]="'canvas.zoomReset' | transloco">{{ (viewZoom() * 100) | number:'1.0-0' }}%</span>
@@ -117,8 +121,9 @@
     <button class="btn btn-sm btn-icon zoom-fit" (click)="zoomToFit()" [attr.data-tip]="'canvas.fit' | transloco" [attr.aria-label]="'canvas.fit' | transloco"><span class="material-icons">fit_screen</span></button>
   </div>
 
-  <div class="tb-sep"></div>
+  </div><!-- /ab-pod-zoom -->
 
+  <div class="ab-pod ab-pod-hist">
   <button class="btn btn-sm btn-icon" [disabled]="!svc.canUndo()" (click)="svc.undo()" [attr.data-tip]="'canvas.undo' | transloco" [attr.aria-label]="'canvas.undo' | transloco"><span class="material-icons">undo</span></button>
   <button class="btn btn-sm btn-icon" [disabled]="!svc.canRedo()" (click)="svc.redo()" [attr.data-tip]="'canvas.redo' | transloco" [attr.aria-label]="'canvas.redo' | transloco"><span class="material-icons">redo</span></button>
 
@@ -188,24 +193,50 @@
       </div>
     }
   </div>
-  <div class="tb-sep"></div>
+  </div><!-- /ab-pod-hist -->
+  </div><!-- /ab-center -->
 
+  <div class="ab-right">
   @if (brand.kit().has) {
-    <button class="btn act-btn brand-apply" (click)="applyBrandKit()" data-tip="Apply your brand kit — logo, colors & fonts"><span class="material-icons">auto_awesome</span> Brand</button>
+    <button class="btn act-btn brand-apply" (click)="applyBrandKit()" data-tip="Apply your brand kit — logo, colors & fonts"><span class="material-icons">auto_awesome</span> <span class="ab-lbl">Brand</span></button>
   }
 
-  <button class="btn act-btn" data-tour="preview" (click)="openPreview()" [attr.data-tip]="'canvas.previewTip' | transloco"><span class="material-icons">visibility</span> {{ 'canvas.preview' | transloco }}</button>
+  <button class="btn act-btn" data-tour="preview" (click)="openPreview()" [attr.data-tip]="'canvas.previewTip' | transloco"><span class="material-icons">visibility</span> <span class="ab-lbl">{{ 'canvas.preview' | transloco }}</span></button>
 
-  <button class="btn act-btn" (click)="goBulk()" [attr.data-tip]="'canvas.bulkTip' | transloco"><span class="material-icons">dynamic_feed</span> {{ 'canvas.bulk' | transloco }}</button>
+  <button class="btn act-btn" (click)="goBulk()" [attr.data-tip]="'canvas.bulkTip' | transloco"><span class="material-icons">dynamic_feed</span> <span class="ab-lbl">{{ 'canvas.bulk' | transloco }}</span></button>
 
   <div class="export-wrap">
-    <button class="btn act-btn" [class.on]="showExport()" (click)="showExport.set(!showExport())" [attr.data-tip]="'canvas.exportTip' | transloco"><span class="material-icons">download</span> {{ 'canvas.export' | transloco }} <span class="material-icons caret">expand_more</span></button>
+    <button class="btn act-btn" [class.on]="showExport()" (click)="showExport.set(!showExport())" [attr.data-tip]="'canvas.exportTip' | transloco"><span class="material-icons">download</span> <span class="ab-lbl">{{ 'canvas.export' | transloco }}</span> <span class="material-icons caret">expand_more</span></button>
     @if (showExport()) {
       <div class="export-menu" (mouseleave)="showExport.set(false)">
-        <button (click)="exportPng()">{{ 'canvas.png' | transloco }}</button>
-        <button (click)="exportPdf()">{{ 'canvas.pdf' | transloco }}</button>
-        <button (click)="exportSvg()">{{ 'canvas.svg' | transloco }}</button>
-        <button (click)="exportJson()">{{ 'canvas.jsonTpl' | transloco }}</button>
+        <div class="em-head">
+          <b>{{ 'canvas.expTitle' | transloco }}</b>
+          <small>{{ 'canvas.expSub' | transloco }} · {{ width }}×{{ height }}px</small>
+        </div>
+        <button class="em-item" (click)="exportPng()">
+          <span class="em-ic png"><span class="material-icons">image</span></span>
+          <span class="em-tt"><b>{{ 'canvas.png' | transloco }}</b><small>{{ 'canvas.pngDesc' | transloco }}</small></span>
+          <span class="em-tag">.png</span>
+          <span class="material-icons em-go">download</span>
+        </button>
+        <button class="em-item" (click)="exportPdf()">
+          <span class="em-ic pdf"><span class="material-icons">picture_as_pdf</span></span>
+          <span class="em-tt"><b>{{ 'canvas.pdf' | transloco }}</b><small>{{ 'canvas.pdfDesc' | transloco }}</small></span>
+          <span class="em-tag">.pdf</span>
+          <span class="material-icons em-go">download</span>
+        </button>
+        <button class="em-item" (click)="exportSvg()">
+          <span class="em-ic svg"><span class="material-icons">polyline</span></span>
+          <span class="em-tt"><b>{{ 'canvas.svg' | transloco }}</b><small>{{ 'canvas.svgDesc' | transloco }}</small></span>
+          <span class="em-tag">.svg</span>
+          <span class="material-icons em-go">download</span>
+        </button>
+        <button class="em-item" (click)="exportJson()">
+          <span class="em-ic json"><span class="material-icons">data_object</span></span>
+          <span class="em-tt"><b>{{ 'canvas.jsonTpl' | transloco }}</b><small>{{ 'canvas.jsonDesc' | transloco }}</small></span>
+          <span class="em-tag">.json</span>
+          <span class="material-icons em-go">download</span>
+        </button>
       </div>
     }
   </div>
@@ -214,6 +245,7 @@
     <span class="material-icons">{{ saving() ? 'hourglass_top' : 'save' }}</span>
     {{ saving() ? ('canvas.saving' | transloco) : ('canvas.save' | transloco) }}
   </button>
+  </div><!-- /ab-right -->
 </div>
 
 @if (message(); as m) {
@@ -538,7 +570,7 @@
                 </div>
                 <span class="grp-label">Font pairings</span>
                 <div class="txt-pairs">
-                  @for (p of pairFonts; track p.label) {
+                  @for (p of shownPairFonts(); track p.label) {
                     <button class="pair" (click)="addPair(p)"><span class="ph" [style.fontFamily]="p.head">{{ p.label }}</span><small class="pb" [style.fontFamily]="p.body">{{ p.head }} + {{ p.body }}</small></button>
                   }
                 </div>
@@ -563,6 +595,10 @@
             <button class="sec-h" (click)="toggleSec('fonts')"><span class="material-icons">font_download</span> Fonts<span class="material-icons caret">{{ secOpen('fonts') ? 'expand_less' : 'expand_more' }}</span></button>
             @if (secOpen('fonts')) {
               <div class="sec-b">
+                <div class="tabs font-lang-tabs">
+                  <button [class.on]="fontShowLang() === 'en'" (click)="fontShowLang.set('en')">English</button>
+                  <button [class.on]="fontShowLang() === 'ar'" (click)="fontShowLang.set('ar')">عربي</button>
+                </div>
                 <label class="upload-font"><span class="material-icons">upload_file</span> Upload a font (.ttf / .otf / .woff)
                   <input type="file" accept=".ttf,.otf,.woff,.woff2,font/*" hidden (change)="onFontUpload($event)" /></label>
                 @if (svc.userFonts().length) {
@@ -573,12 +609,14 @@
                     }
                   </div>
                 }
-                <span class="grp-label">Arabic display fonts</span>
-                <div class="font-showcase">
-                  @for (f of arabicShowcase; track f.family) {
-                    <button class="show-tile" [style.fontFamily]="f.family" (click)="addFontText(f.family, f.sample)" [title]="f.family">{{ f.sample }}</button>
-                  }
-                </div>
+                @for (g of shownFontGroups(); track g.label) {
+                  <span class="grp-label">{{ g.label }}</span>
+                  <div class="font-showcase">
+                    @for (f of g.fonts; track f.family) {
+                      <button class="show-tile" [style.fontFamily]="f.family" (click)="addFontText(f.family, f.sample)" [title]="f.family">{{ f.sample }}</button>
+                    }
+                  </div>
+                }
               </div>
             }
           </section>
@@ -1619,7 +1657,7 @@
   </section>
 
   <ng-template #layersBody>
-    <div class="panel-search"><span class="material-icons">search</span><input [value]="search()" (input)="search.set($any($event.target).value)" placeholder="Search layers…" /></div>
+    <div class="panel-search"><span class="material-icons">search</span><input [value]="layerSearch()" (input)="layerSearch.set($any($event.target).value)" placeholder="Search layers…" /></div>
     @if (filteredLayers().length === 0) {
       <p class="hint">No layers{{ search() ? ' match your search' : ' yet — add elements from the rail' }}.</p>
     } @else {
@@ -1634,7 +1672,7 @@
             @if (editingLayer() === o) {
               <input class="lyr-rename" [(ngModel)]="editLayerName" (click)="$event.stopPropagation()" (keyup.enter)="commitRename(o)" (blur)="commitRename(o)" />
             } @else {
-              <span class="lyr-name" (dblclick)="startRename(o); $event.stopPropagation()" title="Double-click to rename">{{ layerLabel(o) }}</span>
+              <span class="lyr-name">{{ layerLabel(o) }}</span>
             }
             <button class="lyr-ic" (click)="svc.toggleVisible(o); $event.stopPropagation()" [title]="svc.isVisible(o) ? 'Hide' : 'Show'">
               <span class="material-icons">{{ svc.isVisible(o) ? 'visibility' : 'visibility_off' }}</span></button>

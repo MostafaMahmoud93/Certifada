@@ -11,5 +11,8 @@ namespace Certifada.Application.Interfaces.Services.Common
         Task<ServiceResponse<TokenModel>> Register(RegisterModel model);
         Task<ServiceResponse<bool>> ForgotPassword(ForgotPasswordModel model);
         Task<ServiceResponse<bool>> ResetPassword(ResetPasswordModel model);
+        Task<ServiceResponse<bool>> SendMagicLink(MagicLinkModel model);
+        Task<ServiceResponse<TokenModel>> MagicLogin(MagicLoginModel model);
+        Task<ServiceResponse<TokenModel>> ConfirmEmail(ConfirmEmailModel model);
     }
 }

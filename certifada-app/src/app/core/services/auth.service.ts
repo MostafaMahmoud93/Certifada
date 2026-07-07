@@ -45,8 +45,9 @@ export class AuthService {
     return ((parts[0]?.[0] ?? '') + (parts[1]?.[0] ?? '')).toUpperCase() || 'U';
   }
 
-  login(email: string, password: string): Observable<ServiceResponse<TokenModel>> {
-    return this.http.post<ServiceResponse<TokenModel>>(`${this.url}/api/auth/login`, { email, password });
+  /** `rememberMe` asks the API for a 30-day token instead of the default 24h. */
+  login(email: string, password: string, rememberMe = false): Observable<ServiceResponse<TokenModel>> {
+    return this.http.post<ServiceResponse<TokenModel>>(`${this.url}/api/auth/login`, { email, password, rememberMe });
   }
   register(fullName: string, email: string, password: string): Observable<ServiceResponse<TokenModel>> {
     return this.http.post<ServiceResponse<TokenModel>>(`${this.url}/api/Auth/Register`, { fullName, email, password });
@@ -56,6 +57,18 @@ export class AuthService {
   }
   resetPassword(token: string, password: string): Observable<ServiceResponse<boolean>> {
     return this.http.post<ServiceResponse<boolean>>(`${this.url}/api/Auth/ResetPassword`, { token, password });
+  }
+  /** Ask the API to email a one-time passwordless sign-in link. */
+  requestMagicLink(email: string): Observable<ServiceResponse<boolean>> {
+    return this.http.post<ServiceResponse<boolean>>(`${this.url}/api/Auth/MagicLink`, { email });
+  }
+  /** Exchange a magic-link token for a session. */
+  magicLogin(token: string): Observable<ServiceResponse<TokenModel>> {
+    return this.http.post<ServiceResponse<TokenModel>>(`${this.url}/api/Auth/MagicLogin`, { token });
+  }
+  /** Activate an account from the emailed 24h verification link (returns a session on success). */
+  confirmEmail(token: string): Observable<ServiceResponse<TokenModel>> {
+    return this.http.post<ServiceResponse<TokenModel>>(`${this.url}/api/Auth/ConfirmEmail`, { token });
   }
 
   isTokenValid(t: TokenModel | null): boolean {

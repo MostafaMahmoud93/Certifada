@@ -30,7 +30,12 @@
         public string? ProfilePictureURL { get; set; }
         public string? SigneePictureURL { get; set; }
         public bool IsActive { get; set; }
+        public string? TenantName { get; set; }
+        public DateTime? JoinedOn { get; set; }
+        public bool EmailConfirmed { get; set; }
     }
+    /// <summary>Self-service profile update (current user only).</summary>
+    public record UpdateProfileModel(string FullName);
     public class UsersDDLModel
     {
         public Guid Id { get; set; }

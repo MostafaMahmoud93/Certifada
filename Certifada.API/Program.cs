@@ -13,6 +13,9 @@ builder.Services.AddSingleton(sp =>
     return new StripeClient(opts.SecretKey);
 });
 
+// Stripe integration is isolated behind IStripeGateway (the only class that
+// calls the Stripe SDK); BillingService holds the orchestration + DB logic.
+builder.Services.AddScoped<Certifada.API.Services.Stripe.IStripeGateway, Certifada.API.Services.Stripe.StripeGateway>();
 builder.Services.AddScoped<IBillingService, Certifada.API.Services.BillingService>();
 
 
@@ -79,7 +82,7 @@ builder.Services.AddCors(options =>
                     return true;
 
                 // Allow localhost and any subdomain of localhost on port 4800
-                return uri.Port == 4800 &&
+                return (uri.Port == 4800 || uri.Port == 4600) &&
                        (uri.Host.Equals("localhost", StringComparison.OrdinalIgnoreCase) ||
                         uri.Host.EndsWith(".localhost", StringComparison.OrdinalIgnoreCase));
             })
@@ -93,7 +96,9 @@ builder.Services.AddCors(options =>
         policy.WithOrigins(
             "http://localhost:4200",
             "https://localhost:4200",
-            "http://192.168.100.192:4200"
+            "http://192.168.100.192:4200",
+            "https://app.certifada.com",
+            "https://certifada-app.bilal-nathmi.workers.dev"
         )
         .AllowAnyHeader()
         .AllowAnyMethod()
@@ -183,10 +188,11 @@ try
 }
 catch (Exception ex)
 {
-    if (!Directory.Exists(Path.Combine(Directory.GetCurrentDirectory(), DateTime.Now.ToString(@"yyyy\\MM"))))
-        Directory.CreateDirectory(Path.Combine(Directory.GetCurrentDirectory(), DateTime.Now.ToString(@"yyyy\\MM")));
+    string logDir = Path.Combine(Directory.GetCurrentDirectory(), DateTime.Now.ToString("yyyy"), DateTime.Now.ToString("MM"));
+    if (!Directory.Exists(logDir))
+        Directory.CreateDirectory(logDir);
 
-    string path = Path.Combine(Directory.GetCurrentDirectory(), DateTime.Now.ToString(@"yyyy\\MM\\dd")) + ".log";
+    string path = Path.Combine(logDir, DateTime.Now.ToString("dd")) + ".log";
     string contents = $@"==={DateTime.Now.ToString("HH:mm:ss")}=======================================================================================
                             {ex.Message}
                             ----------------------------------------
