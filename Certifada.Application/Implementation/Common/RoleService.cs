@@ -103,16 +103,28 @@ public class RoleService : ServiceBase, IRoleService
     {
         try
         {
-            #region Guard
             Role dbRole = await _unitOfWork.RoleRepository.FindByIDAsync(id);
-            if (dbRole.Users.Any() || dbRole.RolePermissions.Any()) return new ServiceResponse<bool> { Success = false, Data = false, Message = ClutureResource.TheGroupCannotBeDeletedForUseInTheSystem };
-            #endregion
+            if (dbRole == null || dbRole.Is_Deleted)
+                return new ServiceResponse<bool> { Success = false, Data = false, Message = ClutureResource.NoDataFound };
+
+            // Built-in roles are immutable.
+            if (dbRole.Is_System)
+                return new ServiceResponse<bool> { Success = false, Data = false, Message = ClutureResource.TheGroupCannotBeDeletedForUseInTheSystem };
+
+            // Only block when the role is actually assigned to users; its own
+            // permissions are part of the role and are removed with it.
+            var assigned = await _unitOfWork.UserRoleRepository.GetAllAsync(x => x.Role_Id == id);
+            if (assigned.Any())
+                return new ServiceResponse<bool> { Success = false, Data = false, Message = ClutureResource.TheGroupCannotBeDeletedForUseInTheSystem };
+
+            var rolePerms = await _unitOfWork.RolePermissionRepository.GetAllAsync(x => x.Role_Id == id);
+            foreach (var rp in rolePerms) _unitOfWork.RolePermissionRepository.DeleteByEntity(rp);
+
             dbRole.Is_Deleted = true;
             var res = await _unitOfWork.SaveChangesAsync();
-            if (res > 0)
-                return new ServiceResponse<bool>() { Success = true, Data = true, Message = ClutureResource.DeletedSuccessfully };
-            else
-                return new ServiceResponse<bool>() { Success = false, Data = false, Message = ClutureResource.FaildSave };
+            return res > 0
+                ? new ServiceResponse<bool> { Success = true, Data = true, Message = ClutureResource.DeletedSuccessfully }
+                : new ServiceResponse<bool> { Success = false, Data = false, Message = ClutureResource.FaildSave };
         }
         catch (Exception ex)
         {

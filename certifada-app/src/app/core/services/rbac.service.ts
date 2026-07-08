@@ -43,6 +43,8 @@ export class RbacService {
   readonly userRoles = signal<UserRoleLink[]>([]);
   readonly previewRoleId = signal<string | null>(null);
   readonly loading = signal<boolean>(true);
+  /** Real id of the most recently created role (set after the server reload) so the UI can select it. */
+  readonly lastCreatedId = signal<string | null>(null);
 
   /** permission code -> backend Permission Guid (needed for AddEditRoleAction). */
   private codeToId = new Map<string, string>();
@@ -154,7 +156,10 @@ export class RbacService {
     this.fetchRoles((rs) => {
       this.roles.set(rs);
       const created = rs.filter((r) => r.name === name).slice(-1)[0];
-      if (created && codes.length) this.setPermissions(created.id, codes);
+      if (created) {
+        this.lastCreatedId.set(created.id);
+        if (codes.length) this.setPermissions(created.id, codes);
+      }
     });
   }
   deleteRole(id: string): void {

@@ -54,7 +54,7 @@ interface NotifItem { id: number; icon: string; tone: 'brand' | 'success' | 'war
         </button>
         <ng-container [ngTemplateOutlet]="controlsTpl"></ng-container>
       </header>
-      <div class="content">@if (rbac.isPreviewing()) { <div class="preview-bar"><span class="pv-l"><span class="material-icons">visibility</span> Previewing as <b>{{ rbac.previewRole()?.name }}</b> — the app is limited to this role’s access.</span><button class="pv-exit" (click)="rbac.stopPreview()"><span class="material-icons">close</span> Exit preview</button></div> }<router-outlet></router-outlet></div>
+      <div class="content">@if (rbac.isPreviewing()) { <div class="preview-bar"><span class="pv-l"><span class="pv-eye"><span class="material-icons">visibility</span></span><span class="pv-tx"><span class="pv-top">Preview mode</span><span class="pv-sub">Viewing Certifada as <b>{{ rbac.previewRole()?.name }}</b> — access is limited to this role.</span></span></span><button class="pv-exit" (click)="rbac.stopPreview()"><span class="material-icons">logout</span> Exit preview</button></div> }<router-outlet></router-outlet></div>
 
     } @else {
       <!-- ===================== LEFT SIDEBAR ===================== -->
@@ -93,7 +93,7 @@ interface NotifItem { id: number; icon: string; tone: 'brand' | 'success' | 'war
           <span class="spacer"></span>
           <ng-container [ngTemplateOutlet]="controlsTpl"></ng-container>
         </header>
-        <div class="content">@if (rbac.isPreviewing()) { <div class="preview-bar"><span class="pv-l"><span class="material-icons">visibility</span> Previewing as <b>{{ rbac.previewRole()?.name }}</b> — the app is limited to this role’s access.</span><button class="pv-exit" (click)="rbac.stopPreview()"><span class="material-icons">close</span> Exit preview</button></div> }<router-outlet></router-outlet></div>
+        <div class="content">@if (rbac.isPreviewing()) { <div class="preview-bar"><span class="pv-l"><span class="pv-eye"><span class="material-icons">visibility</span></span><span class="pv-tx"><span class="pv-top">Preview mode</span><span class="pv-sub">Viewing Certifada as <b>{{ rbac.previewRole()?.name }}</b> — access is limited to this role.</span></span></span><button class="pv-exit" (click)="rbac.stopPreview()"><span class="material-icons">logout</span> Exit preview</button></div> }<router-outlet></router-outlet></div>
       </div>
     }
   </div>
@@ -197,13 +197,20 @@ interface NotifItem { id: number; icon: string; tone: 'brand' | 'success' | 'war
   <app-upgrade-dialog />
   `,
   styles: [`
-    .preview-bar{position:sticky;top:0;z-index:40;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin:0 0 14px;padding:10px 14px;border-radius:12px;color:#fff;background:linear-gradient(135deg,#7c3aed,#4f46e5);box-shadow:0 10px 26px -14px rgba(79,70,229,.7)}
-    .preview-bar .pv-l{display:inline-flex;align-items:center;gap:8px;font-size:13px;font-weight:600}
-    .preview-bar .pv-l .material-icons{font-size:17px}
-    .preview-bar .pv-l b{font-weight:800}
-    .pv-exit{display:inline-flex;align-items:center;gap:5px;border:1px solid rgba(255,255,255,.4);background:rgba(255,255,255,.16);color:#fff;font:inherit;font-size:12.5px;font-weight:700;border-radius:9px;padding:6px 12px;cursor:pointer;transition:background .14s}
-    .pv-exit:hover{background:rgba(255,255,255,.28)}
-    .pv-exit .material-icons{font-size:15px}
+    .preview-bar{position:sticky;top:0;z-index:40;display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;margin:0 0 14px;padding:11px 12px 11px 14px;border-radius:14px;color:#fff;background:linear-gradient(120deg,#6d28d9,#4f46e5 58%,#7c3aed);box-shadow:0 14px 30px -14px rgba(79,70,229,.75);overflow:hidden}
+    .preview-bar::before{content:'';position:absolute;inset:0;background:radial-gradient(440px 130px at 12% -50%,rgba(255,255,255,.26),transparent 60%);pointer-events:none}
+    .preview-bar .pv-l{position:relative;display:inline-flex;align-items:center;gap:11px;min-width:0}
+    .pv-eye{position:relative;width:34px;height:34px;border-radius:10px;display:grid;place-items:center;background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.32);flex:none}
+    .pv-eye .material-icons{font-size:19px;color:#fff}
+    .pv-eye::after{content:'';position:absolute;inset:-4px;border-radius:13px;border:2px solid rgba(255,255,255,.55);opacity:0;animation:pvpulse 1.8s ease-out infinite}
+    @keyframes pvpulse{0%{opacity:.7;transform:scale(.82)}100%{opacity:0;transform:scale(1.28)}}
+    .pv-tx{display:flex;flex-direction:column;gap:1px;min-width:0}
+    .pv-top{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.11em;color:rgba(255,255,255,.82)}
+    .pv-sub{font-size:13px;font-weight:600;color:#fff}
+    .pv-sub b{font-weight:800}
+    .pv-exit{position:relative;display:inline-flex;align-items:center;gap:6px;border:0;background:#fff;color:#5b21b6;font:inherit;font-size:12.5px;font-weight:800;border-radius:10px;padding:8px 14px;cursor:pointer;transition:transform .14s,box-shadow .14s;flex:none}
+    .pv-exit:hover{transform:translateY(-1px);box-shadow:0 8px 16px -8px rgba(2,6,23,.5)}
+    .pv-exit .material-icons{font-size:16px}
     :host{display:block;height:100vh}
     .shell{display:grid;grid-template-columns:248px 1fr;height:100vh;background:var(--cf-bg);color:var(--cf-ink-700);transition:grid-template-columns .2s ease}
     .shell.collapsed{grid-template-columns:72px 1fr}
