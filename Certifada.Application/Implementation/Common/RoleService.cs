@@ -16,7 +16,17 @@ public class RoleService : ServiceBase, IRoleService
     {
         try
         {
-            Role role = _mapper.Map<Role>(newGroup);
+            var tenantId = (await _unitOfWork.RoleRepository.GetAllAsync(r => !r.Is_Deleted)).Select(r => r.Tenant_Id).FirstOrDefault();
+            Role role = new Role
+            {
+                Name = newGroup.Name,
+                Description = string.Empty,
+                Role_Code = "CUSTOM_" + Guid.NewGuid().ToString("N").Substring(0, 6).ToUpperInvariant(),
+                Tenant_Id = tenantId,
+                Is_System = false,
+                Is_Active = true,
+                Created_Date = DateTime.Now
+            };
             await _unitOfWork.RoleRepository.AddAsync(role);
             var res = await _unitOfWork.SaveChangesAsync();
             if (res > 0)
@@ -53,8 +63,24 @@ public class RoleService : ServiceBase, IRoleService
     {
         try
         {
-            List<RoleModel> rolesModel = await _unitOfWork.RoleRepository.GetAllWithSelectAsync(a => !a.Is_Deleted, s => new RoleModel() { RoleId = s.Id, Name = s.Name });
-            return new ServiceResponse<CollectionResponse<RoleModel>> { Success = true, Data = new CollectionResponse<RoleModel>(rolesModel.Count(), rolesModel), Message = ClutureResource.SavedSuccessfully };
+            var roles = await _unitOfWork.RoleRepository.GetAllAsync(a => !a.Is_Deleted);
+            var rolePerms = await _unitOfWork.RolePermissionRepository.GetAllAsync();
+            var perms = await _unitOfWork.PermissionRepository.GetAllAsync();
+            var userRoles = await _unitOfWork.UserRoleRepository.GetAllAsync();
+            var codeById = perms.ToDictionary(p => p.Id, p => p.Code);
+            List<RoleModel> rolesModel = roles.Select(r => new RoleModel
+            {
+                RoleId = r.Id,
+                Name = r.Name,
+                Description = r.Description,
+                IsSystem = r.Is_System,
+                IsDeleted = r.Is_Deleted,
+                Members = userRoles.Count(ur => ur.Role_Id == r.Id),
+                Codes = rolePerms.Where(rp => rp.Role_Id == r.Id)
+                                 .Select(rp => codeById.TryGetValue(rp.Permission_Id, out var c) ? c : null)
+                                 .Where(c => c != null).Select(c => c!).ToList()
+            }).ToList();
+            return new ServiceResponse<CollectionResponse<RoleModel>> { Success = true, Data = new CollectionResponse<RoleModel>(rolesModel.Count, rolesModel), Message = ClutureResource.RetrieveData };
         }
         catch (Exception ex)
         {

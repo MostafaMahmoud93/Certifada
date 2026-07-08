@@ -1,5 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { AuthService } from './auth.service';
+import { RbacService } from './rbac.service';
 
 /**
  * Single source of truth for "is this action allowed for the current user".
@@ -15,17 +16,27 @@ import { AuthService } from './auth.service';
 @Injectable({ providedIn: 'root' })
 export class PermissionService {
   private auth = inject(AuthService);
+  private rbac = inject(RbacService);
 
-  /** The current user's allowed action codes (lower-cased). */
+  /**
+   * The action codes the UI is gated against right now. Source of truth is the
+   * RBAC layer: the signed-in user's effective role permissions, or the previewed
+   * role when "preview as role" is active. Falls back to the backend token list
+   * for environments where RBAC has not been provisioned.
+   */
   private allowed(): string[] {
-    return (this.auth.userActions ?? []).map((a) => (a || '').toLowerCase());
+    const rbac = this.rbac.gateCodes();
+    const src = rbac.length ? rbac : (this.auth.userActions ?? []);
+    return src.map((a) => (a || '').toLowerCase());
   }
 
-  /** True when the user may perform `action`. Empty/era unknown lists are allowed. */
+  /** True when the user may perform `action`. */
   has(action: string | null | undefined): boolean {
     if (!action) return true;
     const list = this.allowed();
-    if (list.length === 0) return true;            // no list from backend -> do not gate the UI
+    // When previewing a role we enforce strictly (even an empty set = no access).
+    // Otherwise an empty set means RBAC/token is not provisioned -> do not gate.
+    if (list.length === 0) return this.rbac.isPreviewing() ? false : true;
     return list.includes(action.toLowerCase());
   }
 

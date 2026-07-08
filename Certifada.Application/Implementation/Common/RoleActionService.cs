@@ -1,4 +1,4 @@
-﻿namespace Certifada.Application.Implementation.Common;
+namespace Certifada.Application.Implementation.Common;
 public class RoleActionService : ServiceBase, IRoleActionService
 {
     private readonly IConfiguration _configuration;
@@ -39,77 +39,66 @@ public class RoleActionService : ServiceBase, IRoleActionService
         }
     }
 
-    //public async Task<ServiceResponse<CollectionResponse<RoleScreensPermissionModel>>> GetRoleActions(Guid roleId)
-    //{
-    //    try
-    //    {
-    //        var dbRole = await _unitOfWork.RoleRepository.FindByIDAsync(roleId);
-    //        MainModule dbModuleModel = await _unitOfWork.MainModuleRepository.GetAllQ()
-    //           .Include(a => a.Screens.Where(s => s.Link != "#").OrderBy(a => a.Order))
-    //           .ThenInclude(d => d.SubScreens.OrderBy(a => a.Order))
-    //           .ThenInclude(a => a.LinkScreenActions.OrderBy(a => a.ScreenAction.Order)).ThenInclude(a => a.ScreenAction)
-    //           .Include(a => a.Screens).ThenInclude(a => a.LinkScreenActions.OrderBy(a => a.ScreenAction.Order))
-    //           .ThenInclude(a => a.RoleActions.Where(a => a.Role_Id == roleId))
-    //           .FirstOrDefaultAsync(a => a.Id == CountMainModuleSystemID(dbRole.User_Type));
-    //        List<RoleScreensPermissionModel> roleScreens = _mapper.Map<List<RoleScreensPermissionModel>>(dbModuleModel.Screens);
-
-    //        return new ServiceResponse<CollectionResponse<RoleScreensPermissionModel>> { Success = true, Data = new CollectionResponse<RoleScreensPermissionModel>(roleScreens.Count(), roleScreens) };
-
-    //    }
-    //    catch (Exception ex)
-    //    {
-
-    //        return await LogErrorAsync<CollectionResponse<RoleScreensPermissionModel>>(ex, null, new { roleId });
-    //    }
-    //}
-    public async Task<ServiceResponse<bool>> AddEditUserAction(UserActionModel model)
+    /// <summary>Permission catalogue grouped by screen, each flagged as granted for the given role.</summary>
+    public async Task<ServiceResponse<List<ScreenPermissionsModel>>> GetRoleActions(Guid roleId)
     {
         try
         {
-            UserPermission userPermissions = await _unitOfWork.UserPermissionRepository.FirstOrDefaultAsync(q => q.Permission_Id == model.ActionId && q.User_Id == model.UserId);
+            var grantedIds = (await _unitOfWork.RolePermissionRepository.GetAllAsync(rp => rp.Role_Id == roleId))
+                .Select(rp => rp.Permission_Id).ToHashSet();
 
-            if (model.IsAdd && userPermissions != null || !model.IsAdd && userPermissions == null) return new ServiceResponse<bool> { Success = false, Message = (model.IsAdd && userPermissions != null) == true ? "Already Added !" : "Already Deleted !" };
+            var screens = BuildScreens(await _unitOfWork.PermissionRepository.GetAllAsync(), grantedIds);
 
-            if (model.IsAdd)
-            {
-                await _unitOfWork.UserPermissionRepository.AddAsync(new UserPermission { Permission_Id = model.ActionId, User_Id = model.UserId });
-            }
-            else
-            {
-                _unitOfWork.UserPermissionRepository.DeleteByEntity(userPermissions);
-            }
-
-            int result = await _unitOfWork.SaveChangesAsync();
-
-            return new ServiceResponse<bool> { Success = result > 0, Message = ClutureResource.SavedSuccessfully };
+            return new ServiceResponse<List<ScreenPermissionsModel>> { Success = true, Data = screens };
         }
         catch (Exception ex)
         {
-
-            return await LogErrorAsync(ex, false, model);
+            return await LogErrorAsync<List<ScreenPermissionsModel>>(ex, null, new { roleId });
         }
     }
-    //public async Task<ServiceResponse<CollectionResponse<UserScreensPermissionModel>>> GetUserActions(Guid userId)
-    //{
-    //    try
-    //    {
-    //        var dbUser = await _unitOfWork.UserManager.FindByIdAsync(userId.ToString());  // i'm sorry for doing that
-    //        MainModule dbModuleModel = await _unitOfWork.MainModuleRepository.GetAllQ()
-    //            .Include(a => a.Screens.Where(s => s.Link != "#").OrderBy(a => a.Order))
-    //            .ThenInclude(d => d.SubScreens.OrderBy(a => a.Order))
-    //            .ThenInclude(a => a.LinkScreenActions.OrderBy(a => a.ScreenAction.Order)).ThenInclude(a => a.ScreenAction)
-    //            .Include(a => a.Screens).ThenInclude(a => a.LinkScreenActions.OrderBy(a => a.ScreenAction.Order))
-    //            .ThenInclude(a => a.UserActions.Where(a => a.User_Id == userId))
-    //            .FirstOrDefaultAsync(a => a.Id == CountMainModuleSystemID(dbUser.User_Type));
-    //        List<UserScreensPermissionModel> screens = _mapper.Map<List<UserScreensPermissionModel>>(dbModuleModel.Screens);
 
-    //        return new ServiceResponse<CollectionResponse<UserScreensPermissionModel>> { Success = true, Data = new CollectionResponse<UserScreensPermissionModel>(screens.Count(), screens) };
+    /// <summary>Full permission catalogue grouped by screen (nothing granted).</summary>
+    public async Task<ServiceResponse<List<ScreenPermissionsModel>>> GetPermissionsCatalog()
+    {
+        try
+        {
+            var screens = BuildScreens(await _unitOfWork.PermissionRepository.GetAllAsync(), new HashSet<Guid>());
+            return new ServiceResponse<List<ScreenPermissionsModel>> { Success = true, Data = screens };
+        }
+        catch (Exception ex)
+        {
+            return await LogErrorAsync<List<ScreenPermissionsModel>>(ex, null, new { });
+        }
+    }
 
-    //    }
-    //    catch (Exception ex)
-    //    {
+    private static List<ScreenPermissionsModel> BuildScreens(List<Permission> perms, HashSet<Guid> grantedIds) =>
+        perms
+            .GroupBy(p => p.Screen_Key)
+            .OrderBy(g => g.Key)
+            .Select(g => new ScreenPermissionsModel
+            {
+                ScreenKey = g.Key,
+                Actions = g.Select(p => new RolePermissionActionModel
+                {
+                    Id = p.Id,
+                    Code = p.Code,
+                    ShortDescription = p.Short_Description,
+                    Description = p.Description,
+                    IsGranted = grantedIds.Contains(p.Id)
+                }).ToList()
+            })
+            .ToList();
 
-    //        return await LogErrorAsync<CollectionResponse<UserScreensPermissionModel>>(ex, null, new { userId });
-    //    }
-    //}
+    public async Task<ServiceResponse<bool>> AssignUserRole(Guid userId, Guid roleId)
+    {
+        try
+        {
+            var existing = await _unitOfWork.UserRoleRepository.FirstOrDefaultAsync(x => x.User_Id == userId);
+            if (existing == null) await _unitOfWork.UserRoleRepository.AddAsync(new UserRole { User_Id = userId, Role_Id = roleId });
+            else existing.Role_Id = roleId;
+            int result = await _unitOfWork.SaveChangesAsync();
+            return new ServiceResponse<bool> { Success = result > 0, Message = ClutureResource.SavedSuccessfully };
+        }
+        catch (Exception ex) { return await LogErrorAsync(ex, false, new { userId, roleId }); }
+    }
 }

@@ -82,13 +82,13 @@ public class UserConfig : IEntityTypeConfiguration<User>
         builder.HasOne(q => q.Unit).WithMany(x => x.Users).HasForeignKey(q => q.Unit_Id).OnDelete(DeleteBehavior.NoAction);
     }
 }
-public class UserPermissionConfig : IEntityTypeConfiguration<UserPermission>
+public class UserRoleConfig : IEntityTypeConfiguration<UserRole>
 {
-    public void Configure(EntityTypeBuilder<UserPermission> builder)
+    public void Configure(EntityTypeBuilder<UserRole> builder)
     {
-        builder.HasKey(a => new { a.User_Id, a.Permission_Id });
-        builder.HasOne(q => q.Permission).WithMany(x => x.UserPermissions).HasForeignKey(q => q.Permission_Id).OnDelete(DeleteBehavior.NoAction);
-        builder.HasOne(q => q.User).WithMany(x => x.UserPermissions).HasForeignKey(q => q.User_Id).OnDelete(DeleteBehavior.NoAction);
+        builder.HasKey(a => a.User_Id); // one role per user
+        builder.HasOne(q => q.User).WithOne().HasForeignKey<UserRole>(q => q.User_Id).OnDelete(DeleteBehavior.NoAction);
+        builder.HasOne(q => q.Role).WithMany().HasForeignKey(q => q.Role_Id).OnDelete(DeleteBehavior.NoAction);
     }
 }
 public class RolePermissionConfig : IEntityTypeConfiguration<RolePermission>

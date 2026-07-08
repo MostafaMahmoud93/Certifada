@@ -10,11 +10,13 @@ namespace Certifada.Infrastructure.Configuration.SeedInitialData
         {
             // Define the first user data
             var userId = Guid.Parse("DB8F1215-F67E-4E75-B940-3943BD698EA1");
+            var tenantId = Guid.Parse("a0000000-0000-4000-8000-000000000001");
             var createdAt = new DateTime(2025, 8, 10, 15, 0, 45, 964, DateTimeKind.Utc).AddTicks(5459);
             const string seedHash = "AQAAAAIAAYagAAAAEGXpFYVKRy1CS1wTa4v2zHvK2DAwSRj6zGJuY6YEu2UMbe0CMZOHs5I/XjU8zDUmVA=="; // new PasswordHasher<User>().HashPassword(null, "P@55w0rd")
             var firstUser = new User
             {
                 Id = userId,
+                Tenant_Id = tenantId,
                 Email = "must345@yahoo.com",
                 Password_Hash = seedHash,
                 Full_Name = "Mostafa Mahmoud",
@@ -25,142 +27,84 @@ namespace Certifada.Infrastructure.Configuration.SeedInitialData
             };
             // Add the first user to Users
             builder.Entity<User>().HasData(firstUser);
-            builder.Entity<SystemRole>().HasData(
-                new SystemRole
-                {
-                    Id = Guid.Parse("3ae08c10-fdd6-46bf-b513-535e09c5aa61"),
-                    Role_Name = "Administrator",
-                    Description = "Full access to all tenant features",
-                    Role_Code = "ADMIN",
-                    Is_Active = true,
-                    Is_Deleted = false
-                },
-                new SystemRole
-                {
-                    Id = Guid.Parse("40db8cd0-2340-4f56-98f6-edbdc435d137"),
-                    Role_Name = "Designer",
-                    Description = "Can create and edit certificate templates",
-                    Role_Code = "DESIGNER",
-                    Is_Active = true,
-                    Is_Deleted = false
-                },
-                new SystemRole
-                {
-                    Id = Guid.Parse("78752151-7cd4-46ee-bd6c-6b6bef16f286"),
-                    Role_Name = "Issuer",
-                    Description = "Can issue/generate credentials",
-                    Role_Code = "ISSUER",
-                    Is_Active = true,
-                    Is_Deleted = false
-                },
-                new SystemRole
-                {
-                    Id = Guid.Parse("36f3cec7-caf0-4551-9330-7f0e2c231518"),
-                    Role_Name = "Viewer",
-                    Description = "Read-only access",
-                    Role_Code = "VIEWER",
-                    Is_Active = true,
-                    Is_Deleted = false
-                },
-                new SystemRole
-                {
-                    Id = Guid.Parse("74d986ef-92be-4d4b-9993-12976347b1be"),
-                    Role_Name = "Approver",
-                    Description = "Can approve/reject requests and workflows",
-                    Role_Code = "APPROVER",
-                    Is_Active = true,
-                    Is_Deleted = false
-                }
-            );
-            var permissions = new List<Permission>
+            // ---- deterministic GUID from a stable key (keeps HasData migrations stable) ----
+            static Guid Det(string key) => new Guid(System.Security.Cryptography.MD5.HashData(System.Text.Encoding.UTF8.GetBytes(key)));
+
+            // ===== PERMISSIONS — full catalogue; codes are identical to the Angular `Actions` enum =====
+            // Short = one-line hint shown under each action; Full = detailed text for the info popup.
+            var catalog = new (string Screen, string Code, string Short, string Full)[]
             {
-                // Templates
-                new Permission { Id = Guid.Parse("d10c7b98-6a4e-4a66-b109-1eacd5c0b101"), Screen_Key = "Templates.View", Code = "A7G9Q", Description = "View Templates", Is_Deleted = false },
-                new Permission { Id = Guid.Parse("eb27d68d-fae6-4fa3-87b7-5a8b928ff69e"), Screen_Key = "Templates.Create", Code = "X8F2L", Description = "Create Templates", Is_Deleted = false },
-                new Permission { Id = Guid.Parse("6ae47f88-367d-414b-9fa7-6cfd8b58c413"), Screen_Key = "Templates.Edit", Code = "B2V4W", Description = "Edit Templates", Is_Deleted = false },
-                new Permission { Id = Guid.Parse("f7d03dd3-c0e3-47e5-9448-602a24bfa60c"), Screen_Key = "Templates.Delete", Code = "M4K1Z", Description = "Delete Templates", Is_Deleted = false },
-
-                // Credentials
-                new Permission { Id = Guid.Parse("aaae6e31-7407-48fa-ade7-84efc402ba52"), Screen_Key = "Credentials.View", Code = "N9T6D", Description = "View Credentials", Is_Deleted = false },
-                new Permission { Id = Guid.Parse("3f2a2168-7db7-40ec-92c5-7f2b5ae84335"), Screen_Key = "Credentials.Add", Code = "Q5R7P", Description = "Add Credentials", Is_Deleted = false },
-                
-                // Certificate
-                new Permission { Id = Guid.Parse("86e3cf96-4cb9-4b7e-a2cd-1cb136e113dd"), Screen_Key = "Certificate.View", Code = "F2J6W", Description = "View Certificate", Is_Deleted = false },
-                new Permission { Id = Guid.Parse("b96861b8-d76f-42b5-a622-2ce6852d50b4"), Screen_Key = "Certificate.Sign", Code = "V3D8L", Description = "Sign Certificate", Is_Deleted = false },
-
-                // Branding
-                new Permission { Id = Guid.Parse("d19f650b-7ed9-4264-ae33-7fa0eb61dbe3"), Screen_Key = "Branding.View", Code = "Y3X8C", Description = "View Branding", Is_Deleted = false },
-                new Permission { Id = Guid.Parse("fea6837a-c94e-4c18-bd27-7763a1a983de"), Screen_Key = "Branding.Add", Code = "W1U2J", Description = "Add Branding", Is_Deleted = false },
-
-                // Users
-                new Permission { Id = Guid.Parse("0f82d59e-181a-4d4d-b41e-5e2b5b48b30d"), Screen_Key = "Users.View", Code = "Z0A5N", Description = "View Users", Is_Deleted = false },
-                new Permission { Id = Guid.Parse("45314e9d-ec9e-4c3e-9836-7850215b2f98"), Screen_Key = "Users.Add", Code = "K6E3T", Description = "Add Users", Is_Deleted = false },
-                new Permission { Id = Guid.Parse("21b8d3dc-f9ff-438c-b83f-c4dceff8f505"), Screen_Key = "Users.Edit", Code = "L9S4V", Description = "Edit Users", Is_Deleted = false },
-                new Permission { Id = Guid.Parse("b5b7009f-1589-4b47-a353-52b261fdfd03"), Screen_Key = "Users.Delete", Code = "P8B7F", Description = "Delete Users", Is_Deleted = false },
-
-                // Roles
-                new Permission { Id = Guid.Parse("2f3c63f9-82e7-4d82-9aa3-c1a8ea231cfd"), Screen_Key = "Roles.View", Code = "D2M3Y", Description = "View Roles", Is_Deleted = false },
-                new Permission { Id = Guid.Parse("7c6c76a7-b5f5-4b02-9f37-d76a3ac347f3"), Screen_Key = "Roles.Add", Code = "J1H6R", Description = "Add Roles", Is_Deleted = false },
-                new Permission { Id = Guid.Parse("a4e4c234-6fa9-498b-bec0-d420eae1fdcb"), Screen_Key = "Roles.Edit", Code = "U3C9A", Description = "Edit Roles", Is_Deleted = false },
-
-                // Automation
-                new Permission { Id = Guid.Parse("7094382f-6c85-4fe1-a5a3-e1efde39db71"), Screen_Key = "Automation.View", Code = "T5L7X", Description = "View Automation", Is_Deleted = false },
-
-                // Email Settings
-                new Permission { Id = Guid.Parse("cf43b30e-05c1-4a44-8ac6-d05d1a25c0f6"), Screen_Key = "EmailSettings.View", Code = "S4Z8E", Description = "View Email Settings", Is_Deleted = false },
-
-                // Reports
-                new Permission { Id = Guid.Parse("91c2ed65-54b6-4bd1-a660-e3c64dbfb9d3"), Screen_Key = "Reports.View", Code = "G7N2K", Description = "View Reports", Is_Deleted = false }
+                ("dashboard","DASH_VIEW","See KPIs, activity & pending approvals","Open the home dashboard and see workspace KPIs, recent activity and the pending-approvals queue. This is the landing screen after signing in — without it the user starts on another allowed page."),
+                ("dashboard","ANALYTICS_VIEW","Issuance & verification reports","Access analytics and reporting: issuance trends, verification/traffic charts and per-credential view counts. Read-only insight into how credentials are performing."),
+                ("templates","TPL_VIEW","Browse & preview the library","Browse the template library and open any template for preview. This is the baseline access every other template action builds on."),
+                ("templates","TPL_CREATE","Add brand-new templates","Start brand-new templates from scratch or from a preset and add them to the workspace library. Automatically includes viewing templates."),
+                ("templates","TPL_EDIT","Change layout, text & fields","Open a template in the design studio and change its layout, text, images, colours and data fields. Also unlocks opening the designer canvas."),
+                ("templates","TPL_DELETE","Permanently remove templates","Permanently remove templates from the workspace. Deleted templates cannot be recovered, so this is treated as a sensitive action."),
+                ("templates","TPL_ARCHIVE","Hide or restore templates","Archive templates to hide them from the active list, or restore archived ones — without deleting any data."),
+                ("templates","TPL_EXPORT","Download as PDF, PNG or JSON","Download templates as PDF, PNG or JSON, or share the template definition outside Certifada."),
+                ("templates","TPL_INFO","Metadata, usage & history","See a template's metadata, usage statistics and change history."),
+                ("designer","EXNDM","View a design on the canvas","Open the certificate design canvas to view a design. Prerequisite for every other design-studio action."),
+                ("designer","EDITC","Add, move & restyle elements","Add, move, resize and restyle elements on the canvas — text, shapes, images, seals and data fields."),
+                ("designer","CDDCR","Persist canvas changes","Persist changes made on the canvas back to the template. Includes opening and editing the canvas."),
+                ("designer","DELDR","Remove elements from a design","Remove individual elements or clear parts of a design on the canvas."),
+                ("designer","CNV_PRINT","Print or export from the studio","Print the current design or export it as a file directly from the studio."),
+                ("designer","CNV_AI","Generate & refine with AI","Use the AI tools to generate layouts, suggest content and refine designs automatically. A premium capability."),
+                ("credentials","CRED_VIEW","Browse issued certificates","Browse issued certificates and open each recipient's details, delivery status and history. Baseline for all credential actions."),
+                ("credentials","CRED_GEN","Issue one certificate at a time","Issue one certificate at a time by choosing a template and entering a recipient. Includes viewing credentials."),
+                ("credentials","CRED_BULK","Generate many from a data file","Generate many certificates in one run from a data file such as CSV or Excel. Includes single issuing and viewing."),
+                ("credentials","CRED_APPROVE","Release queued credentials","Approve credentials that are waiting in the queue so they can be sent to recipients. Sensitive — controls what actually goes out."),
+                ("credentials","CRED_REJECT","Send back with a reason","Reject credentials awaiting approval and send them back with a reason. Sensitive."),
+                ("credentials","CRED_REVOKE","Invalidate an issued certificate","Invalidate a certificate that was already issued so it no longer verifies. Sensitive and not reversible for the recipient."),
+                ("credentials","CRED_RESEND","Re-send the credential email","Re-send a credential email to its recipient, for example if the original was missed."),
+                ("credentials","CRED_EDIT","Correct & re-render recipient data","Correct the recipient data (name, fields) on an already-issued credential and re-render it."),
+                ("credentials","CRED_EXPORT","Export the list to CSV/Excel","Export the credentials list and its details to CSV or Excel for auditing or reporting."),
+                ("credentials","CRED_DOWNLOAD","Download a certificate file","Download an individual certificate as a file (PDF/PNG)."),
+                ("approvals","APPROVAL_VIEW","Review the pending queue","Open the approvals queue to review credentials and batches waiting for a decision. Needed before anyone can approve or reject."),
+                ("branding","BRAND_MANAGE","Logo, colours, fonts & signature","Set the organisation's logo, colour palette, fonts and default signature that are applied across all templates and emails."),
+                ("people","USER_VIEW","See members & their roles","See the list of workspace members with the role assigned to each. Baseline for managing people."),
+                ("people","USER_INVITE","Send seat invitations","Send seat invitations to bring new members into the workspace."),
+                ("people","USER_MANAGE","Change roles, suspend accounts","Change a member's role, suspend or reactivate accounts. Sensitive — it changes what others can access."),
+                ("people","USER_REMOVE","Remove members & free seats","Remove members from the workspace and free their seat. Sensitive."),
+                ("people","ROLE_VIEW","See roles & their permissions","See all roles and exactly which permissions each one grants."),
+                ("people","ROLE_MANAGE","Create, edit & delete roles","Create, edit, clone and delete roles and change which permissions they grant. Highly sensitive — it defines everyone's access."),
+                ("automation","AUTO_VIEW","See workflows & run history","See automated workflows and their recent run history."),
+                ("automation","AUTO_MANAGE","Create, edit & toggle workflows","Create, edit, enable or disable workflows that automatically issue or route credentials."),
+                ("billing","BILLING_VIEW","Plan, usage & payment history","See the current plan, usage against limits and payment history. Read-only."),
+                ("billing","BILLING_MANAGE","Payment method & subscription","Update the payment method and manage the subscription in the billing portal. Sensitive — financial control."),
+                ("billing","PLAN_CHANGE","Upgrade or downgrade the plan","Upgrade or downgrade the subscription plan, which changes limits and what the whole workspace is billed. Sensitive."),
+                ("billing","PRICING_VIEW","Compare available plans","Open the pricing page and compare the available plans."),
+                ("account","PROFILE_MANAGE","Profile, avatar & preferences","Edit personal profile details, avatar and preferences."),
+                ("account","SIGNATURE_MANAGE","Manage the approver signature","Create and manage the approver signature used when signing off credentials."),
+                ("account","SET_MANAGE","Workspace settings & security","Change workspace-wide settings, integrations and security options. Sensitive — affects the whole organisation."),
+                ("account","SUPPORT_VIEW","Open help & support","Open the support and help resources."),
             };
-            builder.Entity<Permission>().HasData(permissions);
-            var systemRolePermissions = new List<SystemRolePermission>
+            builder.Entity<Permission>().HasData(catalog.Select(c => new Permission { Id = Det("perm:" + c.Code), Screen_Key = c.Screen, Code = c.Code, Short_Description = c.Short, Description = c.Full, Is_Deleted = false }).ToList());
+
+            var allCodes = catalog.Select(c => c.Code).ToArray();
+            var adminCodes = allCodes.Where(c => c != "BILLING_MANAGE" && c != "PLAN_CHANGE").ToArray();
+            string[] approverCodes = { "DASH_VIEW","ANALYTICS_VIEW","TPL_VIEW","CRED_VIEW","APPROVAL_VIEW","CRED_APPROVE","CRED_REJECT","CRED_REVOKE","SUPPORT_VIEW" };
+            string[] editorCodes = { "DASH_VIEW","TPL_VIEW","TPL_CREATE","TPL_EDIT","TPL_EXPORT","TPL_INFO","EXNDM","EDITC","CDDCR","CNV_PRINT","CRED_VIEW","CRED_GEN","CRED_BULK","CRED_RESEND","CRED_DOWNLOAD","BRAND_MANAGE","AUTO_VIEW","SUPPORT_VIEW" };
+            string[] viewerCodes = { "DASH_VIEW","ANALYTICS_VIEW","TPL_VIEW","CRED_VIEW","APPROVAL_VIEW","USER_VIEW","ROLE_VIEW","AUTO_VIEW","BILLING_VIEW","SUPPORT_VIEW" };
+            var roleDefs = new (string Code, string Name, string Desc, string[] Codes)[]
             {
-                // ADMINISTRATOR (All Permissions)
-                new SystemRolePermission { Role_Id = Guid.Parse("3ae08c10-fdd6-46bf-b513-535e09c5aa61"), Permission_Id = Guid.Parse("d10c7b98-6a4e-4a66-b109-1eacd5c0b101") }, // Templates.View
-                new SystemRolePermission { Role_Id = Guid.Parse("3ae08c10-fdd6-46bf-b513-535e09c5aa61"), Permission_Id = Guid.Parse("eb27d68d-fae6-4fa3-87b7-5a8b928ff69e") }, // Templates.Create
-                new SystemRolePermission { Role_Id = Guid.Parse("3ae08c10-fdd6-46bf-b513-535e09c5aa61"), Permission_Id = Guid.Parse("6ae47f88-367d-414b-9fa7-6cfd8b58c413") }, // Templates.Edit
-                new SystemRolePermission { Role_Id = Guid.Parse("3ae08c10-fdd6-46bf-b513-535e09c5aa61"), Permission_Id = Guid.Parse("f7d03dd3-c0e3-47e5-9448-602a24bfa60c") }, // Templates.Delete
-
-                new SystemRolePermission { Role_Id = Guid.Parse("3ae08c10-fdd6-46bf-b513-535e09c5aa61"), Permission_Id = Guid.Parse("aaae6e31-7407-48fa-ade7-84efc402ba52") }, // Credentials.View
-                new SystemRolePermission { Role_Id = Guid.Parse("3ae08c10-fdd6-46bf-b513-535e09c5aa61"), Permission_Id = Guid.Parse("3f2a2168-7db7-40ec-92c5-7f2b5ae84335") }, // Credentials.Add
-
-                new SystemRolePermission { Role_Id = Guid.Parse("3ae08c10-fdd6-46bf-b513-535e09c5aa61"), Permission_Id = Guid.Parse("d19f650b-7ed9-4264-ae33-7fa0eb61dbe3") }, // Branding.View
-                new SystemRolePermission { Role_Id = Guid.Parse("3ae08c10-fdd6-46bf-b513-535e09c5aa61"), Permission_Id = Guid.Parse("fea6837a-c94e-4c18-bd27-7763a1a983de") }, // Branding.Add
-
-                new SystemRolePermission { Role_Id = Guid.Parse("3ae08c10-fdd6-46bf-b513-535e09c5aa61"), Permission_Id = Guid.Parse("0f82d59e-181a-4d4d-b41e-5e2b5b48b30d") }, // Users.View
-                new SystemRolePermission { Role_Id = Guid.Parse("3ae08c10-fdd6-46bf-b513-535e09c5aa61"), Permission_Id = Guid.Parse("45314e9d-ec9e-4c3e-9836-7850215b2f98") }, // Users.Add
-                new SystemRolePermission { Role_Id = Guid.Parse("3ae08c10-fdd6-46bf-b513-535e09c5aa61"), Permission_Id = Guid.Parse("21b8d3dc-f9ff-438c-b83f-c4dceff8f505") }, // Users.Edit
-                new SystemRolePermission { Role_Id = Guid.Parse("3ae08c10-fdd6-46bf-b513-535e09c5aa61"), Permission_Id = Guid.Parse("b5b7009f-1589-4b47-a353-52b261fdfd03") }, // Users.Delete
-
-                new SystemRolePermission { Role_Id = Guid.Parse("3ae08c10-fdd6-46bf-b513-535e09c5aa61"), Permission_Id = Guid.Parse("2f3c63f9-82e7-4d82-9aa3-c1a8ea231cfd") }, // Roles.View
-                new SystemRolePermission { Role_Id = Guid.Parse("3ae08c10-fdd6-46bf-b513-535e09c5aa61"), Permission_Id = Guid.Parse("7c6c76a7-b5f5-4b02-9f37-d76a3ac347f3") }, // Roles.Add
-                new SystemRolePermission { Role_Id = Guid.Parse("3ae08c10-fdd6-46bf-b513-535e09c5aa61"), Permission_Id = Guid.Parse("a4e4c234-6fa9-498b-bec0-d420eae1fdcb") }, // Roles.Edit
-
-                new SystemRolePermission { Role_Id = Guid.Parse("3ae08c10-fdd6-46bf-b513-535e09c5aa61"), Permission_Id = Guid.Parse("7094382f-6c85-4fe1-a5a3-e1efde39db71") }, // Automation.View
-                new SystemRolePermission { Role_Id = Guid.Parse("3ae08c10-fdd6-46bf-b513-535e09c5aa61"), Permission_Id = Guid.Parse("cf43b30e-05c1-4a44-8ac6-d05d1a25c0f6") }, // EmailSettings.View
-                new SystemRolePermission { Role_Id = Guid.Parse("3ae08c10-fdd6-46bf-b513-535e09c5aa61"), Permission_Id = Guid.Parse("91c2ed65-54b6-4bd1-a660-e3c64dbfb9d3") }, // Reports.View
-                new SystemRolePermission { Role_Id = Guid.Parse("3ae08c10-fdd6-46bf-b513-535e09c5aa61"), Permission_Id = Guid.Parse("86e3cf96-4cb9-4b7e-a2cd-1cb136e113dd") }, // Certificate.View
-                new SystemRolePermission { Role_Id = Guid.Parse("3ae08c10-fdd6-46bf-b513-535e09c5aa61"), Permission_Id = Guid.Parse("b96861b8-d76f-42b5-a622-2ce6852d50b4") }, // Certificate.Sign
-
-                // DESIGNER
-                new SystemRolePermission { Role_Id = Guid.Parse("40db8cd0-2340-4f56-98f6-edbdc435d137"), Permission_Id = Guid.Parse("d10c7b98-6a4e-4a66-b109-1eacd5c0b101") }, // Templates.View
-                new SystemRolePermission { Role_Id = Guid.Parse("40db8cd0-2340-4f56-98f6-edbdc435d137"), Permission_Id = Guid.Parse("eb27d68d-fae6-4fa3-87b7-5a8b928ff69e") }, // Templates.Create
-                new SystemRolePermission { Role_Id = Guid.Parse("40db8cd0-2340-4f56-98f6-edbdc435d137"), Permission_Id = Guid.Parse("6ae47f88-367d-414b-9fa7-6cfd8b58c413") }, // Templates.Edit
-                new SystemRolePermission { Role_Id = Guid.Parse("40db8cd0-2340-4f56-98f6-edbdc435d137"), Permission_Id = Guid.Parse("f7d03dd3-c0e3-47e5-9448-602a24bfa60c") }, // Templates.Delete
-
-                // ISSUER
-                new SystemRolePermission { Role_Id = Guid.Parse("78752151-7cd4-46ee-bd6c-6b6bef16f286"), Permission_Id = Guid.Parse("aaae6e31-7407-48fa-ade7-84efc402ba52") }, // Credentials.View
-                new SystemRolePermission { Role_Id = Guid.Parse("78752151-7cd4-46ee-bd6c-6b6bef16f286"), Permission_Id = Guid.Parse("3f2a2168-7db7-40ec-92c5-7f2b5ae84335") }, // Credentials.Add
-
-                // VIEWER
-                new SystemRolePermission { Role_Id = Guid.Parse("36f3cec7-caf0-4551-9330-7f0e2c231518"), Permission_Id = Guid.Parse("aaae6e31-7407-48fa-ade7-84efc402ba52") }, // Credentials.View
-                new SystemRolePermission { Role_Id = Guid.Parse("36f3cec7-caf0-4551-9330-7f0e2c231518"), Permission_Id = Guid.Parse("86e3cf96-4cb9-4b7e-a2cd-1cb136e113dd") }, // Certificate.View
-
-                // APPROVER
-                new SystemRolePermission { Role_Id = Guid.Parse("74d986ef-92be-4d4b-9993-12976347b1be"), Permission_Id = Guid.Parse("86e3cf96-4cb9-4b7e-a2cd-1cb136e113dd") }, // Certificate.View
-                new SystemRolePermission { Role_Id = Guid.Parse("74d986ef-92be-4d4b-9993-12976347b1be"), Permission_Id = Guid.Parse("b96861b8-d76f-42b5-a622-2ce6852d50b4") }  // Certificate.Sign
+                ("OWNER","Owner","Full, unrestricted access to the entire workspace.", allCodes),
+                ("ADMIN","Administrator","Manage content, people and settings \u2014 except billing ownership.", adminCodes),
+                ("APPROVER","Approver","Review, approve, reject and revoke credentials.", approverCodes),
+                ("EDITOR","Editor","Design templates and issue credentials.", editorCodes),
+                ("VIEWER","Viewer","Read-only access across the workspace.", viewerCodes),
             };
-            builder.Entity<SystemRolePermission>().HasData(systemRolePermissions);
+
+            // ===== SYSTEM ROLES (immutable per-tenant defaults) + their permissions =====
+            builder.Entity<SystemRole>().HasData(roleDefs.Select(r => new SystemRole { Id = Det("sysrole:" + r.Code), Role_Name = r.Name, Description = r.Desc, Role_Code = r.Code, Is_Active = true, Is_Deleted = false }).ToList());
+            builder.Entity<SystemRolePermission>().HasData(roleDefs.SelectMany(r => r.Codes.Select(code => new SystemRolePermission { Role_Id = Det("sysrole:" + r.Code), Permission_Id = Det("perm:" + code) })).ToList());
+
+            // ===== DEFAULT TENANT + role copies (Is_System) so the app works out of the box =====
+            builder.Entity<Tenant>().HasData(new Tenant { Id = tenantId, Name = "Certifada", Is_Active = true, Created_Date = createdAt, Is_Deleted = false });
+            builder.Entity<Role>().HasData(roleDefs.Select(r => new Role { Id = Det("role:" + r.Code), Tenant_Id = tenantId, Name = r.Name, Description = r.Desc, Role_Code = r.Code, Is_System = true, Is_Active = true, Created_Date = createdAt, Created_By = userId, Is_Deleted = false }).ToList());
+            builder.Entity<RolePermission>().HasData(roleDefs.SelectMany(r => r.Codes.Select(code => new RolePermission { Role_Id = Det("role:" + r.Code), Permission_Id = Det("perm:" + code) })).ToList());
+
+            // ===== assign the seeded user to the Owner role =====
+            builder.Entity<UserRole>().HasData(new UserRole { User_Id = userId, Role_Id = Det("role:OWNER") });
             var features = new List<Feature>
             {
                 new Feature { Id = Guid.Parse("11111111-1111-1111-1111-111111111111"), Feature_Key = "Template_Designer", Name = "Template Designer", SortOrder = 1, Is_Active = true },

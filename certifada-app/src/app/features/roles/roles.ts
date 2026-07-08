@@ -1,646 +1,775 @@
-import { Component, computed, effect, HostListener, inject, signal } from '@angular/core';
+import { Component, HostListener, computed, effect, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { Router } from '@angular/router';
+import { AlertService } from '../../core/services/alert.service';
+import { RbacService, RbacRole } from '../../core/services/rbac.service';
+import { RbacScreen, RbacPermission } from '../../core/rbac/permission-catalog';
 import { HasActionDirective } from '../../shared/directives/has-action.directive';
 import { Actions } from '../../core/constants/actions';
-import { AlertService } from '../../core/services/alert.service';
-
-interface PermGroup { area: string; icon: string; color: string; perms: { code: string; label: string; desc: string }[]; }
-interface Role { id: number; name: string; desc: string; system: boolean; perms: string[]; color: string; members: number; }
-interface Level { label: string; color: string; bg: string; }
 
 @Component({
   selector: 'app-roles',
   standalone: true,
   imports: [FormsModule, HasActionDirective],
   template: `
-  <div class="head">
-    <div>
-      <h1>Roles &amp; permissions</h1>
-      <p class="cf-muted">Define what each role can do — dependencies are handled for you.</p>
+  <header class="rp-top">
+    <div class="rp-title">
+      <span class="rp-ic"><span class="material-icons">admin_panel_settings</span></span>
+      <div>
+        <h1>Roles &amp; permissions</h1>
+        <p class="cf-muted">Define what each role can do — dependencies are handled for you.</p>
+      </div>
     </div>
-    <button class="cf-btn cf-btn-primary" (click)="addRole()"
-            [appHasAction]="A.Role_Manage" [tooltipMessage]="'🔒 Managing roles isn\\'t in your plan.'">
+    <button class="cf-btn cf-btn-primary" (click)="addRole()" [appHasAction]="A.Role_Manage" [tooltipMessage]="'🔒 Managing roles is not in your plan.'">
       <span class="material-icons">add</span> New role
     </button>
-  </div>
+  </header>
 
   <div class="stats">
-    <div class="stat"><span class="material-icons">badge</span><div class="st-v"><b>{{ roles().length }}</b><small>Roles</small></div></div>
-    <div class="stat sens-stat"><span class="material-icons">shield</span><div class="st-v"><b>{{ sensitiveCount() }}</b><small>Sensitive</small></div></div>
-    <div class="stat"><span class="material-icons">group</span><div class="st-v"><b>{{ totalMembers() }}</b><small>Members</small></div></div>
-    <div class="stat"><span class="material-icons">tune</span><div class="st-v"><b>{{ avgAccess() }}%</b><small>Avg access</small></div></div>
+    <div class="stat"><span class="s-ic i1"><span class="material-icons">badge</span></span><div><b>{{ roles().length }}</b><small>Roles</small></div></div>
+    <div class="stat"><span class="s-ic i2"><span class="material-icons">shield</span></span><div><b>{{ sensitiveCount() }}</b><small>Sensitive</small></div></div>
+    <div class="stat"><span class="s-ic i3"><span class="material-icons">group</span></span><div><b>{{ totalMembers() }}</b><small>Members</small></div></div>
+    <div class="stat"><span class="s-ic i4"><span class="material-icons">tune</span></span><div><b>{{ avgAccess() }}%</b><small>Avg access</small></div></div>
   </div>
 
-  <div class="cols">
-    <!-- Role list -->
-    <div class="list">
-      <div class="list-search"><span class="material-icons">search</span><input [ngModel]="rq()" (ngModelChange)="rq.set($event)" placeholder="Find a role…" /></div>
-      @for (r of filteredRoles(); track r.id) {
-        <button class="role-item card" [class.on]="r.id === selectedId()" (click)="selectedId.set(r.id)">
-          <span class="ravatar" [style.background]="r.color">{{ initial(r) }}</span>
-          <span class="ri-main">
-            <strong>{{ r.name }}
-              @if (r.system) { <span class="lock material-icons" title="Built-in role">lock</span> }
-              @if (isSensitive(r)) { <span class="sens material-icons" title="Elevated permissions">shield</span> }
-            </strong>
-            <small class="cf-muted">{{ r.members }} {{ r.members === 1 ? 'member' : 'members' }} · {{ r.perms.length }} perms</small>
-            <span class="ri-bar"><i [style.width.%]="accessPct(r) * 100" [style.background]="r.color"></i></span>
-          </span>
-        </button>
-      }
-    </div>
+  <div class="rp-grid">
+    <aside class="rail">
+      <div class="rail-search"><span class="material-icons">search</span><input [ngModel]="rq()" (ngModelChange)="rq.set($event)" placeholder="Find a role…" /></div>
+      <div class="rail-list">
+        @for (r of filteredRoles(); track r.id) {
+          <button class="role" [class.on]="selectedId() === r.id" (click)="select(r.id)">
+            <span class="role-ava" [style.background]="r.color">{{ (r.name[0] || '?').toUpperCase() }}</span>
+            <span class="role-tx">
+              <span class="role-name">{{ r.name }} @if (r.isSystem) { <span class="material-icons rl">lock</span> } @if (rbac.isSensitiveCodes(r.permissions)) { <span class="material-icons rs">shield</span> }</span>
+              <span class="role-sub">{{ rbac.membersOf(r.id) }} member{{ rbac.membersOf(r.id) === 1 ? '' : 's' }} · {{ r.permissions.length }} perms</span>
+              <span class="role-bar"><i [style.width.%]="pct(r.permissions) * 100" [style.background]="r.color"></i></span>
+            </span>
+          </button>
+        }
+        @if (!filteredRoles().length) { <p class="rail-empty cf-muted">No roles match “{{ rq() }}”.</p> }
+      </div>
+    </aside>
 
-    @if (selected(); as r) {
-      <div class="detail">
-        <!-- Header -->
-        <div class="card sect rhead">
-          <span class="ravatar lg" [style.background]="r.color">{{ initial(r) }}</span>
-          <div class="rhead-meta">
-            <input class="rname" [(ngModel)]="r.name" [disabled]="r.system" placeholder="Role name" />
-            <input class="rdesc" [(ngModel)]="r.desc" [disabled]="r.system" placeholder="What this role is for…" />
-            <div class="caps">
-              @for (cap of caps(r); track cap.label) {
-                <span class="cap"><span class="material-icons">{{ cap.icon }}</span>{{ cap.label }}</span>
-              }
+    <section class="pane">
+      @if (selected(); as r) {
+        <div class="hero">
+          <span class="hero-ava" [style.background]="r.color">{{ (r.name[0] || '?').toUpperCase() }}</span>
+          <div class="hero-meta">
+            @if (r.isSystem) {
+              <div class="hero-name">{{ r.name }} <span class="pilllock"><span class="material-icons">lock</span> Built-in</span></div>
+              <p class="hero-desc cf-muted">{{ r.desc }}</p>
+            } @else {
+              <input class="hero-name-in" [ngModel]="draftName()" (ngModelChange)="draftName.set($event)" placeholder="Role name" [appHasAction]="A.Role_Manage" [tooltipMessage]="'🔒 Not in your plan.'" />
+              <input class="hero-desc-in" [ngModel]="draftDesc()" (ngModelChange)="draftDesc.set($event)" placeholder="Describe this role…" />
+            }
+            <div class="hero-facts">
+              <span class="hf"><span class="material-icons">group</span>{{ rbac.membersOf(r.id) }} member{{ rbac.membersOf(r.id) === 1 ? '' : 's' }}</span>
+              <span class="hf"><span class="material-icons">vpn_key</span>{{ draftPerms().size }} / {{ rbac.total }} permissions</span>
+              @if (rbac.isSensitiveCodes(draftCodes())) { <span class="hf sens"><span class="material-icons">shield</span> Sensitive</span> }
+              <span class="hf">{{ r.isSystem ? 'Built-in role' : 'Custom role' }}</span>
             </div>
+            <div class="caps">@for (c of caps(draftCodes()); track c.label) { <span class="cap"><span class="material-icons">{{ c.icon }}</span>{{ c.label }}</span> }</div>
           </div>
-          <div class="rhead-side">
-            <span class="lvl" [style.color]="lvl(r).color" [style.background]="lvl(r).bg">{{ lvl(r).label }}</span>
-            @if (isSensitive(r)) { <span class="sens-pill"><span class="material-icons">shield</span> Sensitive</span> }
-            @if (isDirty()) { <span class="dirty-pill"><span class="material-icons">edit</span> Unsaved</span> }
-            <span class="cf-muted xs">{{ r.perms.length }} / {{ total }} permissions</span>
+          <div class="hero-meter">
+            <div class="ring" [style.--p]="pct(draftCodes()) * 100" [style.--c]="r.color"><b>{{ draftPerms().size }}</b><small>of {{ rbac.total }}</small></div>
+            <span class="lvl" [style.background]="lvl(draftCodes()).bg" [style.color]="lvl(draftCodes()).color">{{ lvl(draftCodes()).label }}</span>
           </div>
         </div>
 
-        <!-- Smart toolbar -->
-        <div class="card sect tools">
-          <div class="search"><span class="material-icons">search</span>
-            <input [ngModel]="q()" (ngModelChange)="q.set($event)" placeholder="Search permissions…" /></div>
-          <label class="copy">Start from
-            <select [disabled]="r.system" (change)="copyFrom(r, $any($event.target).value); $any($event.target).value=''">
-              <option value="">choose…</option>
-              @for (o of roles(); track o.id) { @if (o.id !== r.id) { <option [value]="o.id">{{ o.name }}</option> } }
-            </select>
-          </label>
-          <label class="copy">Compare
-            <select [ngModel]="compareId() ?? ''" (ngModelChange)="compareId.set($event ? +$event : null)">
-              <option value="">off</option>
-              @for (o of roles(); track o.id) { @if (o.id !== r.id) { <option [value]="o.id">{{ o.name }}</option> } }
-            </select>
-          </label>
-          <button class="cf-btn cf-btn-secondary sm" (click)="cloneRole(r)" title="Duplicate this role"><span class="material-icons">content_copy</span> Clone</button>
-          @if (!r.system) {
-            <button class="iconbtn danger" (click)="deleteRole(r)" title="Delete role"><span class="material-icons">delete</span></button>
-          }
+        <div class="tools">
+          <div class="psearch"><span class="material-icons">search</span><input [ngModel]="q()" (ngModelChange)="q.set($event)" placeholder="Search permissions…" />@if (q()) { <button class="clr" (click)="q.set('')"><span class="material-icons">close</span></button> }</div>
+          @if (!r.isSystem) { <button class="ico st" [class.act]="startOpen()" (click)="toggleStartBar()" title="Copy another role's permissions as a starting point"><span class="material-icons">content_copy</span> Start from</button> }
+          <button class="ico" [class.act]="comparing()" (click)="toggleCompareBar()" title="Compare with another role"><span class="material-icons">compare_arrows</span> Compare</button>
+          <button class="ico" (click)="preview(r)" title="Preview as this role"><span class="material-icons">visibility</span></button>
+          <button class="ico wide" (click)="clone(r)" [appHasAction]="A.Role_Manage" [tooltipMessage]="'🔒 Not in your plan.'" title="Clone"><span class="material-icons">content_copy</span> Clone</button>
+          @if (!r.isSystem) { <button class="ico danger" (click)="del(r)" [appHasAction]="A.Role_Manage" [tooltipMessage]="'🔒 Not in your plan.'" title="Delete role"><span class="material-icons">delete</span></button> }
         </div>
 
-        @if (!r.system) {
-          <div class="card sect presets">
-            <span class="ps-label">Quick presets</span>
-            <div class="ps-row">
-              @for (p of presets; track p.key) {
-                <button class="ps" (click)="applyPreset(r, p.codes)">{{ p.label }}</button>
-              }
+        @if (r.isSystem) {
+          <div class="note"><span class="material-icons">lock</span> This is a built-in role and can't be edited. <button class="lk" (click)="clone(r)">Clone it</button> to customise.</div>
+        } @else {
+          <div class="presets"><span class="presets-l"><span class="material-icons">auto_awesome</span> Quick presets</span>@for (p of presets; track p.key) { <button class="preset" [class.on]="activePreset() === p.key" (click)="applyPreset(p.codes)"><span class="material-icons">{{ p.icon }}</span>{{ p.label }}@if (activePreset() === p.key) { <span class="material-icons pchk">check</span> }</button> }</div>
+        }
+
+        @if (startOpen() && !r.isSystem) {
+          <div class="cbar sbar">
+            <span class="cbar-l"><span class="material-icons">content_copy</span> Start from</span>
+            <div class="cbar-chips">
+              @for (o of roles(); track o.id) { @if (o.id !== r.id) {
+                <button type="button" class="cchip" (click)="pickStart(o.id)"><i class="cc-dot" [style.background]="o.color"></i>{{ o.name }}<span class="cc-n">{{ o.permissions.length }}</span></button>
+              } }
             </div>
+            <button class="cbar-x" (click)="startOpen.set(false)" title="Close"><span class="material-icons">close</span></button>
           </div>
         }
 
-        @if (r.system) {
-          <div class="banner"><span class="material-icons">lock</span> This is a built-in role. <button class="link" (click)="cloneRole(r)">Clone it</button> to customise permissions.</div>
+        @if (comparing()) {
+          <div class="cbar">
+            <span class="cbar-l"><span class="material-icons">compare_arrows</span> Compare with</span>
+            <div class="cbar-chips">
+              @for (o of roles(); track o.id) { @if (o.id !== r.id) {
+                <button type="button" class="cchip" [class.on]="compareId() === o.id" (click)="pickCompare(o.id)">
+                  <i class="cc-dot" [style.background]="o.color"></i>{{ o.name }}
+                  @if (compareId() === o.id) { <span class="material-icons cc-ck">check</span> }
+                </button>
+              } }
+            </div>
+            <button class="cbar-x" (click)="closeCompare()" title="Close compare"><span class="material-icons">close</span></button>
+          </div>
         }
+
         @if (compareRole(); as cmp) {
-          <div class="card sect cmp">
-            <div class="cmp-top"><span class="material-icons">compare_arrows</span> Comparison</div>
-            <div class="cmp-head">
-              <div class="cmp-role">
-                <span class="ravatar sm" [style.background]="r.color">{{ initial(r) }}</span>
-                <span class="cmp-meta"><b>{{ r.name }}</b><span class="lvl xs2" [style.color]="lvl(r).color" [style.background]="lvl(r).bg">{{ lvl(r).label }}</span></span>
+          <div class="cmp">
+            <div class="cmp-top">
+              <span class="cmp-pair">
+                <span class="cmp-role"><i class="cd" [style.background]="r.color"></i>{{ r.name }}</span>
+                <span class="material-icons cmp-vs">sync_alt</span>
+                <span class="cmp-role"><i class="cd" [style.background]="cmp.color"></i>{{ cmp.name }}</span>
+              </span>
+              <div class="cmp-views" role="tablist">
+                <button [class.on]="compareView() === 'overlay'" (click)="compareView.set('overlay')" title="Overlay diff on the cards"><span class="material-icons">layers</span>Overlay</button>
+                <button [class.on]="compareView() === 'split'" (click)="compareView.set('split')" title="Side-by-side columns"><span class="material-icons">vertical_split</span>Split</button>
+                <button [class.on]="compareView() === 'matrix'" (click)="compareView.set('matrix')" title="Full comparison table"><span class="material-icons">grid_on</span>Matrix</button>
               </div>
-              <button class="cmp-swap" (click)="swapCompare(r)" title="Swap sides"><span class="material-icons">swap_horiz</span></button>
-              <div class="cmp-role rev">
-                <span class="cmp-meta end"><b>{{ cmp.name }}</b><span class="lvl xs2" [style.color]="lvl(cmp).color" [style.background]="lvl(cmp).bg">{{ lvl(cmp).label }}</span></span>
-                <span class="ravatar sm" [style.background]="cmp.color">{{ initial(cmp) }}</span>
-              </div>
-            </div>
-
-            <div class="cmp-bar">
-              @if (diffMore(r)) { <i class="seg a" [style.flex]="diffMore(r)" [title]="'Only ' + r.name"></i> }
-              @if (diffShared(r)) { <i class="seg s" [style.flex]="diffShared(r)" title="Shared"></i> }
-              @if (diffFewer(r)) { <i class="seg b" [style.flex]="diffFewer(r)" [title]="'Only ' + cmp.name"></i> }
+              <button class="cmp-x" (click)="compareId.set(null)" title="Stop comparing"><span class="material-icons">close</span></button>
             </div>
             <div class="cmp-legend">
-              <span><i class="d a"></i> Only here · <b>{{ diffMore(r) }}</b></span>
-              <span><i class="d s"></i> Shared · <b>{{ diffShared(r) }}</b></span>
-              <span><i class="d b"></i> Only {{ cmp.name }} · <b>{{ diffFewer(r) }}</b></span>
+              <span class="lg add"><span class="dot"></span><b>{{ diffMore() }}</b> only in {{ r.name }}</span>
+              <span class="lg rem"><span class="dot"></span><b>{{ diffFewer() }}</b> only in {{ cmp.name }}</span>
+              <span class="lg same"><span class="dot"></span><b>{{ diffSame() }}</b> shared</span>
+              @if (compareView() !== 'overlay') { <label class="cmp-diffonly"><input type="checkbox" [checked]="diffOnly()" (change)="diffOnly.set(!diffOnly())" /><span class="cdo-box"></span> Differences only</label> }
             </div>
+          </div>
+        }
 
-            <div class="cmp-areas">
-              @for (g of groups; track g.area) {
-                <div class="cmp-area" [class.diff]="groupCount(r, g) !== groupCount(cmp, g)">
-                  <span class="ca-name"><span class="material-icons">{{ g.icon }}</span> {{ g.area }}</span>
-                  <span class="ca-cnt"><b>{{ groupCount(r, g) }}</b><i>vs</i><b>{{ groupCount(cmp, g) }}</b></span>
-                </div>
+        @if (compareRole() && compareView() === 'matrix') {
+          <div class="mtx">
+            <div class="mtx-head">
+              <span class="mtx-c0">Permission</span>
+              <span class="mtx-c"><i class="cd" [style.background]="r.color"></i>{{ selected()?.name }}</span>
+              <span class="mtx-c"><i class="cd" [style.background]="compareRole()?.color"></i>{{ compareRole()?.name }}</span>
+            </div>
+            @for (s of searchedScreens(); track s.key) {
+              @if (matrixRows(s).length) {
+                <div class="mtx-scr"><span class="material-icons" [style.color]="s.color">{{ s.icon }}</span>{{ s.label }}</div>
+                @for (p of matrixRows(s); track p.code) {
+                  <div class="mtx-row" [class.d]="has(p.code) !== cmpHas(p.code)">
+                    <span class="mtx-c0"><span class="mtx-tt">{{ p.label }}</span><span class="mtx-hint">{{ p.hint }}</span></span>
+                    <span class="mtx-c"><span class="mk" [class.yes]="has(p.code)"><span class="material-icons">{{ has(p.code) ? 'check' : 'remove' }}</span></span></span>
+                    <span class="mtx-c"><span class="mk" [class.yes]="cmpHas(p.code)"><span class="material-icons">{{ cmpHas(p.code) ? 'check' : 'remove' }}</span></span></span>
+                  </div>
+                }
               }
-            </div>
-
-            @if (!r.system && diffFewer(r) > 0) {
-              <div class="cmp-acts">
-                <button class="cf-btn cf-btn-secondary sm" (click)="addMissing(r)"><span class="material-icons">add</span> Add the {{ diffFewer(r) }} {{ cmp.name }} has</button>
-                <button class="cf-btn cf-btn-secondary sm" (click)="copyFrom(r, cmp.id + '')"><span class="material-icons">sync_alt</span> Match exactly</button>
+            }
+            @if (!matrixTotal()) { <p class="cf-muted" style="padding:22px;text-align:center">No permissions to show.</p> }
+          </div>
+        } @else if (compareRole() && compareView() === 'split') {
+          <div class="split">
+            @for (col of [selected(), compareRole()]; track $index) {
+              <div class="split-col">
+                <div class="split-head"><span class="hero-ava sm" [style.background]="col?.color">{{ (col?.name?.[0] || '?').toUpperCase() }}</span><b>{{ col?.name }}</b><span class="split-n">{{ col?.permissions?.length }}</span></div>
+                @for (s of searchedScreens(); track s.key) {
+                  @if (splitRows(s, col).length) {
+                    <div class="split-scr"><span class="material-icons" [style.color]="s.color">{{ s.icon }}</span>{{ s.label }}</div>
+                    @for (p of splitRows(s, col); track p.code) {
+                      <div class="split-row" [class.uniq]="isUnique(p.code, col)"><span class="material-icons">check</span>{{ p.label }}</div>
+                    }
+                  }
+                }
               </div>
-            } @else if (diffMore(r) === 0 && diffFewer(r) === 0) {
-              <p class="cmp-eq"><span class="material-icons">check_circle</span> Identical permissions.</p>
             }
           </div>
-        }
-        @if (twinName(r); as twin) {
-          <div class="banner warn"><span class="material-icons">info</span> Identical permissions to <b>{{ twin }}</b> — consider merging or differentiating.</div>
-        }
-
-        @if (filteredGroups().length) {
-        <div class="groups">
-        @for (g of filteredGroups(); track g.area) {
-          <div class="gcard" [style.--ga]="g.color">
-            <div class="ghead">
-              <span class="gicon"><span class="material-icons">{{ g.icon }}</span></span>
-              <span class="gh-title">{{ g.area }}</span>
-              <button class="gtoggle" [class.full]="areaAll(r, g)" [class.some]="areaSome(r, g)" [disabled]="r.system"
-                      (click)="toggleArea(r, g)" [title]="areaAll(r, g) ? 'Clear all' : 'Select all'">
-                <span class="material-icons">{{ areaAll(r, g) ? 'check_box' : (areaSome(r, g) ? 'indeterminate_check_box' : 'check_box_outline_blank') }}</span>
-                <span class="gt-count">{{ groupCount(r, g) }}/{{ g.perms.length }}</span>
-              </button>
-            </div>
-            <span class="gbar"><i [style.width.%]="g.perms.length ? groupCount(r, g) / g.perms.length * 100 : 0"></i></span>
-            <div class="perms">
-              @for (p of g.perms; track p.code) {
-                <label class="perm" [class.on]="r.perms.includes(p.code)" [class.dis]="r.system"
-                       [class.d-add]="permDiff(r, p.code) === 'add'" [class.d-rem]="permDiff(r, p.code) === 'rem'">
-                  <input type="checkbox" [checked]="r.perms.includes(p.code)" [disabled]="r.system" (change)="toggle(r, p.code)" />
-                  <span class="pl">{{ p.label }}</span>
-                  @if (isRequired(r, p.code)) { <span class="req" title="Required by another enabled permission">auto</span> }
-                  @if (permDiff(r, p.code) === 'add') { <span class="dmark add" [title]="'Only in this role'">+</span> }
-                  @else if (permDiff(r, p.code) === 'rem') { <span class="dmark rem" [title]="'Only in ' + compareRole()?.name">−</span> }
-                  <button type="button" class="pinfo" (click)="openInfo(p, g); $event.preventDefault(); $event.stopPropagation()" title="What does this do?"><span class="material-icons">info</span></button>
-                </label>
+        } @else {
+        <div class="cards-top">
+          <span class="ct-sum"><b>{{ draftPerms().size }}</b> of {{ rbac.total }} granted · {{ filteredScreens().length }} screens</span>
+          <div class="ct-filters">
+            @for (fo of filterOptions; track fo.key) { <button class="ct-f" [class.on]="permFilter() === fo.key" (click)="permFilter.set(fo.key)"><span class="material-icons">{{ fo.icon }}</span>{{ fo.label }}</button> }
+          </div>
+          <button class="ct-toggle" (click)="toggleAllCards()"><span class="material-icons">{{ allOpen() ? 'unfold_less' : 'unfold_more' }}</span>{{ allOpen() ? 'Collapse all' : 'Expand all' }}</button>
+        </div>
+        <div class="cards">
+          @for (s of filteredScreens(); track s.key) {
+            <div class="card" [style.--sc]="s.color">
+              <div class="card-h" (click)="toggleCard(s.key)">
+                <span class="card-ic" [style.color]="s.color" [style.background]="tint(s.color)"><span class="material-icons">{{ s.icon }}</span></span>
+                <span class="card-tt">{{ s.label }} <em>{{ s.desc }}</em></span>
+                <button type="button" class="card-all" [class.full]="allOn(s)" [class.some]="screenState(s) === 'indeterminate_check_box'" [disabled]="r.isSystem" (click)="$event.stopPropagation(); toggleScreenAll(s)" [title]="allOn(s) ? 'Clear all in this screen' : 'Select all in this screen'">
+                  <span class="material-icons">{{ screenState(s) }}</span>
+                  <span class="ca-tx">{{ allOn(s) ? 'All selected' : 'Select all' }}</span>
+                  <span class="ca-n">{{ granted(s) }}/{{ s.perms.length }}</span>
+                </button>
+                <span class="material-icons card-chev" [class.open]="isOpen(s.key)">expand_more</span>
+              </div>
+              <div class="card-bar"><i [style.width.%]="ratio(s) * 100" [style.background]="s.color"></i></div>
+              @if (isOpen(s.key)) {
+              <div class="card-perms">
+                @for (p of s.perms; track p.code) {
+                  <label class="pk" [class.on]="has(p.code)" [class.dis]="r.isSystem" [class.d-add]="diff(p.code) === 'add'" [class.d-rem]="diff(p.code) === 'rem'">
+                    <input type="checkbox" [checked]="has(p.code)" [disabled]="r.isSystem" (change)="toggle(p.code)" /><span class="pk-box"></span>
+                    <span class="pk-main">
+                      <span class="pk-top">
+                        <span class="pk-tt">{{ p.label }}</span>
+                        @if (isRequired(p.code)) { <span class="pk-auto" title="Auto-enabled — required by another permission">AUTO</span> }
+                        @if (sensitive(p.code)) { <span class="material-icons pk-sens" title="Sensitive">shield</span> }
+                      </span>
+                      <span class="pk-hint">{{ p.hint }}</span>
+                    </span>
+                    <button type="button" class="pk-i" (click)="openInfo(p, s, $event)" title="What does this do?"><span class="material-icons">info</span></button>
+                  </label>
+                }
+              </div>
               }
             </div>
-          </div>
-        }
+          }
+          @if (!filteredScreens().length) { <p class="cf-muted" style="grid-column:1/-1;padding:22px;text-align:center">No permissions match your search or filter.</p> }
         </div>
-        } @else { <div class="card sect cf-muted">No permissions match “{{ q() }}”.</div> }
-
-        @if (!r.system) {
-          <div class="save-bar">
-            @if (isDirty()) { <span class="dirty-note"><span class="material-icons">history</span> You have unsaved changes</span> }
-            @if (isDirty()) { <button class="cf-btn cf-btn-secondary" (click)="resetRole(r)"><span class="material-icons">undo</span> Reset</button> }
-            <button class="cf-btn cf-btn-primary" [class.glow]="isDirty()" (click)="save()"
-                    [appHasAction]="A.Role_Manage" [tooltipMessage]="'🔒 Not in your plan.'"><span class="material-icons">save</span> Save changes</button>
-          </div>
         }
-      </div>
-    }
+      } @else {
+        <div class="empty"><span class="material-icons">admin_panel_settings</span><p>{{ rbac.loading() ? 'Loading roles…' : 'Select a role to view and edit its permissions.' }}</p></div>
+      }
+    </section>
   </div>
 
-  @if (msg()) { <div class="toast">{{ msg() }}</div> }
+  @if (dirty()) {
+    <div class="savebar">
+      <span class="sb-l"><span class="material-icons">edit</span> You have unsaved changes</span>
+      <div class="sb-r">
+        <button class="sb-discard" (click)="discard()">Discard</button>
+        <button class="sb-save" (click)="save()"><span class="material-icons">save</span> Save changes</button>
+      </div>
+    </div>
+  }
 
-  @if (infoOpen(); as info) {
-    <div class="info-backdrop" (click)="closeInfo()">
-      <div class="info-pop" (click)="$event.stopPropagation()" [style.--ga]="info.color">
-        <button class="info-x" (click)="closeInfo()" title="Close"><span class="material-icons">close</span></button>
-        <div class="info-head">
-          <span class="gicon"><span class="material-icons">{{ info.icon }}</span></span>
-          <div class="info-ht"><h4>{{ info.label }}</h4><span class="info-area">{{ info.area }}</span></div>
+  @if (info(); as i) {
+    <div class="iover" (click)="closeInfo()">
+      <div class="imodal" (click)="$event.stopPropagation()">
+        <button class="iclose" (click)="closeInfo()"><span class="material-icons">close</span></button>
+        <div class="ihead" [style.background]="tint(i.color)">
+          <span class="ii" [style.background]="i.color"><span class="material-icons">{{ i.icon }}</span></span>
+          <div class="ihx">
+            <small>{{ i.screen }}</small>
+            <h4>{{ i.label }}</h4>
+            @if (i.sensitive) { <span class="ibadge"><span class="material-icons">shield</span> Sensitive action</span> }
+          </div>
         </div>
-        <p class="info-desc">{{ info.desc }}</p>
-        @if (requiredLabels(info.code).length) {
-          <div class="info-block">
-            <span class="ib-label"><span class="material-icons">link</span> Turning this on also enables</span>
-            <div class="ib-chips">@for (l of requiredLabels(info.code); track l) { <span class="ib-chip">{{ l }}</span> }</div>
-          </div>
-        }
-        @if (enabledByLabels(info.code).length) {
-          <div class="info-block">
-            <span class="ib-label"><span class="material-icons">lock</span> Required by</span>
-            <div class="ib-chips">@for (l of enabledByLabels(info.code); track l) { <span class="ib-chip">{{ l }}</span> }</div>
-          </div>
-        }
+        <div class="ibody">
+          <div class="ilbl">What it does</div>
+          <p class="idesc">{{ i.desc }}</p>
+          @if (i.requires.length) { <div class="isec"><span class="isec-l"><span class="material-icons">link</span> Turning this on also enables</span><div class="ichips">@for (x of i.requires; track x) { <span class="ichip on">{{ x }}</span> }</div></div> }
+          @if (i.enables.length) { <div class="isec"><span class="isec-l"><span class="material-icons">account_tree</span> Required by these permissions</span><div class="ichips">@for (x of i.enables; track x) { <span class="ichip">{{ x }}</span> }</div></div> }
+          <div class="icode"><span class="material-icons">tag</span> Permission code <code>{{ i.code }}</code></div>
+        </div>
       </div>
     </div>
   }
   `,
   styles: [`
-    :host{display:block}
-    .head{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:18px}
-    .head h1{font-size:22px}
+    :host{display:block;padding-bottom:70px}
     .cf-btn .material-icons{font-size:18px}
-    .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:18px}
-    .stat{display:flex;align-items:center;gap:12px;padding:13px 15px;border:1px solid var(--cf-line);border-radius:var(--cf-radius-md);background:var(--cf-surface)}
-    .stat>.material-icons{width:38px;height:38px;flex:none;display:grid;place-items:center;border-radius:10px;font-size:20px;background:var(--cf-brand-50);color:var(--cf-brand-600)}
-    .stat.sens-stat>.material-icons{background:#fef3c7;color:#d97706}
-    .st-v{display:flex;flex-direction:column;line-height:1.1}
-    .st-v b{font-size:20px;font-weight:800;color:var(--cf-ink-900)}
-    .st-v small{font-size:11.5px;color:var(--cf-ink-500)}
-    .dirty-pill{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:700;color:#b45309;background:#fffbeb;border:1px solid #fde68a;padding:2px 9px;border-radius:999px}
-    .dirty-pill .material-icons{font-size:13px}
-    .dirty-note{display:inline-flex;align-items:center;gap:6px;margin-inline-end:auto;font-size:12.5px;font-weight:600;color:#b45309}
-    .dirty-note .material-icons{font-size:16px}
-    .cf-btn.glow{box-shadow:0 0 0 3px var(--cf-brand-100,var(--cf-brand-50))}
-    .cols{display:grid;grid-template-columns:280px 1fr;gap:18px;align-items:start}
-    .list{display:flex;flex-direction:column;gap:8px}
-    .list-search{display:flex;align-items:center;gap:7px;height:36px;padding:0 10px;border:1px solid var(--cf-line);border-radius:var(--cf-radius-sm);background:var(--cf-surface-2);margin-bottom:2px}
-    .list-search .material-icons{font-size:17px;color:var(--cf-ink-400)}
-    .list-search input{flex:1;border:0;background:none;height:auto;padding:0;outline:none;box-shadow:none;font:inherit;font-size:13px}
-    .sens{font-size:14px!important;color:#d97706}
-    .sens-pill{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:700;color:#b45309;background:#fef3c7;padding:3px 9px;border-radius:999px}
-    .sens-pill .material-icons{font-size:14px}
-    .caps{display:flex;flex-wrap:wrap;gap:5px;margin-top:4px}
-    .cap{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;color:var(--cf-ink-600);background:var(--cf-surface-2);border:1px solid var(--cf-line);padding:2px 8px;border-radius:999px}
+    .rp-top{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:16px}
+    .rp-title{display:flex;align-items:center;gap:13px;min-width:0}
+    .rp-ic{width:44px;height:44px;border-radius:13px;display:grid;place-items:center;flex:none;background:var(--cf-brand-50);color:var(--cf-brand-600);border:1px solid var(--cf-brand-100)}
+    .rp-ic .material-icons{font-size:24px}
+    .rp-top h1{font-size:22px;font-weight:800;letter-spacing:-.02em;color:var(--cf-ink-900)}
+    .rp-top p{font-size:13.5px;margin-top:2px}
+
+    .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px}
+    @media(max-width:820px){.stats{grid-template-columns:1fr 1fr}}
+    .stat{display:flex;align-items:center;gap:11px;padding:13px 15px;border:1px solid var(--cf-line);border-radius:14px;background:var(--cf-surface);transition:border-color .14s,box-shadow .14s}
+    .stat:hover{border-color:var(--cf-brand-200);box-shadow:0 8px 20px -16px rgba(15,23,42,.4)}
+    .s-ic{width:40px;height:40px;border-radius:11px;display:grid;place-items:center;flex:none}.s-ic .material-icons{font-size:20px}
+    .s-ic.i1{background:var(--cf-brand-50);color:var(--cf-brand-600)}
+    .s-ic.i2{background:color-mix(in srgb,#f59e0b 16%,transparent);color:#d97706}
+    .s-ic.i3{background:color-mix(in srgb,#10b981 14%,transparent);color:#059669}
+    .s-ic.i4{background:color-mix(in srgb,#8b5cf6 15%,transparent);color:#7c3aed}
+    .stat b{font-size:19px;font-weight:800;color:var(--cf-ink-900);display:block;line-height:1.1}
+    .stat small{font-size:11.5px;color:var(--cf-ink-500)}
+
+    .rp-grid{display:grid;grid-template-columns:270px 1fr;gap:18px;align-items:start}
+    @media(max-width:980px){.rp-grid{grid-template-columns:1fr}}
+    .rail{position:sticky;top:12px;display:flex;flex-direction:column;gap:10px}
+    .rail-search{display:flex;align-items:center;gap:8px;height:40px;padding:0 12px;border:1px solid var(--cf-line);border-radius:12px;background:var(--cf-surface)}
+    .rail-search .material-icons{font-size:18px;color:var(--cf-ink-400)}
+    .rail-search input{flex:1;border:0;background:none;outline:none;font:inherit;font-size:13.5px;color:var(--cf-ink-900)}
+    .rail-list{display:flex;flex-direction:column;gap:6px}
+    .role{display:flex;align-items:center;gap:11px;width:100%;border:1px solid transparent;background:var(--cf-surface);border-radius:13px;padding:10px 12px;cursor:pointer;text-align:start;transition:border-color .14s,background .14s,box-shadow .14s}
+    .role:hover{border-color:var(--cf-line)}
+    .role.on{border-color:var(--cf-brand-500);box-shadow:var(--cf-ring);background:var(--cf-brand-50)}
+    .role-ava{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;color:#fff;font-weight:800;font-size:14px;flex:none}
+    .role-tx{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
+    .role-name{display:flex;align-items:center;gap:5px;font-size:14px;font-weight:700;color:var(--cf-ink-900);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .role-name .rl{font-size:13px;color:var(--cf-ink-400)}.role-name .rs{font-size:13px;color:#d97706}
+    .role-sub{font-size:11.5px;color:var(--cf-ink-500)}
+    .role-bar{height:3px;border-radius:3px;background:var(--cf-surface-2);overflow:hidden}.role-bar i{display:block;height:100%;border-radius:3px;opacity:.85}
+    .rail-empty{padding:14px;font-size:13px;text-align:center}
+
+    .pane{border:1px solid var(--cf-line);border-radius:18px;background:var(--cf-surface);padding:20px 22px;min-height:420px}
+    .hero{display:flex;align-items:center;gap:16px;padding-bottom:16px;border-bottom:1px solid var(--cf-line-soft)}
+    .hero-ava{width:52px;height:52px;border-radius:15px;display:grid;place-items:center;color:#fff;font-weight:800;font-size:22px;flex:none;box-shadow:0 8px 18px -8px rgba(15,23,42,.45)}
+    .hero-meta{flex:1;min-width:0}
+    .hero-name{font-size:20px;font-weight:800;color:var(--cf-ink-900);display:flex;align-items:center;gap:9px}
+    .hero-desc{font-size:13px;margin-top:3px}
+    .pilllock{display:inline-flex;align-items:center;gap:4px;font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;padding:3px 8px;border-radius:999px;background:var(--cf-surface-2);color:var(--cf-ink-500)}.pilllock .material-icons{font-size:12px}
+    .hero-name-in{width:100%;border:1px solid transparent;background:none;font:inherit;font-size:20px;font-weight:800;color:var(--cf-ink-900);border-radius:9px;padding:3px 8px;margin-inline-start:-8px}
+    .hero-name-in:hover{border-color:var(--cf-line)}.hero-name-in:focus{border-color:var(--cf-brand-500);outline:none}
+    .hero-desc-in{width:100%;border:1px solid transparent;background:none;font:inherit;font-size:13px;color:var(--cf-ink-600);border-radius:9px;padding:3px 8px;margin:3px 0 0 -8px}
+    .hero-desc-in:hover{border-color:var(--cf-line)}.hero-desc-in:focus{border-color:var(--cf-brand-500);outline:none}
+    .hero-facts{display:flex;flex-wrap:wrap;align-items:center;gap:14px;margin-top:9px}
+    .hf{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;color:var(--cf-ink-500)}
+    .hf .material-icons{font-size:15px;color:var(--cf-ink-400)}
+    .hf.sens{color:#b45309}.hf.sens .material-icons{color:#d97706}
+    .hf+.hf{padding-inline-start:14px;border-inline-start:1px solid var(--cf-line)}
+    .caps{display:flex;flex-wrap:wrap;gap:6px;margin-top:11px}
+    .cap{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;color:var(--cf-ink-600);background:var(--cf-surface-2);border-radius:999px;padding:3px 9px}
     .cap .material-icons{font-size:13px;color:var(--cf-brand-600)}
-    .presets{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
-    .ps-label{font-size:11.5px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--cf-ink-400)}
-    .ps-row{display:flex;flex-wrap:wrap;gap:6px}
-    .ps{padding:6px 12px;border:1px solid var(--cf-line);border-radius:999px;background:var(--cf-surface);color:var(--cf-ink-700);font:inherit;font-size:12px;font-weight:600;cursor:pointer;transition:border-color .12s,color .12s,background .12s}
-    .ps:hover{border-color:var(--cf-brand-500);color:var(--cf-brand-700);background:var(--cf-brand-50)}
-    .role-item{display:flex;align-items:center;gap:11px;padding:11px;border:1px solid var(--cf-line);cursor:pointer;text-align:start;font:inherit;transition:border-color .12s,box-shadow .12s,transform .12s}
-    .role-item:hover{transform:translateY(-1px)}
-    .role-item.on{border-color:var(--cf-brand-500);box-shadow:0 0 0 2px var(--cf-brand-50)}
-    .ravatar{width:34px;height:34px;flex:none;border-radius:10px;display:grid;place-items:center;color:#fff;font-weight:800;font-size:15px}
-    .ravatar.lg{width:48px;height:48px;border-radius:13px;font-size:20px}
-    .ri-main{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
-    .ri-main strong{font-size:13.5px;color:var(--cf-ink-900);display:flex;align-items:center;gap:6px}
-    .ri-main small{font-size:11px}
-    .lock{font-size:14px!important;color:var(--cf-ink-400)}
-    .ri-bar{height:4px;border-radius:999px;background:var(--cf-line);overflow:hidden;margin-top:2px}
-    .ri-bar i{display:block;height:100%;border-radius:999px;transition:width .25s}
-    .detail{display:flex;flex-direction:column;gap:14px}
-    .sect{padding:16px 18px}
-    .sect h3{font-size:13px}
-    .rhead{display:flex;align-items:center;gap:14px}
-    .rhead-meta{flex:1;min-width:0;display:flex;flex-direction:column;gap:7px}
-    .rname{height:38px;font-size:16px;font-weight:700}
-    .rdesc{height:34px;font-size:13px;color:var(--cf-ink-600)}
-    input,select{border:1px solid var(--cf-line);border-radius:var(--cf-radius-sm);padding:0 10px;font:inherit;background:var(--cf-surface);color:var(--cf-ink-900);outline:none;height:36px}
-    input:focus,select:focus{border-color:var(--cf-brand-500);box-shadow:var(--cf-ring)}
-    input:disabled,select:disabled{background:var(--cf-surface-2);color:var(--cf-ink-500)}
-    .rhead-side{display:flex;flex-direction:column;align-items:flex-end;gap:5px;flex:none}
-    .lvl{font-size:11.5px;font-weight:700;padding:4px 11px;border-radius:999px}
-    .xs{font-size:11px}
-    .tools{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
-    .search{flex:1;min-width:140px;display:flex;align-items:center;gap:7px;height:36px;padding:0 10px;border:1px solid var(--cf-line);border-radius:var(--cf-radius-sm);background:var(--cf-surface-2)}
-    .search .material-icons{font-size:17px;color:var(--cf-ink-400)}
-    .search input{flex:1;border:0;background:none;height:auto;padding:0;box-shadow:none}
-    .copy{display:flex;align-items:center;gap:7px;font-size:12.5px;color:var(--cf-ink-600)}
-    .copy select{height:36px}
-    .cf-btn.sm{padding:7px 11px;font-size:12.5px}
-    .iconbtn{width:36px;height:36px;display:grid;place-items:center;border:1px solid var(--cf-line);border-radius:var(--cf-radius-sm);background:var(--cf-surface);color:var(--cf-ink-600);cursor:pointer}
-    .iconbtn.danger:hover{border-color:var(--cf-danger);color:var(--cf-danger);background:var(--cf-danger-soft)}
-    .iconbtn .material-icons{font-size:18px}
-    .banner{display:flex;align-items:center;gap:8px;padding:11px 14px;border:1px solid var(--cf-brand-200,var(--cf-line));background:var(--cf-brand-50);border-radius:var(--cf-radius-md);font-size:13px;color:var(--cf-brand-700)}
-    .banner .material-icons{font-size:18px}
-    .banner .link{border:0;background:none;color:var(--cf-brand-700);font:inherit;font-weight:700;text-decoration:underline;cursor:pointer;padding:0}
-    .banner.warn{border-color:#fde68a;background:#fffbeb;color:#92400e}
-    .cmp{display:flex;flex-direction:column;gap:11px}
-    .ravatar.sm{width:26px;height:26px;border-radius:8px;font-size:12px}
-    .cmp-head{display:flex;align-items:center;gap:12px}
-    .cmp-role{flex:1;min-width:0;display:flex;align-items:center;gap:8px;font-size:14px}
-    .cmp-role b{color:var(--cf-ink-900);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-    .cmp-role.rev{justify-content:flex-end}
-    .cmp-swap{width:32px;height:32px;flex:none;display:grid;place-items:center;border:1px solid var(--cf-line);border-radius:50%;background:var(--cf-surface);color:var(--cf-ink-600);cursor:pointer}
-    .cmp-swap:hover{border-color:var(--cf-brand-500);color:var(--cf-brand-600)}
-    .cmp-swap .material-icons{font-size:18px}
-    .cmp-top{display:flex;align-items:center;gap:7px;font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--cf-ink-500)}
-    .cmp-top .material-icons{font-size:16px;color:var(--cf-brand-600)}
-    .cmp-meta{display:flex;flex-direction:column;gap:3px;min-width:0}
-    .cmp-meta.end{align-items:flex-end;text-align:right}
-    .cmp-meta b{font-size:14px;color:var(--cf-ink-900);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:130px}
-    .lvl.xs2{font-size:9.5px;font-weight:700;padding:1px 7px;border-radius:999px;align-self:flex-start}
-    .cmp-meta.end .lvl.xs2{align-self:flex-end}
-    .cmp-bar{display:flex;height:14px;border-radius:999px;overflow:hidden;background:var(--cf-surface-2);gap:0}
-    .cmp-bar .seg{display:block;transition:flex .25s}
-    .cmp-bar .seg.a{background:#22c55e}
-    .cmp-bar .seg.s{background:var(--cf-brand-500)}
-    .cmp-bar .seg.b{background:#f59e0b}
-    .cmp-legend{display:flex;flex-wrap:wrap;gap:14px;font-size:11.5px;color:var(--cf-ink-600)}
-    .cmp-legend span{display:inline-flex;align-items:center;gap:6px}
-    .cmp-legend b{color:var(--cf-ink-900)}
-    .cmp-legend .d{width:10px;height:10px;border-radius:3px;flex:none}
-    .cmp-legend .d.a{background:#22c55e}
-    .cmp-legend .d.s{background:var(--cf-brand-500)}
-    .cmp-legend .d.b{background:#f59e0b}
-    .cmp-acts{display:flex;gap:8px;flex-wrap:wrap}
-    .cmp-areas{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:6px}
-    .cmp-area{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 9px;border:1px solid var(--cf-line);border-radius:var(--cf-radius-sm);font-size:12px;background:var(--cf-surface)}
-    .cmp-area.diff{border-color:var(--cf-brand-500);background:var(--cf-brand-50)}
-    .ca-name{display:inline-flex;align-items:center;gap:6px;color:var(--cf-ink-700);min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-    .ca-name .material-icons{font-size:15px;color:var(--cf-ink-400)}
-    .cmp-area.diff .ca-name{color:var(--cf-ink-900);font-weight:600}
-    .cmp-area.diff .ca-name .material-icons{color:var(--cf-brand-600)}
-    .ca-cnt{display:inline-flex;align-items:center;gap:5px;flex:none;font-variant-numeric:tabular-nums}
-    .ca-cnt b{color:var(--cf-ink-900)}
-    .ca-cnt i{font-style:normal;color:var(--cf-ink-400);font-size:10px}
-    .cmp-eq{display:flex;align-items:center;gap:7px;font-size:12.5px;margin:0;color:var(--cf-ink-600)}
-    .cmp-eq .material-icons{font-size:17px;color:#16a34a}
-    .perm.d-add{border-color:#86efac;background:#f0fdf4}
-    .perm.d-rem{border-color:#fcd34d;background:#fffbeb}
-    .dmark{width:16px;height:16px;flex:none;display:grid;place-items:center;border-radius:50%;font-size:12px;font-weight:800;color:#fff}
-    .dmark.add{background:#16a34a}
-    .dmark.rem{background:#d97706}
-    .ghead{display:flex;align-items:center;gap:10px;margin-bottom:9px}
-    .gh-title{flex:1;min-width:0;font-size:12.5px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;color:var(--cf-ink-800);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-    .gcount{font-size:11.5px;font-weight:700;color:var(--cf-ink-500);background:var(--cf-surface-2);padding:2px 8px;border-radius:999px}
-    .gcount.full{color:var(--cf-brand-700);background:var(--cf-brand-50)}
-    .gtoggle{flex:none;display:inline-flex;align-items:center;gap:5px;padding:3px 10px 3px 6px;border:1px solid var(--cf-line);border-radius:999px;background:var(--cf-surface);color:var(--cf-ink-500);font:inherit;font-size:11.5px;font-weight:700;cursor:pointer;transition:border-color .12s,color .12s,background .12s}
-    .gtoggle .material-icons{font-size:17px}
-    .gtoggle .gt-count{font-variant-numeric:tabular-nums}
-    .gtoggle:hover:not(:disabled){border-color:var(--ga);color:var(--ga)}
-    .gtoggle.some{color:var(--ga);border-color:var(--ga)}
-    .gtoggle.full{color:#fff;background:var(--ga);border-color:var(--ga)}
-    .gtoggle:disabled{opacity:.55;cursor:default}
-    .gbar{display:block;height:4px;border-radius:999px;background:var(--cf-line);overflow:hidden;margin-bottom:12px}
-    .gbar i{display:block;height:100%;border-radius:999px;transition:width .25s;background:var(--ga)}
-    .groups{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;align-items:start}
-    .gcard{display:flex;flex-direction:column;padding:14px 15px;border:1px solid var(--cf-line);border-top:3px solid var(--ga);border-radius:var(--cf-radius-md);background:var(--cf-surface);box-shadow:0 1px 2px rgba(16,24,40,.05);transition:box-shadow .15s,transform .15s}
-    .gcard:hover{box-shadow:var(--cf-shadow-lg);transform:translateY(-2px)}
-    .gicon{width:30px;height:30px;flex:none;display:grid;place-items:center;border-radius:9px;background:var(--ga)}
-    .gicon .material-icons{font-size:17px;color:#fff}
-    .perms{display:flex;flex-wrap:wrap;gap:8px}
-    .perm{flex:1 1 150px;display:flex;align-items:center;gap:9px;padding:8px 11px;border:1px solid var(--cf-line);border-radius:var(--cf-radius-sm);font-size:12.5px;color:var(--cf-ink-700);cursor:pointer;transition:border-color .12s,background .12s}
-    .perm.on{border-color:var(--cf-brand-500);background:var(--cf-brand-50)}
-    .perm input{width:16px;height:16px;accent-color:var(--cf-brand-600);cursor:pointer}
-    .perm .pl{flex:1}
-    .perm.dis{opacity:.65;cursor:default}
-    .pinfo{flex:none;width:22px;height:22px;display:grid;place-items:center;border:0;background:none;border-radius:6px;color:var(--cf-ink-400);cursor:pointer;opacity:.55;transition:opacity .12s,color .12s,background .12s}
-    .pinfo:hover{opacity:1;color:var(--ga);background:var(--cf-surface-2)}
-    .pinfo .material-icons{font-size:16px}
-    .info-backdrop{position:fixed;inset:0;background:rgba(15,23,42,.45);display:grid;place-items:center;z-index:90;padding:20px;animation:fade .12s ease}
-    .info-pop{position:relative;width:min(420px,100%);background:var(--cf-surface);border:1px solid var(--cf-line);border-top:4px solid var(--ga);border-radius:var(--cf-radius-md);box-shadow:var(--cf-shadow-lg);padding:20px}
-    .info-x{position:absolute;top:12px;inset-inline-end:12px;width:30px;height:30px;display:grid;place-items:center;border:0;background:none;border-radius:8px;color:var(--cf-ink-500);cursor:pointer}
-    .info-x:hover{background:var(--cf-surface-2);color:var(--cf-ink-800)}
-    .info-x .material-icons{font-size:19px}
-    .info-head{display:flex;align-items:center;gap:12px;margin-bottom:14px;padding-inline-end:30px}
-    .info-ht h4{margin:0;font-size:16px;color:var(--cf-ink-900)}
-    .info-area{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--ga)}
-    .info-desc{margin:0 0 16px;font-size:13.5px;line-height:1.55;color:var(--cf-ink-700)}
-    .info-block{padding-top:12px;border-top:1px solid var(--cf-line)}
-    .info-block + .info-block{margin-top:10px}
-    .ib-label{display:flex;align-items:center;gap:6px;font-size:11.5px;font-weight:700;color:var(--cf-ink-500);margin-bottom:7px}
-    .ib-label .material-icons{font-size:15px}
-    .ib-chips{display:flex;flex-wrap:wrap;gap:6px}
-    .ib-chip{font-size:12px;font-weight:600;color:var(--cf-ink-700);background:var(--cf-surface-2);border:1px solid var(--cf-line);padding:3px 9px;border-radius:999px}
-    @keyframes fade{from{opacity:0}to{opacity:1}}
-    .req{font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--cf-brand-700);background:var(--cf-brand-100,var(--cf-brand-50));padding:1px 6px;border-radius:999px}
-    .save-bar{display:flex;align-items:center;justify-content:flex-end;gap:10px}
-    .toast{position:fixed;bottom:22px;inset-inline-end:22px;background:var(--cf-ink-900);color:#fff;padding:11px 16px;border-radius:var(--cf-radius-md);box-shadow:var(--cf-shadow-lg);font-size:13.5px;z-index:80}
-    @media(min-width:1500px){.groups{grid-template-columns:repeat(3,minmax(0,1fr))}}
-    @media(max-width:880px){.cols{grid-template-columns:1fr}}
-    @media(max-width:760px){.groups{grid-template-columns:1fr}}
+    .hero-meter{display:flex;flex-direction:column;align-items:center;gap:8px;flex:none}
+    .ring{--p:0;--c:var(--cf-brand-500);width:70px;height:70px;border-radius:50%;display:grid;place-items:center;background:conic-gradient(var(--c) calc(var(--p)*1%),var(--cf-surface-2) 0);position:relative}
+    .ring::before{content:'';position:absolute;inset:6px;border-radius:50%;background:var(--cf-surface)}
+    .ring b{position:relative;font-size:18px;font-weight:800;color:var(--cf-ink-900);line-height:1}
+    .ring small{position:relative;font-size:9px;color:var(--cf-ink-400);font-weight:600}
+    .lvl{font-size:10.5px;font-weight:800;padding:3px 10px;border-radius:999px;white-space:nowrap}
+
+    .tools{display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin:16px 0 14px}
+    .psearch{flex:1;min-width:200px;display:flex;align-items:center;gap:8px;height:38px;padding:0 13px;border:1px solid var(--cf-line);border-radius:10px;background:var(--cf-surface)}
+    .psearch .material-icons{font-size:18px;color:var(--cf-ink-400)}
+    .psearch input{flex:1;border:0;background:none;outline:none;font:inherit;font-size:13.5px;color:var(--cf-ink-900)}
+    .psearch .clr{border:0;background:none;color:var(--cf-ink-400);cursor:pointer;display:grid;place-items:center}.psearch .clr .material-icons{font-size:16px}
+    .ico{display:inline-flex;align-items:center;gap:6px;height:38px;padding:0 11px;border:1px solid var(--cf-line);border-radius:10px;background:var(--cf-surface);font:inherit;font-size:12.5px;font-weight:600;color:var(--cf-ink-700);cursor:pointer;transition:.14s}
+    .ico:hover{border-color:var(--cf-brand-400);background:var(--cf-brand-50);color:var(--cf-brand-700)}
+    .ico .material-icons{font-size:17px}
+    .ico.danger:hover{border-color:transparent;background:var(--cf-danger-soft);color:var(--cf-danger)}
+    .ico.act{border-color:transparent;background:#7c3aed;color:#fff}
+    .ico.act:hover{background:#6d28d9;color:#fff}
+    .ico.st.act{background:var(--cf-brand-600)}.ico.st.act:hover{background:var(--cf-brand-700)}
+
+    /* easy one-click compare bar */
+    .cbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:10px 12px;margin-bottom:12px;border:1px solid color-mix(in srgb,#8b5cf6 24%,var(--cf-line));background:color-mix(in srgb,#8b5cf6 6%,var(--cf-surface));border-radius:13px}
+    .cbar-l{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;color:#7c3aed;white-space:nowrap}
+    .cbar-l .material-icons{font-size:16px}
+    .cbar-chips{display:flex;align-items:center;gap:6px;flex-wrap:wrap;flex:1;min-width:0}
+    .cchip{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--cf-line);background:var(--cf-surface);border-radius:999px;padding:5px 12px;font:inherit;font-size:12.5px;font-weight:700;color:var(--cf-ink-700);cursor:pointer;transition:.13s}
+    .cchip:hover{border-color:#a78bfa;color:#6d28d9}
+    .cchip .cc-dot{width:11px;height:11px;border-radius:50%;flex:none;box-shadow:0 1px 3px rgba(15,23,42,.25)}
+    .cchip.on{border-color:transparent;background:#7c3aed;color:#fff}
+    .cchip.on .cc-dot{box-shadow:0 0 0 2px rgba(255,255,255,.6)}
+    .cchip .cc-ck{font-size:15px;margin-inline-start:-2px}
+    .cbar-x{border:0;background:rgba(124,58,237,.1);color:#7c3aed;border-radius:8px;width:28px;height:28px;display:grid;place-items:center;cursor:pointer;transition:.13s;flex:none}
+    .cbar-x:hover{background:rgba(124,58,237,.22)}.cbar-x .material-icons{font-size:16px}
+    .cc-n{font-size:10.5px;font-weight:800;color:var(--cf-ink-400);background:var(--cf-surface-2);border-radius:999px;padding:1px 7px;margin-inline-start:1px}
+    .cchip.on .cc-n{background:rgba(255,255,255,.22);color:#fff}
+    .sbar{border-color:var(--cf-brand-200);background:var(--cf-brand-50)}
+    .sbar .cbar-l{color:var(--cf-brand-700)}
+    .sbar .cchip:hover{border-color:var(--cf-brand-400);color:var(--cf-brand-700)}
+    .sbar .cbar-x{background:var(--cf-brand-100);color:var(--cf-brand-700)}
+    .sbar .cbar-x:hover{background:var(--cf-brand-200)}
+
+    .note{display:flex;align-items:center;gap:9px;font-size:13px;color:var(--cf-ink-700);background:var(--cf-surface-2);border:1px solid var(--cf-line);border-radius:12px;padding:11px 14px;margin-bottom:14px}
+    .note .material-icons{font-size:17px;color:var(--cf-ink-400)}
+    .note .lk,.cmpbar .lk{border:0;background:none;color:var(--cf-brand-700);font:inherit;font-weight:700;cursor:pointer;text-decoration:underline}
+    .presets{display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-bottom:16px}
+    .presets-l{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:var(--cf-ink-400);margin-inline-end:2px}
+    .presets-l .material-icons{font-size:14px;color:var(--cf-brand-500)}
+    .preset{display:inline-flex;align-items:center;gap:5px;border:1px solid var(--cf-line);background:var(--cf-surface);border-radius:999px;padding:5px 12px;font:inherit;font-size:12px;font-weight:600;color:var(--cf-ink-700);cursor:pointer;transition:.13s}
+    .preset .material-icons{font-size:14px;color:var(--cf-ink-400);transition:color .13s}
+    .preset:hover{border-color:var(--cf-brand-400);background:var(--cf-brand-50);color:var(--cf-brand-700)}
+    .preset:hover .material-icons{color:var(--cf-brand-500)}
+    .preset.on{border-color:transparent;background:var(--cf-brand-600);color:#fff;box-shadow:0 6px 14px -8px var(--cf-brand-600)}
+    .preset.on .material-icons{color:#fff}
+    .preset.on .pchk{font-size:15px;margin-inline-start:1px}
+    .cmp{border:1px solid color-mix(in srgb,#8b5cf6 24%,var(--cf-line));background:color-mix(in srgb,#8b5cf6 7%,var(--cf-surface));border-radius:13px;padding:11px 13px;margin-bottom:14px}
+    .cmp-top{display:flex;align-items:center;justify-content:space-between;gap:10px}
+    .cmp-pair{display:flex;align-items:center;gap:11px;flex-wrap:wrap}
+    .cmp-role{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:700;color:var(--cf-ink-900)}
+    .cmp-role .cd{width:11px;height:11px;border-radius:3px;flex:none;box-shadow:0 1px 3px rgba(15,23,42,.25)}
+    .cmp-vs{font-size:16px;color:#7c3aed}
+    .cmp-x{border:0;background:rgba(124,58,237,.1);color:#7c3aed;border-radius:8px;width:26px;height:26px;display:grid;place-items:center;cursor:pointer;transition:.13s;flex:none}
+    .cmp-x:hover{background:rgba(124,58,237,.22)}.cmp-x .material-icons{font-size:16px}
+    .cmp-legend{display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin-top:10px;padding-top:10px;border-top:1px solid color-mix(in srgb,#8b5cf6 16%,var(--cf-line))}
+    .lg{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--cf-ink-600)}
+    .lg b{color:var(--cf-ink-900);font-weight:800}
+    .lg .dot{width:9px;height:9px;border-radius:50%;flex:none}
+    .lg.add .dot{background:#10b981}.lg.rem .dot{background:#ef4444}.lg.same .dot{background:var(--cf-ink-300)}
+    .cmp-views{display:inline-flex;background:var(--cf-surface);border:1px solid color-mix(in srgb,#8b5cf6 20%,var(--cf-line));border-radius:10px;padding:2px;gap:2px}
+    .cmp-views button{display:inline-flex;align-items:center;gap:5px;border:0;background:none;font:inherit;font-size:12px;font-weight:700;color:var(--cf-ink-500);padding:5px 11px;border-radius:8px;cursor:pointer;transition:.12s}
+    .cmp-views button .material-icons{font-size:15px}
+    .cmp-views button:hover{color:#6d28d9}
+    .cmp-views button.on{background:#7c3aed;color:#fff;box-shadow:0 4px 10px -4px rgba(124,58,237,.6)}
+    .cmp-diffonly{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:var(--cf-ink-600);cursor:pointer;margin-inline-start:auto}
+    .cmp-diffonly input{position:absolute;opacity:0;width:0;height:0}
+    .cmp-diffonly .cdo-box{width:15px;height:15px;border-radius:4px;border:1.5px solid color-mix(in srgb,#8b5cf6 40%,var(--cf-line));display:inline-grid;place-items:center;transition:.12s}
+    .cmp-diffonly .cdo-box::after{content:'check';font-family:'Material Icons';font-size:11px;color:#fff;opacity:0}
+    .cmp-diffonly input:checked+.cdo-box{background:#7c3aed;border-color:#7c3aed}.cmp-diffonly input:checked+.cdo-box::after{opacity:1}
+
+    /* compare — matrix table */
+    .mtx{border:1px solid var(--cf-line);border-radius:14px;overflow:hidden;background:var(--cf-surface)}
+    .mtx-head,.mtx-row{display:grid;grid-template-columns:1fr 120px 120px;align-items:center}
+    .mtx-head{background:var(--cf-surface-2);border-bottom:1px solid var(--cf-line);padding:10px 14px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;color:var(--cf-ink-500)}
+    .mtx-head .mtx-c{justify-self:center;display:inline-flex;align-items:center;gap:6px;color:var(--cf-ink-800)}
+    .mtx-head .cd{width:10px;height:10px;border-radius:3px}
+    .mtx-scr{display:flex;align-items:center;gap:7px;padding:9px 14px;background:color-mix(in srgb,var(--cf-brand-500) 4%,var(--cf-surface-2));font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;color:var(--cf-ink-600);border-top:1px solid var(--cf-line-soft)}
+    .mtx-scr .material-icons{font-size:15px}
+    .mtx-row{padding:9px 14px;border-top:1px solid var(--cf-line-soft)}
+    .mtx-row.d{background:color-mix(in srgb,#f59e0b 7%,transparent)}
+    .mtx-c0{display:flex;flex-direction:column;gap:1px;min-width:0}
+    .mtx-tt{font-size:12.5px;font-weight:600;color:var(--cf-ink-800)}
+    .mtx-hint{font-size:11px;color:var(--cf-ink-500)}
+    .mtx-c{justify-self:center}
+    .mk{width:26px;height:26px;border-radius:8px;display:grid;place-items:center;background:var(--cf-surface-2);color:var(--cf-ink-300);border:1px solid var(--cf-line)}
+    .mk .material-icons{font-size:16px}
+    .mk.yes{background:color-mix(in srgb,#10b981 15%,transparent);color:#059669;border-color:transparent}
+
+    /* compare — split columns */
+    .split{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    @media(max-width:700px){.split{grid-template-columns:1fr}}
+    .split-col{border:1px solid var(--cf-line);border-radius:14px;background:var(--cf-surface);overflow:hidden}
+    .split-head{display:flex;align-items:center;gap:9px;padding:12px 14px;border-bottom:1px solid var(--cf-line);font-size:14px;color:var(--cf-ink-900)}
+    .split-head .split-n{margin-inline-start:auto;font-size:11px;font-weight:800;color:var(--cf-ink-500);background:var(--cf-surface-2);border-radius:999px;padding:2px 9px}
+    .hero-ava.sm{width:28px;height:28px;border-radius:9px;font-size:13px;box-shadow:none}
+    .split-scr{display:flex;align-items:center;gap:7px;padding:8px 14px;background:var(--cf-surface-2);font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;color:var(--cf-ink-500)}
+    .split-scr .material-icons{font-size:14px}
+    .split-row{display:flex;align-items:center;gap:8px;padding:7px 14px 7px 16px;font-size:12.5px;color:var(--cf-ink-700);border-top:1px solid var(--cf-line-soft)}
+    .split-row .material-icons{font-size:15px;color:#10b981}
+    .split-row.uniq{background:color-mix(in srgb,#10b981 8%,transparent);font-weight:600;color:var(--cf-ink-900)}
+
+    /* screen cards grid */
+    .cards{display:flex;flex-direction:column;gap:12px}
+    .card{border:1px solid var(--cf-line);border-inline-start:3px solid var(--sc,var(--cf-brand-500));border-radius:13px;background:var(--cf-surface);overflow:hidden;transition:box-shadow .16s,border-color .16s}
+    .card:hover{box-shadow:0 12px 26px -18px rgba(15,23,42,.38)}
+    .card-h{display:flex;align-items:center;gap:11px;padding:12px 15px;cursor:pointer;transition:background .13s}
+    .card-h:hover{background:var(--cf-surface-2)}
+    .card-tt em{font-style:normal;font-weight:500;text-transform:none;letter-spacing:0;color:var(--cf-ink-400);font-size:11.5px;margin-inline-start:8px}
+    .card-ic{width:32px;height:32px;border-radius:9px;display:grid;place-items:center;flex:none}.card-ic .material-icons{font-size:18px}
+    .card-tt{flex:1;min-width:0;font-size:12.5px;font-weight:800;letter-spacing:.02em;text-transform:uppercase;color:var(--cf-ink-800);line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .card-all{display:inline-flex;align-items:center;gap:6px;font:inherit;font-size:11px;font-weight:700;color:var(--cf-ink-500);background:var(--cf-surface-2);border:1px solid var(--cf-line);border-radius:999px;padding:3px 6px 3px 8px;cursor:pointer;transition:.13s}
+    .card-all:hover:not(:disabled){border-color:var(--cf-brand-400);color:var(--cf-brand-700);background:var(--cf-brand-50)}
+    .card-all:disabled{cursor:default;opacity:.55}
+    .card-all .material-icons{font-size:16px}
+    .card-all .ca-tx{white-space:nowrap;letter-spacing:.01em}
+    .card-all .ca-n{font-size:10px;font-weight:800;background:var(--cf-surface);border:1px solid var(--cf-line);border-radius:999px;padding:1px 6px}
+    .card-all.some{color:var(--sc,var(--cf-brand-700));border-color:color-mix(in srgb,var(--sc,var(--cf-brand-500)) 40%,var(--cf-line));background:color-mix(in srgb,var(--sc,var(--cf-brand-500)) 8%,transparent)}
+    .card-all.full{color:#fff;background:var(--sc,var(--cf-brand-600));border-color:transparent}
+    .card-all.full .material-icons{color:#fff}
+    .card-all.full .ca-n{background:rgba(255,255,255,.22);border-color:transparent;color:#fff}
+    .card-bar{height:3px;background:var(--cf-surface-2);margin:0 15px 2px}.card-bar i{display:block;height:100%;border-radius:3px;transition:width .2s}
+    .card-perms{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:8px;padding:11px 15px 14px;animation:cardin .16s ease}
+    @media(max-width:520px){.card-perms{grid-template-columns:1fr}}
+    @keyframes cardin{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
+    .card-chev{margin-inline-start:1px;color:var(--cf-ink-300);transition:transform .2s;font-size:18px}
+    .card-chev.open{transform:rotate(180deg)}
+    .cards-top{position:sticky;top:8px;z-index:20;display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:12px;padding:9px 12px;border:1px solid var(--cf-line);border-radius:12px;background:color-mix(in srgb,var(--cf-surface) 82%,transparent);backdrop-filter:blur(8px)}
+    .ct-sum{font-size:12.5px;font-weight:600;color:var(--cf-ink-500);white-space:nowrap}.ct-sum b{color:var(--cf-ink-800);font-weight:800}
+    .ct-filters{display:inline-flex;align-items:center;gap:5px;flex-wrap:wrap;margin-inline:auto}
+    .ct-f{display:inline-flex;align-items:center;gap:4px;border:1px solid var(--cf-line);background:var(--cf-surface);border-radius:999px;padding:4px 11px;font:inherit;font-size:11.5px;font-weight:700;color:var(--cf-ink-600);cursor:pointer;transition:.12s}
+    .ct-f .material-icons{font-size:14px;color:var(--cf-ink-400)}
+    .ct-f:hover{border-color:var(--cf-brand-400);color:var(--cf-brand-700)}
+    .ct-f.on{background:var(--cf-brand-600);border-color:transparent;color:#fff}.ct-f.on .material-icons{color:#fff}
+    .ct-toggle{display:inline-flex;align-items:center;gap:5px;border:1px solid var(--cf-line);background:var(--cf-surface);border-radius:8px;padding:5px 12px;font:inherit;font-size:12px;font-weight:700;color:var(--cf-brand-700);cursor:pointer;transition:.13s}
+    .ct-toggle:hover{background:var(--cf-brand-50);border-color:var(--cf-brand-400)}.ct-toggle .material-icons{font-size:16px}
+    .pk:focus-within{border-color:var(--cf-brand-500);box-shadow:var(--cf-ring)}
+    .pk{display:flex;align-items:flex-start;gap:9px;padding:9px 10px;border:1px solid var(--cf-line);border-radius:10px;cursor:pointer;background:var(--cf-surface);transition:border-color .12s,background .12s;position:relative}
+    .pk:hover{border-color:color-mix(in srgb,var(--cf-brand-500) 35%,var(--cf-line));background:var(--cf-surface-2)}
+    .pk.on{border-color:var(--cf-brand-300);background:var(--cf-brand-50)}
+    .pk.on:hover{background:color-mix(in srgb,var(--cf-brand-500) 8%,var(--cf-brand-50))}
+    .pk.dis{cursor:not-allowed;opacity:.8}
+    .pk.d-add{box-shadow:inset 3px 0 0 #10b981}.pk.d-rem{box-shadow:inset 3px 0 0 #ef4444}
+    .pk input{position:absolute;opacity:0;width:0;height:0}
+    .pk-box{width:17px;height:17px;border-radius:5px;border:1.5px solid var(--cf-line);background:var(--cf-surface);flex:none;margin-top:1px;position:relative;transition:.13s}
+    .pk.on .pk-box{background:var(--cf-brand-500);border-color:var(--cf-brand-500)}
+    .pk-box::after{content:'check';font-family:'Material Icons';font-size:13px;color:#fff;position:absolute;inset:0;display:grid;place-items:center;opacity:0;transition:opacity .12s}
+    .pk.on .pk-box::after{opacity:1}
+    .pk-main{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+    .pk-top{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+    .pk-tt{font-size:12.5px;font-weight:700;color:var(--cf-ink-800);line-height:1.2}
+    .pk-hint{font-size:11px;color:var(--cf-ink-500);line-height:1.35}
+    .pk-auto{font-size:8px;font-weight:800;letter-spacing:.05em;color:var(--cf-brand-700);background:var(--cf-brand-50);border:1px solid var(--cf-brand-100);border-radius:4px;padding:1px 4px;flex:none}
+    .pk-sens{font-size:13px;color:#d97706;flex:none}
+    .pk-i{border:0;background:none;color:#d7dbe3;cursor:pointer;display:grid;place-items:center;flex:none;padding:0;width:22px;height:22px;border-radius:50%;transition:.13s;margin-top:-1px}
+    .pk-i:hover{color:var(--sc,var(--cf-brand-500));background:color-mix(in srgb,var(--sc,var(--cf-brand-500)) 15%,transparent)}
+    .pk-i .material-icons{font-size:17px}
+    .pk.on .pk-i{color:#d7dbe3}
+
+    .empty{text-align:center;color:var(--cf-ink-400);padding:70px 20px}.empty .material-icons{font-size:42px}.empty p{margin-top:8px;font-size:14px}
+
+    .savebar{position:fixed;left:50%;transform:translateX(-50%);bottom:18px;z-index:60;display:flex;align-items:center;gap:18px;padding:10px 12px 10px 18px;border-radius:14px;background:var(--cf-ink-900);color:#fff;box-shadow:0 20px 44px -18px rgba(2,6,23,.6);animation:sbin .2s ease}
+    @keyframes sbin{from{opacity:0;transform:translate(-50%,14px)}to{opacity:1;transform:translate(-50%,0)}}
+    .sb-l{display:inline-flex;align-items:center;gap:8px;font-size:13px;font-weight:600}.sb-l .material-icons{font-size:17px;color:#fde68a}
+    .sb-r{display:flex;align-items:center;gap:8px}
+    .sb-discard{border:1px solid rgba(255,255,255,.25);background:rgba(255,255,255,.08);color:#fff;font:inherit;font-size:12.5px;font-weight:600;border-radius:9px;padding:7px 13px;cursor:pointer}
+    .sb-discard:hover{background:rgba(255,255,255,.16)}
+    .sb-save{display:inline-flex;align-items:center;gap:6px;border:0;background:var(--cf-brand-500);color:#fff;font:inherit;font-size:12.5px;font-weight:700;border-radius:9px;padding:7px 14px;cursor:pointer}
+    .sb-save:hover{background:var(--cf-brand-600)}.sb-save .material-icons{font-size:16px}
+
+    .iover{position:fixed;inset:0;background:rgba(2,6,23,.5);backdrop-filter:blur(3px);display:grid;place-items:center;z-index:80;padding:20px}
+    .imodal{position:relative;width:100%;max-width:400px;background:var(--cf-surface);border:1px solid var(--cf-line);border-radius:18px;box-shadow:0 36px 72px -26px rgba(2,6,23,.55);overflow:hidden;animation:iin .18s ease}
+    @keyframes iin{from{opacity:0;transform:translateY(10px) scale(.98)}to{opacity:1;transform:none}}
+    .iclose{position:absolute;top:12px;inset-inline-end:12px;border:0;background:rgba(255,255,255,.6);border-radius:8px;width:26px;height:26px;display:grid;place-items:center;color:var(--cf-ink-500);cursor:pointer;z-index:1;transition:.13s}
+    .iclose:hover{background:#fff;color:var(--cf-ink-900)}.iclose .material-icons{font-size:17px}
+    .ihead{display:flex;align-items:flex-start;gap:12px;padding:16px 18px 15px;border-bottom:1px solid var(--cf-line-soft)}
+    .ii{width:42px;height:42px;border-radius:12px;display:grid;place-items:center;flex:none;color:#fff;box-shadow:0 6px 14px -6px rgba(15,23,42,.45)}.ii .material-icons{font-size:21px}
+    .ihx{flex:1;min-width:0;padding-inline-end:24px}
+    .ihx small{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--cf-ink-500)}
+    .ihx h4{font-size:16px;font-weight:800;color:var(--cf-ink-900);margin-top:1px;line-height:1.25}
+    .ibadge{display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:800;color:#b45309;background:#fef3c7;border:1px solid #fde68a;border-radius:999px;padding:2px 8px;margin-top:6px}.ibadge .material-icons{font-size:11px}
+    .ibody{padding:15px 18px 18px}
+    .ilbl{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:var(--cf-ink-400);margin-bottom:5px}
+    .idesc{font-size:13px;line-height:1.6;color:var(--cf-ink-700);margin-bottom:15px}
+    .isec{margin-bottom:13px}
+    .isec-l{display:flex;align-items:center;gap:5px;font-size:11.5px;font-weight:700;color:var(--cf-ink-600);margin-bottom:6px}.isec-l .material-icons{font-size:14px;color:var(--cf-ink-400)}
+    .ichips{display:flex;flex-wrap:wrap;gap:5px}
+    .ichip{font-size:11px;font-weight:600;color:var(--cf-ink-700);background:var(--cf-surface-2);border:1px solid var(--cf-line);border-radius:7px;padding:3px 9px}
+    .ichip.on{color:var(--cf-brand-700);background:var(--cf-brand-50);border-color:var(--cf-brand-100)}
+    .icode{display:flex;align-items:center;gap:6px;font-size:11.5px;color:var(--cf-ink-500);border-top:1px solid var(--cf-line-soft);padding-top:13px;margin-top:2px}.icode .material-icons{font-size:14px;color:var(--cf-ink-400)}.icode code{margin-inline-start:auto;background:var(--cf-surface-2);border:1px solid var(--cf-line);border-radius:6px;padding:2px 8px;font-family:monospace;font-size:11px;color:var(--cf-ink-800)}
   `],
 })
 export class RolesPage {
   readonly A = Actions;
+  readonly rbac = inject(RbacService);
   private alerts = inject(AlertService);
-  msg = signal('');
-  q = signal('');
+  private router = inject(Router);
 
-  groups: PermGroup[] = [
-    { area: 'Templates', icon: 'grid_view', color: '#6366f1', perms: [
-      { code: Actions.Template_View, label: 'View templates', desc: 'See every certificate template in the workspace and open it for preview. This is the baseline access most other template actions build on.' },
-      { code: Actions.Template_Create, label: 'Create templates', desc: 'Start brand-new templates from scratch or from a preset, and save them to the workspace library.' },
-      { code: Actions.Template_Edit, label: 'Edit in designer', desc: 'Open a template in the design studio and change its layout, text, images, colours and variables.' },
-      { code: Actions.Template_Delete, label: 'Delete templates', desc: 'Permanently remove templates from the workspace. Deleted templates cannot be recovered.' },
-      { code: Actions.Template_Export, label: 'Export templates', desc: 'Download templates as PDF, PNG or JSON, or share them outside Certifada.' },
-    ] },
-    { area: 'Credentials', icon: 'workspace_premium', color: '#0ea5e9', perms: [
-      { code: Actions.Credential_View, label: 'View credentials', desc: 'Browse issued certificates and view each recipient’s details and status.' },
-      { code: Actions.Credential_Generate, label: 'Generate single', desc: 'Issue one certificate at a time from a chosen template and recipient.' },
-      { code: Actions.Credential_Bulk, label: 'Bulk generate', desc: 'Generate many certificates in one run from a data file such as CSV or Excel.' },
-      { code: Actions.Credential_Approve, label: 'Approve / revoke', desc: 'Approve certificates before they are issued, or revoke ones that were already issued. A sensitive action.' },
-    ] },
-    { area: 'Branding', icon: 'palette', color: '#ec4899', perms: [{ code: Actions.Branding_Manage, label: 'Manage brand kit', desc: 'Set the organisation’s logo, colours, fonts and default signature used across all templates.' }] },
-    { area: 'People', icon: 'group', color: '#10b981', perms: [
-      { code: Actions.User_View, label: 'View users', desc: 'See the list of people in the workspace along with the role assigned to each.' },
-      { code: Actions.User_Manage, label: 'Invite & manage users', desc: 'Invite new users, deactivate accounts and assign roles to people. A sensitive action.' },
-      { code: Actions.Role_View, label: 'View roles', desc: 'See all roles and the permissions granted to each of them.' },
-      { code: Actions.Role_Manage, label: 'Manage roles', desc: 'Create, edit and delete roles and change which permissions they grant. A sensitive action.' },
-    ] },
-    { area: 'Automation', icon: 'bolt', color: '#f59e0b', perms: [
-      { code: Actions.Automation_View, label: 'View automations', desc: 'See automated workflows and their recent run history.' },
-      { code: Actions.Automation_Manage, label: 'Manage automations', desc: 'Create, edit, enable or disable automated workflows that issue or route credentials.' },
-    ] },
-    { area: 'Settings', icon: 'settings', color: '#64748b', perms: [{ code: Actions.Settings_Manage, label: 'Manage settings', desc: 'Change workspace-wide settings, integrations and security options. A sensitive action.' }] },
-  ];
-
-  private allCodes = this.groups.flatMap((g) => g.perms.map((p) => p.code));
-  readonly total = this.allCodes.length;
-
-  /** Each permission's prerequisites (enabling it auto-enables these). */
-  private implies: Record<string, string[]> = {
-    [Actions.Template_Create]: [Actions.Template_View],
-    [Actions.Template_Edit]: [Actions.Template_View],
-    [Actions.Template_Delete]: [Actions.Template_View],
-    [Actions.Template_Export]: [Actions.Template_View],
-    [Actions.Credential_Generate]: [Actions.Credential_View],
-    [Actions.Credential_Bulk]: [Actions.Credential_View, Actions.Credential_Generate],
-    [Actions.Credential_Approve]: [Actions.Credential_View],
-    [Actions.User_Manage]: [Actions.User_View],
-    [Actions.Role_Manage]: [Actions.Role_View],
-    [Actions.Automation_Manage]: [Actions.Automation_View],
-  };
-
-  private palette = ['#4f46e5', '#0ea5e9', '#10b981', '#f59e0b', '#ef4444', '#ec4899', '#8b5cf6', '#14b8a6'];
-  private seq = 10;
-  roles = signal<Role[]>([
-    { id: 1, name: 'Administrator', desc: 'Full access to everything.', system: true, color: '#4f46e5', members: 2, perms: [...this.allCodes] },
-    { id: 2, name: 'Editor', desc: 'Designs templates and issues credentials.', system: false, color: '#0ea5e9', members: 5, perms: [
-      Actions.Template_View, Actions.Template_Create, Actions.Template_Edit, Actions.Template_Export,
-      Actions.Credential_View, Actions.Credential_Generate, Actions.Credential_Bulk,
-      Actions.Branding_Manage, Actions.Automation_View,
-    ] },
-    { id: 3, name: 'Viewer', desc: 'Read-only access.', system: true, color: '#10b981', members: 12, perms: [
-      Actions.Template_View, Actions.Credential_View, Actions.User_View, Actions.Role_View, Actions.Automation_View,
-    ] },
-  ]);
-  selectedId = signal(2);
-  selected = computed(() => this.roles().find((r) => r.id === this.selectedId()));
-
-  rq = signal('');
-  readonly filteredRoles = computed(() => {
-    const s = this.rq().trim().toLowerCase();
+  readonly roles = this.rbac.roles;
+  selectedId = signal<string>('');
+  selected = computed<RbacRole | undefined>(() => {
     const l = this.roles();
-    return s ? l.filter((r) => r.name.toLowerCase().includes(s)) : l;
+    return l.find((r) => r.id === this.selectedId()) ?? l.find((r) => r.systemKey === 'editor') ?? l[0];
   });
 
-  private elevated = [Actions.Template_Delete, Actions.Credential_Approve, Actions.User_Manage, Actions.Role_Manage, Actions.Settings_Manage];
-  isSensitive(r: Role): boolean { return this.elevated.some((c) => r.perms.includes(c)); }
+  rq = signal('');
+  q = signal('');
+  compareId = signal<string | null>(null);
+  compareView = signal<'overlay' | 'split' | 'matrix'>('overlay');
+  diffOnly = signal<boolean>(false);
+  permFilter = signal<'all' | 'granted' | 'sensitive' | 'missing'>('all');
+  startFrom = signal<string>('');
+  startOpen = signal<boolean>(false);
+  compareOpen = signal<boolean>(false);
+  /** True when the compare bar is showing OR a role is actively being compared. */
+  comparing = computed<boolean>(() => this.compareOpen() || !!this.compareId());
 
-  // ---- org summary ----
-  totalMembers = computed(() => this.roles().reduce((s, r) => s + r.members, 0));
-  sensitiveCount = computed(() => this.roles().filter((r) => this.isSensitive(r)).length);
-  avgAccess = computed(() => { const l = this.roles(); return l.length ? Math.round(l.reduce((s, r) => s + this.accessPct(r), 0) / l.length * 100) : 0; });
+  toggleStartBar(): void { this.startOpen.set(!this.startOpen()); if (this.startOpen()) this.compareOpen.set(false); }
+  pickStart(id: string): void { this.onStartFrom(id); this.startOpen.set(false); }
+  toggleCompareBar(): void { if (this.comparing()) this.closeCompare(); else { this.compareOpen.set(true); this.startOpen.set(false); } }
+  pickCompare(id: string | null): void { this.compareId.set(id); this.compareOpen.set(true); }
+  closeCompare(): void { this.compareOpen.set(false); this.compareId.set(null); }
 
-  // ---- unsaved-change tracking ----
-  private snap = new Map<number, string>();
-  private snapKey(r: Role): string { return JSON.stringify({ n: r.name, d: r.desc, p: [...r.perms].sort() }); }
-  private _snapFx = effect(() => { const r = this.selected(); if (r && !this.snap.has(r.id)) this.snap.set(r.id, this.snapKey(r)); });
-  isDirty(): boolean { const r = this.selected(); return !!r && !r.system && this.snap.has(r.id) && this.snap.get(r.id) !== this.snapKey(r); }
-  resetRole(r: Role): void {
-    const b = this.snap.get(r.id); if (!b) return;
-    const o = JSON.parse(b) as { n: string; d: string; p: string[] };
-    r.name = o.n; r.desc = o.d; r.perms = [...o.p];
-    this.alerts.success('Changes reverted.');
-  }
-
-  presets: { key: string; label: string; codes: string[] }[] = [
-    { key: 'full', label: 'Full access', codes: [...this.allCodes] },
-    { key: 'editor', label: 'Editor', codes: [Actions.Template_View, Actions.Template_Create, Actions.Template_Edit, Actions.Template_Export, Actions.Credential_View, Actions.Credential_Generate, Actions.Credential_Bulk, Actions.Branding_Manage, Actions.Automation_View] },
-    { key: 'issuer', label: 'Issuer', codes: [Actions.Template_View, Actions.Credential_View, Actions.Credential_Generate, Actions.Credential_Bulk] },
-    { key: 'approver', label: 'Approver', codes: [Actions.Credential_View, Actions.Credential_Approve] },
-    { key: 'readonly', label: 'Read-only', codes: [Actions.Template_View, Actions.Credential_View, Actions.User_View, Actions.Role_View, Actions.Automation_View] },
-    { key: 'none', label: 'No access', codes: [] },
+  readonly filterOptions: { key: 'all' | 'granted' | 'sensitive' | 'missing'; label: string; icon: string }[] = [
+    { key: 'all', label: 'All', icon: 'apps' },
+    { key: 'granted', label: 'Granted', icon: 'check_circle' },
+    { key: 'sensitive', label: 'Sensitive', icon: 'shield' },
+    { key: 'missing', label: 'Not granted', icon: 'radio_button_unchecked' },
   ];
-  applyPreset(r: Role, codes: string[]): void {
-    if (r.system) return;
-    r.perms = [...new Set(codes.flatMap((c) => [c, ...this.requiredBy(c)]))];
-    this.alerts.success('Preset applied.');
+
+  draftPerms = signal<Set<string>>(new Set());
+  draftName = signal('');
+  draftDesc = signal('');
+  private loadedId = '';
+
+  constructor() {
+    effect(() => {
+      const r = this.selected();
+      if (r && r.id !== this.loadedId) { this.loadDraft(r); this.loadedId = r.id; }
+    });
+  }
+  private loadDraft(r: RbacRole): void { this.draftPerms.set(new Set(r.permissions)); this.draftName.set(r.name); this.draftDesc.set(r.desc); }
+  select(id: string): void { this.selectedId.set(id); }
+  draftCodes = computed(() => [...this.draftPerms()]);
+
+  collapsed = signal<Set<string>>(new Set<string>());
+  isOpen(k: string): boolean { return !this.collapsed().has(k); }
+  toggleCard(k: string): void { const s = new Set(this.collapsed()); if (s.has(k)) s.delete(k); else s.add(k); this.collapsed.set(s); }
+  allOpen = computed(() => this.collapsed().size === 0);
+  toggleAllCards(): void { this.collapsed.set(this.allOpen() ? new Set(this.rbac.screens.map((s) => s.key)) : new Set<string>()); }
+
+  readonly filteredRoles = computed(() => {
+    const s = this.rq().trim().toLowerCase();
+    return s ? this.roles().filter((r) => r.name.toLowerCase().includes(s)) : this.roles();
+  });
+  private matchSearch(p: { label: string; desc: string; hint: string }, s: string): boolean {
+    return !s || p.label.toLowerCase().includes(s) || p.desc.toLowerCase().includes(s) || p.hint.toLowerCase().includes(s);
+  }
+  /** Screens filtered by the search box only (used by Split / Matrix compare views). */
+  readonly searchedScreens = computed<RbacScreen[]>(() => {
+    const s = this.q().trim().toLowerCase();
+    if (!s) return this.rbac.screens;
+    return this.rbac.screens.map((g) => ({ ...g, perms: g.perms.filter((p) => this.matchSearch(p, s)) })).filter((g) => g.perms.length);
+  });
+  /** Screens filtered by search AND the active filter chip (used by the editable cards). */
+  readonly filteredScreens = computed<RbacScreen[]>(() => {
+    const s = this.q().trim().toLowerCase();
+    const f = this.permFilter();
+    const draft = this.draftPerms();
+    return this.rbac.screens
+      .map((g) => ({ ...g, perms: g.perms.filter((p) => {
+        if (!this.matchSearch(p, s)) return false;
+        if (f === 'granted') return draft.has(p.code);
+        if (f === 'missing') return !draft.has(p.code);
+        if (f === 'sensitive') return this.sensitive(p.code);
+        return true;
+      }) }))
+      .filter((g) => g.perms.length);
+  });
+
+  sensitiveCount = computed(() => this.roles().filter((r) => this.rbac.isSensitiveCodes(r.permissions)).length);
+  totalMembers = computed(() => this.roles().reduce((s, r) => s + (r.members ?? 0), 0));
+  avgAccess = computed(() => { const l = this.roles(); return l.length ? Math.round((l.reduce((s, r) => s + this.pct(r.permissions), 0) / l.length) * 100) : 0; });
+
+  compareRole = computed<RbacRole | null>(() => { const id = this.compareId(); return id ? (this.roles().find((r) => r.id === id) ?? null) : null; });
+  diffMore = computed(() => { const c = this.compareRole(); if (!c) return 0; return [...this.draftPerms()].filter((p) => !c.permissions.includes(p)).length; });
+  diffFewer = computed(() => { const c = this.compareRole(); if (!c) return 0; return c.permissions.filter((p) => !this.draftPerms().has(p)).length; });
+  diffSame = computed(() => { const c = this.compareRole(); if (!c) return 0; return [...this.draftPerms()].filter((p) => c.permissions.includes(p)).length; });
+  diff(code: string): '' | 'add' | 'rem' {
+    const c = this.compareRole(); if (!c) return '';
+    const a = this.draftPerms().has(code); const b = c.permissions.includes(code);
+    return a && !b ? 'add' : !a && b ? 'rem' : '';
+  }
+  // ---- Split / Matrix compare helpers ----
+  cmpHas(code: string): boolean { return this.compareRole()?.permissions.includes(code) ?? false; }
+  /** Matrix rows for a screen — all perms, or only the ones that differ when "Differences only" is on. */
+  matrixRows(s: RbacScreen): RbacPermission[] {
+    const perms = (this.searchedScreens().find((g) => g.key === s.key)?.perms ?? []) as RbacPermission[];
+    return this.diffOnly() ? perms.filter((p) => this.has(p.code) !== this.cmpHas(p.code)) : perms;
+  }
+  matrixTotal(): number { return this.searchedScreens().reduce((n, s) => n + this.matrixRows(s).length, 0); }
+  /** Split-column rows: perms the given role grants (optionally only the ones unique to that role). */
+  splitRows(s: RbacScreen, col: RbacRole | null | undefined): RbacPermission[] {
+    if (!col) return [];
+    const perms = (this.searchedScreens().find((g) => g.key === s.key)?.perms ?? []) as RbacPermission[];
+    return perms.filter((p) => this.roleHas(col, p.code) && (!this.diffOnly() || this.isUnique(p.code, col)));
+  }
+  private roleHas(col: RbacRole, code: string): boolean {
+    return col.id === this.selected()?.id ? this.draftPerms().has(code) : col.permissions.includes(code);
+  }
+  /** True when this role grants the code but the *other* compared role does not. */
+  isUnique(code: string, col: RbacRole | null | undefined): boolean {
+    if (!col) return false;
+    const other = col.id === this.selected()?.id ? this.compareRole() : this.selected();
+    return this.roleHas(col, code) && !(other ? this.roleHas(other, code) : false);
   }
 
-  /** High-level capabilities derived from the role's permissions. */
-  caps(r: Role): { icon: string; label: string }[] {
-    const h = (c: string) => r.perms.includes(c);
+  presets: { key: string; label: string; icon: string; codes: string[] }[] = [
+    { key: 'full', label: 'Full access', icon: 'all_inclusive', codes: [...this.rbac.allCodes] },
+    { key: 'editor', label: 'Editor', icon: 'design_services', codes: [Actions.Template_View, Actions.Template_Create, Actions.Template_Edit, Actions.Template_Export, Actions.Canvas_View, Actions.Canvas_Edit, Actions.Canvas_Save, Actions.Credential_View, Actions.Credential_Generate, Actions.Credential_Bulk, Actions.Branding_Manage] },
+    { key: 'issuer', label: 'Issuer', icon: 'workspace_premium', codes: [Actions.Credential_View, Actions.Credential_Generate, Actions.Credential_Bulk, Actions.Credential_Download] },
+    { key: 'approver', label: 'Approver', icon: 'verified', codes: [Actions.Approval_View, Actions.Credential_View, Actions.Credential_Approve, Actions.Credential_Reject, Actions.Credential_Revoke] },
+    { key: 'readonly', label: 'Read-only', icon: 'visibility', codes: [Actions.Dashboard_View, Actions.Template_View, Actions.Credential_View, Actions.User_View, Actions.Role_View] },
+    { key: 'none', label: 'No access', icon: 'block', codes: [] },
+  ];
+  /** The preset whose full (dependency-resolved) code set exactly matches the current draft, if any. */
+  activePreset = computed<string>(() => {
+    const cur = [...this.draftPerms()].sort().join('|');
+    for (const p of this.presets) {
+      const full = [...new Set(p.codes.flatMap((c) => [c, ...this.rbac.requiredBy(c)]))].sort().join('|');
+      if (full === cur) return p.key;
+    }
+    return '';
+  });
+
+  pct(codes: string[]): number { return this.rbac.total ? codes.length / this.rbac.total : 0; }
+  ratio(s: RbacScreen): number { return s.perms.length ? this.granted(s) / s.perms.length : 0; }
+  has(code: string): boolean { return this.draftPerms().has(code); }
+  sensitive(code: string): boolean { return this.rbac.isSensitiveCodes([code]); }
+  granted(s: RbacScreen): number { return s.perms.filter((p) => this.draftPerms().has(p.code)).length; }
+  allOn(s: RbacScreen): boolean { return s.perms.length > 0 && s.perms.every((p) => this.draftPerms().has(p.code)); }
+  screenState(s: RbacScreen): 'check_box' | 'indeterminate_check_box' | 'check_box_outline_blank' {
+    const g = this.granted(s);
+    return g === 0 ? 'check_box_outline_blank' : g === s.perms.length ? 'check_box' : 'indeterminate_check_box';
+  }
+  toggleScreenAll(s: RbacScreen): void {
+    const r = this.selected(); if (!r || r.isSystem) return;
+    const codes = s.perms.map((p) => p.code);
+    const cur = this.draftPerms();
+    if (codes.every((c) => cur.has(c))) { const drop = new Set([...codes, ...codes.flatMap((c) => this.rbac.dependentsOf(c))]); this.setDraft([...cur].filter((c) => !drop.has(c))); }
+    else this.setDraft([...new Set([...cur, ...codes, ...codes.flatMap((c) => this.rbac.requiredBy(c))])]);
+  }
+  isRequired(code: string): boolean { return this.draftPerms().has(code) && this.rbac.dependentsOf(code).some((d) => this.draftPerms().has(d)); }
+  tint(c: string): string { return `color-mix(in srgb, ${c} 14%, transparent)`; }
+  lvl(codes: string[]): { label: string; color: string; bg: string } {
+    const p = this.pct(codes);
+    if (p >= 0.999) return { label: 'Full access', color: '#4338ca', bg: '#eef2ff' };
+    if (p >= 0.6) return { label: 'Standard', color: '#0369a1', bg: '#e0f2fe' };
+    if (p >= 0.25) return { label: 'Limited', color: '#b45309', bg: '#fef3c7' };
+    return { label: 'Read-only', color: '#475569', bg: '#f1f5f9' };
+  }
+  caps(codes: string[]): { icon: string; label: string }[] {
+    const h = (c: string) => codes.includes(c);
     const out: { icon: string; label: string }[] = [];
     if (h(Actions.Template_Create) || h(Actions.Template_Edit)) out.push({ icon: 'design_services', label: 'Design' });
     if (h(Actions.Credential_Generate) || h(Actions.Credential_Bulk)) out.push({ icon: 'workspace_premium', label: 'Issue' });
     if (h(Actions.Credential_Bulk)) out.push({ icon: 'dynamic_feed', label: 'Bulk' });
-    if (h(Actions.Credential_Approve)) out.push({ icon: 'verified', label: 'Approve' });
+    if (h(Actions.Credential_Approve) || h(Actions.Credential_Revoke)) out.push({ icon: 'verified', label: 'Approve' });
     if (h(Actions.Branding_Manage)) out.push({ icon: 'palette', label: 'Brand' });
     if (h(Actions.User_Manage) || h(Actions.Role_Manage)) out.push({ icon: 'group', label: 'People' });
     if (h(Actions.Automation_Manage)) out.push({ icon: 'bolt', label: 'Automate' });
+    if (h(Actions.Billing_Manage) || h(Actions.Plan_Change)) out.push({ icon: 'credit_card', label: 'Billing' });
     if (h(Actions.Settings_Manage)) out.push({ icon: 'settings', label: 'Settings' });
     if (!out.length) out.push({ icon: 'visibility', label: 'View only' });
     return out;
   }
 
-  // ---- compare & insights ----
-  compareId = signal<number | null>(null);
-  compareRole = computed(() => { const id = this.compareId(); return id ? (this.roles().find((r) => r.id === id) ?? null) : null; });
-  diffMore(r: Role): number { const c = this.compareRole(); return c ? r.perms.filter((p) => !c.perms.includes(p)).length : 0; }
-  diffFewer(r: Role): number { const c = this.compareRole(); return c ? c.perms.filter((p) => !r.perms.includes(p)).length : 0; }
-  permDiff(r: Role, code: string): '' | 'add' | 'rem' {
-    const c = this.compareRole();
-    if (!c) return '';
-    const a = r.perms.includes(code), b = c.perms.includes(code);
-    return a && !b ? 'add' : !a && b ? 'rem' : '';
+  private setDraft(codes: string[]): void { this.draftPerms.set(new Set(codes)); }
+  toggle(code: string): void {
+    const r = this.selected(); if (!r || r.isSystem) return;
+    const cur = this.draftPerms();
+    if (cur.has(code)) { const drop = new Set([code, ...this.rbac.dependentsOf(code)]); this.setDraft([...cur].filter((c) => !drop.has(c))); }
+    else this.setDraft([...new Set([...cur, code, ...this.rbac.requiredBy(code)])]);
   }
-  twinName(r: Role): string | null {
-    const key = (x: Role) => [...x.perms].sort().join('|');
-    const k = key(r);
-    return this.roles().find((x) => x.id !== r.id && key(x) === k)?.name ?? null;
+  applyPreset(codes: string[]): void {
+    const r = this.selected(); if (!r || r.isSystem) return;
+    this.setDraft([...new Set(codes.flatMap((c) => [c, ...this.rbac.requiredBy(c)]))]);
   }
-  diffShared(r: Role): number { const c = this.compareRole(); return c ? r.perms.filter((p) => c.perms.includes(p)).length : 0; }
-  swapCompare(r: Role): void { const cmp = this.compareId(); if (!cmp) return; this.compareId.set(r.id); this.selectedId.set(cmp); }
-  addMissing(r: Role): void {
-    const c = this.compareRole();
-    if (!c || r.system) return;
-    const missing = c.perms.filter((p) => !r.perms.includes(p));
-    r.perms = [...new Set([...r.perms, ...missing, ...missing.flatMap((m) => this.requiredBy(m))])];
-    this.alerts.success('Added ' + missing.length + ' permission' + (missing.length === 1 ? '' : 's') + '.');
+  onStartFrom(id: string): void {
+    const r = this.selected(); if (!r || r.isSystem || !id) { this.startFrom.set(''); return; }
+    const src = this.roles().find((x) => x.id === id);
+    if (src) this.setDraft([...new Set(src.permissions.flatMap((c) => [c, ...this.rbac.requiredBy(c)]))]);
+    this.startFrom.set('');
   }
 
-  readonly filteredGroups = computed<PermGroup[]>(() => {
-    const s = this.q().trim().toLowerCase();
-    if (!s) return this.groups;
-    return this.groups
-      .map((g) => ({ ...g, perms: g.perms.filter((p) => p.label.toLowerCase().includes(s)) }))
-      .filter((g) => g.perms.length);
+  dirty = computed<boolean>(() => {
+    const r = this.selected(); if (!r || r.isSystem) return false;
+    const a = [...this.draftPerms()].sort().join('|'); const b = [...r.permissions].sort().join('|');
+    return a !== b || this.draftName() !== r.name || this.draftDesc() !== r.desc;
   });
+  save(): void {
+    const r = this.selected(); if (!r || r.isSystem) return;
+    if (this.draftName() !== r.name || this.draftDesc() !== r.desc) this.rbac.rename(r.id, this.draftName().trim() || r.name, this.draftDesc());
+    this.rbac.setPermissions(r.id, [...this.draftPerms()]);
+    this.alerts.success('Role saved.');
+  }
+  discard(): void { const r = this.selected(); if (r) this.loadDraft(r); }
 
-  // ---- smart helpers ----
-  private requiredBy(code: string): string[] {
-    const out = new Set<string>();
-    const walk = (c: string) => (this.implies[c] ?? []).forEach((d) => { if (!out.has(d)) { out.add(d); walk(d); } });
-    walk(code);
-    return [...out];
+  addRole(): void {
+    const r = this.rbac.createRole('New role', [Actions.Dashboard_View, Actions.Template_View, Actions.Credential_View]);
+    this.selectedId.set(r.id); this.loadedId = ''; this.loadDraft(r); this.loadedId = r.id;
+    this.alerts.success('Role created — customise its permissions, then Save.');
   }
-  private dependentsOf(code: string): string[] {
-    return this.allCodes.filter((x) => this.requiredBy(x).includes(code));
-  }
-  isRequired(r: Role, code: string): boolean {
-    return r.perms.includes(code) && this.dependentsOf(code).some((d) => r.perms.includes(d));
-  }
-
-  accessPct(r: Role): number { return this.total ? r.perms.length / this.total : 0; }
-  lvl(r: Role): Level {
-    const p = this.accessPct(r);
-    if (p >= 0.999) return { label: 'Full access', color: '#4f46e5', bg: '#eef2ff' };
-    if (p >= 0.6) return { label: 'Standard', color: '#0369a1', bg: '#e0f2fe' };
-    if (p >= 0.25) return { label: 'Limited', color: '#b45309', bg: '#fef3c7' };
-    return { label: 'Read-only', color: '#475569', bg: '#f1f5f9' };
-  }
-  initial(r: Role): string { return (r.name || '?').trim().charAt(0).toUpperCase() || '?'; }
-  groupCount(r: Role, g: PermGroup): number { return g.perms.filter((p) => r.perms.includes(p.code)).length; }
-
-  toggle(r: Role, code: string): void {
-    if (r.system) return;
-    if (r.perms.includes(code)) {
-      const drop = new Set([code, ...this.dependentsOf(code)]);
-      r.perms = r.perms.filter((c) => !drop.has(c));
-    } else {
-      r.perms = [...new Set([...r.perms, code, ...this.requiredBy(code)])];
-    }
-  }
-  areaAll(r: Role, g: PermGroup): boolean { return g.perms.every((p) => r.perms.includes(p.code)); }
-  areaSome(r: Role, g: PermGroup): boolean { const n = this.groupCount(r, g); return n > 0 && n < g.perms.length; }
-
-  // ---- permission info popup ----
-  infoOpen = signal<{ label: string; desc: string; area: string; icon: string; color: string; code: string } | null>(null);
-  openInfo(p: { code: string; label: string; desc: string }, g: PermGroup): void {
-    this.infoOpen.set({ label: p.label, desc: p.desc, area: g.area, icon: g.icon, color: g.color, code: p.code });
-  }
-  closeInfo(): void { this.infoOpen.set(null); }
-  @HostListener('document:keydown.escape') onEsc(): void { if (this.infoOpen()) this.closeInfo(); }
-  private labelOf(code: string): string {
-    for (const g of this.groups) { const p = g.perms.find((x) => x.code === code); if (p) return p.label; }
-    return code;
-  }
-  requiredLabels(code: string): string[] { return this.requiredBy(code).map((c) => this.labelOf(c)); }
-  enabledByLabels(code: string): string[] { return this.dependentsOf(code).map((c) => this.labelOf(c)); }
-  toggleArea(r: Role, g: PermGroup): void {
-    if (r.system) return;
-    const codes = g.perms.map((p) => p.code);
-    if (this.areaAll(r, g)) {
-      const drop = new Set([...codes, ...codes.flatMap((c) => this.dependentsOf(c))]);
-      r.perms = r.perms.filter((c) => !drop.has(c));
-    } else {
-      r.perms = [...new Set([...r.perms, ...codes, ...codes.flatMap((c) => this.requiredBy(c))])];
-    }
-  }
-
-  copyFrom(r: Role, sourceId: string): void {
-    if (r.system || !sourceId) return;
-    const src = this.roles().find((x) => x.id === +sourceId);
-    if (!src) return;
-    r.perms = [...src.perms];
-    this.alerts.success('Copied permissions from “' + src.name + '”.');
-  }
-  cloneRole(r: Role): void {
-    const id = ++this.seq;
-    this.roles.update((l) => [...l, { id, name: r.name + ' (copy)', desc: r.desc, system: false, color: this.palette[id % this.palette.length], members: 0, perms: [...r.perms] }]);
-    this.selectedId.set(id);
+  clone(r: RbacRole): void {
+    const n = this.rbac.cloneRole(r);
+    this.selectedId.set(n.id); this.loadedId = ''; this.loadDraft(n); this.loadedId = n.id;
     this.alerts.success('Role cloned — now fully editable.');
   }
-  addRole(): void {
-    const id = ++this.seq;
-    this.roles.update((l) => [...l, { id, name: 'New role', desc: '', system: false, color: this.palette[id % this.palette.length], members: 0, perms: [Actions.Template_View, Actions.Credential_View] }]);
-    this.selectedId.set(id);
-  }
-  async deleteRole(r: Role): Promise<void> {
-    if (r.system) return;
-    const ok = await this.alerts.confirm({ title: 'Delete role', message: 'Delete the “' + r.name + '” role?', danger: true, confirmText: 'Delete' });
+  async del(r: RbacRole): Promise<void> {
+    if (r.isSystem) return;
+    const ok = await this.alerts.confirm({ title: 'Delete role', message: `Delete the “${r.name}” role?`, danger: true, confirmText: 'Delete' });
     if (!ok) return;
-    this.roles.update((l) => l.filter((x) => x.id !== r.id));
-    const first = this.roles()[0];
-    if (first) this.selectedId.set(first.id);
+    this.rbac.deleteRole(r.id);
+    this.selectedId.set(''); this.loadedId = '';
     this.alerts.success('Role deleted.');
   }
-  save(): void { const r = this.selected(); if (r) this.snap.set(r.id, this.snapKey(r)); this.alerts.success('Role saved.'); }
+  preview(r: RbacRole): void {
+    this.rbac.startPreview(r.id);
+    this.alerts.info(`Previewing the app as “${r.name}”. Use the banner at the top to exit preview.`);
+    this.router.navigateByUrl('/app/dashboard');
+  }
+
+  private permLabel(code: string): string {
+    for (const s of this.rbac.screens) { const p = s.perms.find((x) => x.code === code); if (p) return p.label; }
+    return code;
+  }
+  info = signal<{ label: string; desc: string; screen: string; icon: string; color: string; code: string; requires: string[]; enables: string[]; sensitive: boolean } | null>(null);
+  openInfo(p: { code: string; label: string; desc: string }, s: RbacScreen, e: Event): void {
+    e.preventDefault(); e.stopPropagation();
+    this.info.set({ label: p.label, desc: p.desc, screen: s.label, icon: s.icon, color: s.color, code: p.code, requires: this.rbac.requiredBy(p.code).map((c) => this.permLabel(c)), enables: this.rbac.dependentsOf(p.code).map((c) => this.permLabel(c)), sensitive: this.sensitive(p.code) });
+  }
+  closeInfo(): void { this.info.set(null); }
+  @HostListener('document:keydown.escape') onEsc(): void { if (this.info()) { this.closeInfo(); return; } if (this.startOpen()) { this.startOpen.set(false); return; } if (this.compareOpen()) { this.closeCompare(); return; } if (this.q()) this.q.set(''); }
 }

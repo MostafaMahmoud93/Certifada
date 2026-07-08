@@ -26,7 +26,7 @@ public class Certifada_DbContext : DbContext
     public virtual DbSet<TenantFeatureOverride> TenantFeatureOverrides { get; set; }
     public virtual DbSet<SystemRolePermission> SystemRolePermissions { get; set; }
     public virtual DbSet<RolePermission> RolePermissions { get; set; }
-    public virtual DbSet<UserPermission> UserPermissions { get; set; }
+    public virtual DbSet<UserRole> UserRoles { get; set; }
     public virtual DbSet<TenantBranding> TenantBrands { get; set; }
     public virtual DbSet<UserLoginLog> UserLoginLogs { get; set; }
     public virtual DbSet<UnitBranding> UnitBrands { get; set; }

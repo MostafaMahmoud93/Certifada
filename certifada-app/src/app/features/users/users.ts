@@ -6,6 +6,7 @@ import { HasActionDirective } from '../../shared/directives/has-action.directive
 import { Actions } from '../../core/constants/actions';
 import { AlertService } from '../../core/services/alert.service';
 import { PlanService } from '../../core/services/plan.service';
+import { RbacService } from '../../core/services/rbac.service';
 
 type UStatus = 'Active' | 'Invited' | 'Suspended';
 interface AppUser { id: number; name: string; email: string; role: string; status: UStatus; lastActive: string | null; }
@@ -296,11 +297,27 @@ export class UsersPage {
   readonly A = Actions;
   private alerts = inject(AlertService);
   readonly plan = inject(PlanService);
-  roles = ['Admin', 'Editor', 'Viewer'];
+  readonly rbac = inject(RbacService);
+  /** Role names come from the RBAC layer (system + custom). */
+  get roles(): string[] { return this.rbac.roles().map((r) => r.name); }
   search = '';
   roleFilter = signal<string>('all');
   msg = signal('');
   readonly ringC = 2 * Math.PI * 46;
+
+  constructor() {
+    // Provision UserRoles for the demo members: the signed-in account is the Owner,
+    // the rest map onto their matching system role.
+    const map: Record<string, string> = { Admin: 'Administrator' };
+    for (const u of this.users()) {
+      const uid = u.email.toLowerCase();
+      if (this.rbac.roleIdOfUser(uid)) continue;
+      const want = uid === this.rbac.currentUserId ? 'Owner' : (map[u.role] || u.role);
+      const rr = this.rbac.roles().find((x) => x.name === want) || this.rbac.roles().find((x) => x.name === u.role);
+      if (rr) this.rbac.setUserRole(uid, rr.id);
+    }
+    this.users.update((l) => l.map((u) => { const r = this.rbac.roleOfUser(u.email.toLowerCase()); return r ? { ...u, role: r.name } : u; }));
+  }
 
   inviteOpen = signal(false);
   inviteRoleOpen = signal(false);
@@ -339,14 +356,18 @@ export class UsersPage {
   countRole(r: string): number { return this.users().filter((u) => u.role === r).length; }
 
   initials(n: string): string { return n.split(' ').map((p) => p[0]).join('').slice(0, 2).toUpperCase(); }
-  roleIcon(r: string): string { return r === 'Admin' ? 'shield' : r === 'Editor' ? 'edit' : r === 'Viewer' ? 'visibility' : 'badge'; }
+  roleIcon(r: string): string { return /owner/i.test(r) ? 'workspace_premium' : /admin/i.test(r) ? 'shield' : /approv/i.test(r) ? 'verified' : /editor/i.test(r) ? 'edit' : /viewer/i.test(r) ? 'visibility' : 'badge'; }
 
   roleMenu = signal<number | null>(null);
   @HostListener('document:click') closeRoleMenu(): void { if (this.roleMenu() !== null) this.roleMenu.set(null); }
   toggleRoleMenu(id: number, e: Event): void { e.stopPropagation(); this.roleMenu.update((v) => (v === id ? null : id)); }
-  roleDesc(r: string): string { return r === 'Admin' ? 'Full access & billing' : r === 'Editor' ? 'Create & issue credentials' : r === 'Viewer' ? 'Read-only access' : 'Custom role permissions'; }
+  roleDesc(r: string): string { return this.rbac.roles().find((x) => x.name === r)?.desc || 'Custom role permissions'; }
   pctOf(n: number): number { const l = this.seatLimit(); return !isFinite(l) || l <= 0 ? 0 : Math.min(100, (n / l) * 100); }
-  setRole(u: AppUser, role: string): void { this.users.update((l) => l.map((x) => (x.id === u.id ? { ...x, role } : x))); }
+  setRole(u: AppUser, role: string): void {
+    const rr = this.rbac.roles().find((x) => x.name === role);
+    if (rr) this.rbac.setUserRole(u.email.toLowerCase(), rr.id);
+    this.users.update((l) => l.map((x) => (x.id === u.id ? { ...x, role } : x)));
+  }
   toggle(u: AppUser): void { const status: UStatus = u.status === 'Active' ? 'Suspended' : 'Active'; this.users.update((l) => l.map((x) => (x.id === u.id ? { ...x, status } : x))); }
   async remove(u: AppUser): Promise<void> {
     const ok = await this.alerts.confirm({ title: 'Remove member', message: 'Remove ' + u.name + ' from the workspace? Their seat will be freed.', danger: true, confirmText: 'Remove' });
@@ -360,6 +381,8 @@ export class UsersPage {
     const email = this.inviteEmail.trim(); if (!email) return;
     if (!this.seatsLeft()) { this.alerts.warning('All ' + this.seatLimitLabel() + ' seats are in use. Upgrade your plan to invite more members.', { title: 'Seat limit reached' }); return; }
     const name = email.split('@')[0].replace(/[._]/g, ' ').replace(/\b\w/g, (m) => m.toUpperCase());
+    const rr = this.rbac.roles().find((x) => x.name === this.inviteRole);
+    if (rr) this.rbac.setUserRole(email.toLowerCase(), rr.id);
     this.users.update((l) => [...l, { id: ++this.seq, name, email, role: this.inviteRole, status: 'Invited', lastActive: null }]);
     this.inviteOpen.set(false);
     this.flash('Invitation sent to ' + email);

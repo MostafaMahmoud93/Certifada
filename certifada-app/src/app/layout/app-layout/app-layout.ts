@@ -15,6 +15,7 @@ import { LayoutService } from '../../core/services/layout.service';
 import { BrandService } from '../../core/services/brand.service';
 import { ApprovalService } from '../../core/services/approval.service';
 import { MessageService } from '../../core/services/message.service';
+import { RbacService } from '../../core/services/rbac.service';
 import { UpgradeDialogComponent } from '../../shared/components/upgrade-dialog/upgrade-dialog';
 
 interface NavItem { label: string; icon: string; link: string; action: string; }
@@ -53,7 +54,7 @@ interface NotifItem { id: number; icon: string; tone: 'brand' | 'success' | 'war
         </button>
         <ng-container [ngTemplateOutlet]="controlsTpl"></ng-container>
       </header>
-      <div class="content"><router-outlet></router-outlet></div>
+      <div class="content">@if (rbac.isPreviewing()) { <div class="preview-bar"><span class="pv-l"><span class="material-icons">visibility</span> Previewing as <b>{{ rbac.previewRole()?.name }}</b> — the app is limited to this role’s access.</span><button class="pv-exit" (click)="rbac.stopPreview()"><span class="material-icons">close</span> Exit preview</button></div> }<router-outlet></router-outlet></div>
 
     } @else {
       <!-- ===================== LEFT SIDEBAR ===================== -->
@@ -92,7 +93,7 @@ interface NotifItem { id: number; icon: string; tone: 'brand' | 'success' | 'war
           <span class="spacer"></span>
           <ng-container [ngTemplateOutlet]="controlsTpl"></ng-container>
         </header>
-        <div class="content"><router-outlet></router-outlet></div>
+        <div class="content">@if (rbac.isPreviewing()) { <div class="preview-bar"><span class="pv-l"><span class="material-icons">visibility</span> Previewing as <b>{{ rbac.previewRole()?.name }}</b> — the app is limited to this role’s access.</span><button class="pv-exit" (click)="rbac.stopPreview()"><span class="material-icons">close</span> Exit preview</button></div> }<router-outlet></router-outlet></div>
       </div>
     }
   </div>
@@ -196,6 +197,13 @@ interface NotifItem { id: number; icon: string; tone: 'brand' | 'success' | 'war
   <app-upgrade-dialog />
   `,
   styles: [`
+    .preview-bar{position:sticky;top:0;z-index:40;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin:0 0 14px;padding:10px 14px;border-radius:12px;color:#fff;background:linear-gradient(135deg,#7c3aed,#4f46e5);box-shadow:0 10px 26px -14px rgba(79,70,229,.7)}
+    .preview-bar .pv-l{display:inline-flex;align-items:center;gap:8px;font-size:13px;font-weight:600}
+    .preview-bar .pv-l .material-icons{font-size:17px}
+    .preview-bar .pv-l b{font-weight:800}
+    .pv-exit{display:inline-flex;align-items:center;gap:5px;border:1px solid rgba(255,255,255,.4);background:rgba(255,255,255,.16);color:#fff;font:inherit;font-size:12.5px;font-weight:700;border-radius:9px;padding:6px 12px;cursor:pointer;transition:background .14s}
+    .pv-exit:hover{background:rgba(255,255,255,.28)}
+    .pv-exit .material-icons{font-size:15px}
     :host{display:block;height:100vh}
     .shell{display:grid;grid-template-columns:248px 1fr;height:100vh;background:var(--cf-bg);color:var(--cf-ink-700);transition:grid-template-columns .2s ease}
     .shell.collapsed{grid-template-columns:72px 1fr}
@@ -402,6 +410,7 @@ export class AppLayout {
   brand = inject(BrandService);
   approvals = inject(ApprovalService);
   msgs = inject(MessageService);
+  readonly rbac = inject(RbacService);
   private router = inject(Router);
   readonly A = Actions;
   navKey(link: string): string { return link.split('/').pop() || ''; }

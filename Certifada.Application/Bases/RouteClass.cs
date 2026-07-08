@@ -68,9 +68,9 @@ public static class RouteClass
     public static class RoleAction
     {
         public const string GetRoleActions = "api/RoleAction/GetRoleActions/{RoleId}";
-        public const string GetUserActions = "api/RoleAction/GetUserActions/{userId}";
+        public const string GetPermissions = "api/RoleAction/GetPermissions";
         public const string AddEditRoleAction = "api/RoleAction/AddEditRoleAction";
-        public const string AddEditUserAction = "api/RoleAction/AddEditUserAction";
+        public const string AssignUserRole = "api/RoleAction/AssignUserRole";
     }
     public static class HistoryReport
     {

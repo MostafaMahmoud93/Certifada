@@ -463,15 +463,15 @@ public class AuthService : ServiceBase, IAuthService
                 claims: claims,
                 signingCredentials: new SigningCredentials(superSecretPassword, SecurityAlgorithms.HmacSha256)
             );
-            // Real permission codes for this user — derived directly from RolePermission + UserPermission
-            // (no DB view dependency). Drives the Angular RBAC: appHasAction / *appCanAction / guards.
+            // Real permission codes for this user — role-based: RolePermission via User.Role_Id.
+            // Drives the Angular RBAC: appHasAction / *appCanAction / guards.
             string[] userActions = Array.Empty<string>();
             try
             {
                 var permissionIds = new List<Guid>();
-                if (user.Role_Id.HasValue)
-                    permissionIds.AddRange((await _unitOfWork.RolePermissionRepository.GetAllAsync(rp => rp.Role_Id == user.Role_Id.Value)).Select(rp => rp.Permission_Id));
-                permissionIds.AddRange((await _unitOfWork.UserPermissionRepository.GetAllAsync(up => up.User_Id == user.Id)).Select(up => up.Permission_Id));
+                var roleId = (await _unitOfWork.UserRoleRepository.FirstOrDefaultAsync(ur => ur.User_Id == user.Id))?.Role_Id ?? user.Role_Id;
+                if (roleId.HasValue)
+                    permissionIds.AddRange((await _unitOfWork.RolePermissionRepository.GetAllAsync(rp => rp.Role_Id == roleId.Value)).Select(rp => rp.Permission_Id));
                 var distinctIds = permissionIds.Distinct().ToList();
                 if (distinctIds.Count > 0)
                 {

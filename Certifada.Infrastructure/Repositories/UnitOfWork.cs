@@ -21,8 +21,8 @@ public class UnitOfWork : IUnitOfWork
     public IBaseRepository<GlobalAttachment, Guid> GlobalAttachmentRepository => new BaseRepository<GlobalAttachment, Guid>(_dbContext);
     public IBaseRepository<EmailSendingLog, Guid> EmailSendingLogRepository => new BaseRepository<EmailSendingLog, Guid>(_dbContext);
     public IBaseRepository<TenantBranding, Guid> TenantBrandingRepository => new BaseRepository<TenantBranding, Guid>(_dbContext);
-    public ICustomBaseRepository<UserPermission> UserPermissionRepository => new CustomBaseRepository<UserPermission>(_dbContext);
     public ICustomBaseRepository<RolePermission> RolePermissionRepository => new CustomBaseRepository<RolePermission>(_dbContext);
+    public ICustomBaseRepository<UserRole> UserRoleRepository => new CustomBaseRepository<UserRole>(_dbContext);
     public IBaseRepository<EmailTemplate, Guid> EmailTemplateRepository => new BaseRepository<EmailTemplate, Guid>(_dbContext);
     public IBaseRepository<UnitBranding, Guid> UnitBrandingRepository => new BaseRepository<UnitBranding, Guid>(_dbContext);
     public IBaseRepository<UserLoginLog, Guid> UserLoginLogRepository => new BaseRepository<UserLoginLog, Guid>(_dbContext);

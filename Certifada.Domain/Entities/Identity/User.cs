@@ -23,7 +23,6 @@ namespace Certifada.Domain.Entities.Identity
         public virtual Unit Unit { get; set; }
         public virtual Role Role { get; set; }
         public virtual ICollection<GlobalAttachment>? Attachments { get; set; }
-        public virtual ICollection<UserPermission> UserPermissions { get; set; }
         public virtual ICollection<AccessLog> AccessLogs { get; set; }
         public virtual ICollection<UserLoginLog> UserLoginLogs { get; set; }
         public virtual ICollection<UnitBranding> UserCreatedUnitBrands { get; set; }

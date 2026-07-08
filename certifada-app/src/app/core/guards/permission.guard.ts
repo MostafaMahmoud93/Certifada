@@ -12,11 +12,10 @@ export const permissionGuard: CanActivateFn = (route) => {
   const action = route.data?.['action'] as string | undefined;
   if (!action) return true;
 
-  // TEMP — until the backend provisions permission codes in the JWT, a user
-  // with no action codes shouldn't be locked out of the whole app. Remove this
-  // line once the API returns real codes so gating is actually enforced.
-  if (!auth.userActions.length) return true;
-
+  // Enforcement is driven by the RBAC layer (PermissionService.has) which is
+  // preview-aware and defaults the signed-in owner to full access, so there is
+  // no lock-out risk. `auth` is kept for future token-based checks.
+  void auth;
   if (perm.has(action)) return true;
 
   // Authenticated but the role lacks this action -> dedicated Access Restricted page

@@ -16,8 +16,8 @@ public interface IUnitOfWork
     IBaseRepository<GlobalAttachment, Guid> GlobalAttachmentRepository { get; }
     IBaseRepository<EmailSendingLog, Guid> EmailSendingLogRepository { get; }
     IBaseRepository<TenantBranding, Guid> TenantBrandingRepository { get; }
-    ICustomBaseRepository<UserPermission> UserPermissionRepository { get; }
     ICustomBaseRepository<RolePermission> RolePermissionRepository { get; }
+    ICustomBaseRepository<UserRole> UserRoleRepository { get; }
     IBaseRepository<EmailTemplate, Guid> EmailTemplateRepository { get; }
     IBaseRepository<UnitBranding, Guid> UnitBrandingRepository { get; }
     IBaseRepository<UserLoginLog, Guid> UserLoginLogRepository { get; }
